@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SlagScan – tennis slaganalyse</title>
+  <meta name="description" content="Analyseer je tennisslagen met AI: herken forehand, backhand en opslag, meet racketsnelheid en krijg techniektips." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%23d7f34a'/><path d='M10 20c14 6 14 18 0 24M54 20c-14 6-14 18 0 24' stroke='%23fff' stroke-width='4' fill='none'/></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="ball" aria-hidden="true"></span>
+      <div>
+        <h1>SlagScan</h1>
+        <p>AI-analyse van je tennisslagen</p>
+      </div>
+    </div>
+    <div id="status" class="status" role="status">Model laden…</div>
+  </header>
+
+  <main class="layout">
+    <section class="stage-col">
+      <div class="source-bar">
+        <label class="btn primary">
+          <input id="fileInput" type="file" accept="video/*" hidden />
+          📁 Video uploaden
+        </label>
+        <button id="cameraBtn" class="btn">🎥 Live camera</button>
+        <button id="analyzeBtn" class="btn accent" disabled>▶ Analyseer video</button>
+        <button id="stopBtn" class="btn ghost" hidden>■ Stop</button>
+      </div>
+
+      <div id="stage" class="stage empty">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div id="flash" class="flash" hidden></div>
+        <div id="liveSpeed" class="live-speed" hidden>
+          <span id="liveSpeedVal">0</span><small>km/u</small>
+        </div>
+        <div id="progress" class="progress" hidden><div></div></div>
+        <div class="placeholder">
+          <div class="ph-icon">🎾</div>
+          <h2>Upload een video of start je camera</h2>
+          <p>Film jezelf van achteren of van voren, het hele lichaam in beeld. SlagScan herkent automatisch je forehands, backhands en opslagen.</p>
+        </div>
+      </div>
+
+      <div class="player-bar">
+        <button id="playBtn" class="icon-btn" title="Afspelen / pauze" disabled>⏯</button>
+        <button id="stepBack" class="icon-btn" title="Frame terug" disabled>⏮</button>
+        <button id="stepFwd" class="icon-btn" title="Frame vooruit" disabled>⏭</button>
+        <div class="seek-wrap">
+          <input id="seek" type="range" min="0" max="1000" value="0" disabled aria-label="Tijdlijn" />
+          <div id="timeline" class="timeline" aria-label="Slagen op de tijdlijn"></div>
+        </div>
+        <span id="timeLabel" class="time">0:00</span>
+        <select id="rate" title="Afspeelsnelheid">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+        </select>
+      </div>
+
+      <details class="settings" open>
+        <summary>Instellingen</summary>
+        <div class="settings-grid">
+          <label>Slaghand
+            <select id="hand">
+              <option value="right">Rechtshandig</option>
+              <option value="left">Linkshandig</option>
+            </select>
+          </label>
+          <label>Lengte speler (cm)
+            <input id="height" type="number" min="120" max="220" value="180" />
+          </label>
+          <label>Gevoeligheid
+            <input id="sens" type="range" min="1" max="10" value="5" />
+          </label>
+          <label>Analyse-precisie
+            <select id="analysisRate">
+              <option value="60">Hoog (60 beelden/s)</option>
+              <option value="30" selected>Normaal (30 beelden/s)</option>
+              <option value="15">Snel (15 beelden/s)</option>
+            </select>
+          </label>
+          <label class="check"><input id="showSkeleton" type="checkbox" checked /> Skelet tonen</label>
+          <label class="check"><input id="showTrail" type="checkbox" checked /> Polsspoor tonen</label>
+        </div>
+        <p class="hint">Snelheden zijn schattingen op basis van 2D-video en je lichaamslengte. Filmen met 60 fps geeft betere resultaten.</p>
+      </details>
+    </section>
+
+    <aside class="side-col">
+      <section class="card summary">
+        <div class="card-head">
+          <h3>Sessie</h3>
+          <button id="exportBtn" class="btn small ghost" disabled>⬇ CSV</button>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span id="kTotal">0</span><label>slagen</label></div>
+          <div class="kpi"><span id="kMax">–</span><label>top km/u</label></div>
+          <div class="kpi"><span id="kScore">–</span><label>gem. score</label></div>
+        </div>
+        <div class="types">
+          <div class="type fh"><b id="cFh">0</b><span>Forehand</span><small id="sFh">–</small></div>
+          <div class="type bh"><b id="cBh">0</b><span>Backhand</span><small id="sBh">–</small></div>
+          <div class="type sv"><b id="cSv">0</b><span>Opslag</span><small id="sSv">–</small></div>
+        </div>
+        <canvas id="chart" height="140" aria-label="Racketsnelheid per slag"></canvas>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h3>Slagen</h3>
+          <div class="filters" role="tablist">
+            <button class="chip active" data-filter="all">Alle</button>
+            <button class="chip" data-filter="forehand">FH</button>
+            <button class="chip" data-filter="backhand">BH</button>
+            <button class="chip" data-filter="serve">Opslag</button>
+          </div>
+        </div>
+        <ol id="strokeList" class="stroke-list">
+          <li class="empty-list">Nog geen slagen. Start een analyse.</li>
+        </ol>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">SlagScan draait volledig in je browser – je video wordt nergens naartoe gestuurd.</footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
