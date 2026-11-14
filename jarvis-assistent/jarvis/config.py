@@ -31,6 +31,7 @@ class Config:
     pin: str = field(default_factory=lambda: os.environ.get("JARVIS_PIN", ""))
     cert_file: str = field(default_factory=lambda: os.environ.get("JARVIS_CERT", ""))
     key_file: str = field(default_factory=lambda: os.environ.get("JARVIS_KEY", ""))
+    connector: bool = field(default_factory=lambda: _bool("JARVIS_CONNECTOR", False))
 
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir)

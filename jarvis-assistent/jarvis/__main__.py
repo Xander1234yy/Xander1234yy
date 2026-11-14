@@ -72,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, help="poort voor de webmodus")
     parser.add_argument("--telefoon", action="store_true",
                         help="webmodus: ook bereikbaar vanaf je telefoon op hetzelfde wifi (met pincode)")
+    parser.add_argument("--connector", action="store_true",
+                        help="webmodus: maak Jarvis bereikbaar als connector voor claude.ai (telefoonversie)")
     parser.add_argument("--pin", help="webmodus: eigen pincode (standaard wordt er een gemaakt)")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-q", "--query", help="stel één vraag en sluit af")
@@ -86,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         config.host = "0.0.0.0"
     if args.pin:
         config.pin = args.pin
+    if args.connector:
+        config.connector = True
 
     if args.mode == "koppel-google":
         from .home.assistant import GoogleAssistant

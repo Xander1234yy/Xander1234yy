@@ -60,6 +60,25 @@ Met [Tailscale](https://tailscale.com) (gratis voor persoonlijk gebruik) krijgt 
    ```
 3. Tailscale toont een adres zoals `https://mijn-pc.tailnet-1234.ts.net`. Open dat op je telefoon en zet het op je beginscherm. De microfoon werkt nu ook.
 
+### De telefoonversie op claude.ai, met je echte Google Home
+
+Er is ook een online versie van Jarvis die je zonder installatie op je telefoon opent via claude.ai. Een kopie staat in [`online/jarvis-online.html`](online/jarvis-online.html). Gesprekken, taken, notities, herinneringen en geheugen werken daar meteen. Om ook je echte apparaten te bedienen, koppel je Jarvis thuis één keer als **connector**:
+
+1. Start Jarvis met de connector aan:
+   ```bash
+   python -m jarvis web --connector
+   ```
+   Jarvis toont een pincode en een connector-pad zoals `/mcp/AbC123…`. Dat pad is geheim; deel het met niemand.
+2. Maak Jarvis bereikbaar via internet met [Tailscale Funnel](https://tailscale.com/kb/1223/funnel):
+   ```bash
+   tailscale funnel --bg 8000
+   ```
+   Je krijgt een adres zoals `https://mijn-pc.tailnet-1234.ts.net`.
+3. Ga in claude.ai naar *Instellingen → Connectors → Eigen connector toevoegen*. Kies als naam precies **Jarvis**, en als adres het Tailscale-adres plus het connector-pad, bijvoorbeeld `https://mijn-pc.tailnet-1234.ts.net/mcp/AbC123…`.
+4. Open de online versie en tik op **Verbind met je huis**. De tegels tonen nu je echte apparaten, en je kunt Jarvis vragen "doe de woonkamer op 30 procent" of "hoe wordt het weer morgen?".
+
+De connector biedt vier tools: `home_devices`, `home_control`, `google_home_command` en `get_weather`. Met `--connector` is de webapp ook via internet bereikbaar. Daarom is de pincode in deze stand altijd verplicht, en zonder het geheime pad geeft de connector alleen "niet gevonden".
+
 ### Jarvis altijd aan laten staan
 
 Je telefoon bedient Jarvis via de computer waar hij op draait. Die moet dus aan staan. Een Raspberry Pi of oude laptop is ideaal: gebruik `deploy/jarvis.service` om Jarvis automatisch te laten starten (de stappen staan in het bestand).
@@ -129,6 +148,7 @@ Voor de spraakmodus in de terminal: `pip install -r requirements-voice.txt` (mac
 | `JARVIS_WEB_SEARCH` | `1` | Webzoeken aan of uit |
 | `JARVIS_ALLOW_SHELL` | `0` | Shell-commando's toestaan (met bevestiging in de terminal) |
 | `JARVIS_HOST` / `JARVIS_PORT` | `127.0.0.1` / `8000` | Adres van de web-app (`--telefoon` zet de host op `0.0.0.0`) |
+| `JARVIS_CONNECTOR` | `0` | Connector voor claude.ai aanzetten (zelfde als `--connector`) |
 | `JARVIS_PIN` | automatisch | Pincode voor toegang vanaf andere apparaten (4 tot 8 cijfers) |
 | `JARVIS_CERT` / `JARVIS_KEY` | – | Eigen https-certificaat |
 
@@ -145,11 +165,14 @@ jarvis/
 ├── memory.py            # geheugen, notities, taken en herinneringen
 ├── web.py               # webserver en API (http/https)
 ├── auth.py              # pincode en sessies
+├── mcp_server.py        # connector voor claude.ai (MCP)
 ├── voice.py             # spraakmodus
 └── static/              # de app (index.html, manifest, service worker, iconen)
 ```
 
 Tests: `pip install pytest && python -m pytest`
+
+`online/jarvis-online.html` is de online versie voor claude.ai. Die gebruikt de runtime van claude.ai (Claude, opslag, microfoon en connectors) en werkt dus alleen daar.
 
 ## Veiligheid
 

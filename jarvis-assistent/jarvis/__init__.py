@@ -3,4 +3,4 @@ from .brain import Jarvis
 from .config import Config
 
 __all__ = ["Jarvis", "Config"]
-__version__ = "1.1.0"
+__version__ = "1.3.0"

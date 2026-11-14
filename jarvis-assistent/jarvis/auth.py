@@ -30,8 +30,8 @@ class Auth:
         if self.pin and not (self.pin.isdigit() and 4 <= len(self.pin) <= 8):
             raise ValueError("De pincode moet uit 4 tot 8 cijfers bestaan.")
         self.generated_pin = False
-        if not self.pin and not _is_loopback(config.host):
-            # Bereikbaar vanaf het netwerk zonder pincode? Dan maken we er zelf een.
+        if not self.pin and (config.connector or not _is_loopback(config.host)):
+            # Bereikbaar vanaf het netwerk of internet zonder pincode? Dan maken we er zelf een.
             pin_path = config.data_dir / "pin"
             if pin_path.exists():
                 self.pin = pin_path.read_text().strip()

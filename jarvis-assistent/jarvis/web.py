@@ -14,6 +14,7 @@ from importlib import resources
 
 from .auth import Auth
 from .brain import Jarvis
+from .mcp_server import McpEndpoint, load_token
 
 log = logging.getLogger("jarvis.web")
 
@@ -41,13 +42,13 @@ def lan_ip() -> str | None:
         return None
 
 
-def make_handler(jarvis: Jarvis, auth: Auth):
+def make_handler(jarvis: Jarvis, auth: Auth, mcp: McpEndpoint | None = None):
     static_dir = resources.files("jarvis").joinpath("static")
     files = {path: (static_dir.joinpath(name).read_bytes(), ctype) for path, (name, ctype) in STATIC.items()}
     https = bool(jarvis.config.cert_file)
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "Jarvis/1.2"
+        server_version = "Jarvis/1.3"
 
         def log_message(self, fmt, *args):
             log.debug(fmt, *args)
@@ -90,8 +91,17 @@ def make_handler(jarvis: Jarvis, auth: Auth):
             return False
 
         # --- GET ----------------------------------------------------------------
+        def _mcp_other(self):
+            if mcp and mcp.matches(self.path.split("?", 1)[0]):
+                return self._send(405, b"", "text/plain", {"Allow": "POST"})
+            self._json(404, {"error": "niet gevonden"})
+
+        do_DELETE = _mcp_other
+
         def do_GET(self):
             path = self.path.split("?", 1)[0]
+            if mcp and mcp.matches(path):
+                return self._mcp_other()
             if path in files:
                 body, ctype = files[path]
                 cache = "no-cache" if path in ("/", "/index.html", "/sw.js") else "public, max-age=86400"
@@ -123,6 +133,21 @@ def make_handler(jarvis: Jarvis, auth: Auth):
         # --- POST ---------------------------------------------------------------
         def do_POST(self):
             path = self.path.split("?", 1)[0]
+            if path.startswith("/mcp/"):
+                if not (mcp and mcp.matches(path)):
+                    return self._json(404, {"error": "niet gevonden"})
+                try:
+                    length = int(self.headers.get("Content-Length", 0))
+                    if length > MAX_BODY:
+                        return self._json(413, {"error": "te groot"})
+                    message = json.loads(self.rfile.read(length) or b"null")
+                except (ValueError, json.JSONDecodeError):
+                    return self._json(400, {"jsonrpc": "2.0", "id": None,
+                                            "error": {"code": -32700, "message": "Ongeldige JSON"}})
+                reply = mcp.handle(message)
+                if reply is None:
+                    return self._send(202, b"", "text/plain")
+                return self._json(200, reply)
             if "application/json" not in self.headers.get("Content-Type", ""):
                 return self._json(415, {"error": "verwacht JSON"})
             try:
@@ -173,7 +198,9 @@ def make_handler(jarvis: Jarvis, auth: Auth):
 def build_server(jarvis: Jarvis) -> tuple[ThreadingHTTPServer, Auth]:
     cfg = jarvis.config
     auth = Auth(cfg)
-    httpd = ThreadingHTTPServer((cfg.host, cfg.port), make_handler(jarvis, auth))
+    mcp = McpEndpoint(jarvis, load_token(jarvis)) if cfg.connector else None
+    httpd = ThreadingHTTPServer((cfg.host, cfg.port), make_handler(jarvis, auth, mcp))
+    httpd.mcp = mcp
     if cfg.cert_file:
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(cfg.cert_file, cfg.key_file or None)
@@ -194,6 +221,10 @@ def serve(jarvis: Jarvis) -> None:
             print(f"  Op je telefoon:    {scheme}://{ip}:{cfg.port}   (zelfde wifi)")
     if auth.enabled:
         print(f"  Pincode:           {auth.pin}" + (f"  (opgeslagen in {cfg.data_dir / 'pin'})" if auth.generated_pin else ""))
+    if httpd.mcp:
+        print(f"  Connector-pad:     /mcp/{httpd.mcp.token}")
+        print("                     Zet je publieke https-adres ervoor (bv. via 'tailscale funnel --bg "
+              f"{cfg.port}') en voeg dat toe als connector 'Jarvis' in claude.ai.")
     if scheme == "http" and cfg.host not in ("127.0.0.1", "localhost", "::1"):
         print("  Let op: de microfoon op je telefoon werkt alleen via https (zie README, 'Op je telefoon').")
     print("  Ctrl+C om te stoppen\n")

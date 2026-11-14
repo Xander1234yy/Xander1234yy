@@ -1,0 +1,619 @@
+<title>Jarvis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: woning-app — kop met begroeting, kamers met tegels, zwevende vraagbalk onderin */
+  :root {
+    --bg: #f2f2f7; --card: #ffffff; --tile-off: rgba(118,118,128,.12); --tile-on: #ffffff;
+    --text: #1c1c1e; --text-2: #6e6e73; --text-on: #1c1c1e; --text-on-2: #6e6e73; --sep: rgba(60,60,67,.14);
+    --accent: #007aff; --on-accent: #ffffff; --yellow: #ffb800; --orange: #ff9500; --green: #34c759; --teal: #30b0c7; --red: #ff3b30;
+    --icon-off: #8e8e93; --icon-bg: rgba(142,142,147,.2); --glass: rgba(255,255,255,.95); --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.07);
+    --bubble: #e9e9eb; --scrim: rgba(0,0,0,.3); --qr-bg: #ffffff;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000; --card: #1c1c1e; --tile-off: rgba(44,44,46,.9); --tile-on: #f2f2f7;
+      --text: #f5f5f7; --text-2: #98989d; --text-on: #1c1c1e; --text-on-2: #6e6e73; --sep: rgba(84,84,88,.5);
+      --icon-bg: rgba(142,142,147,.24); --glass: rgba(28,28,30,.94); --shadow: 0 8px 30px rgba(0,0,0,.5);
+      --bubble: #2c2c2e; --scrim: rgba(0,0,0,.55); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000; --card: #1c1c1e; --tile-off: rgba(44,44,46,.9); --tile-on: #f2f2f7;
+    --text: #f5f5f7; --text-2: #98989d; --text-on: #1c1c1e; --text-on-2: #6e6e73; --sep: rgba(84,84,88,.5);
+    --icon-bg: rgba(142,142,147,.24); --glass: rgba(28,28,30,.94); --shadow: 0 8px 30px rgba(0,0,0,.5);
+    --bubble: #2c2c2e; --scrim: rgba(0,0,0,.55); color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  body { background: var(--bg); color: var(--text); font: 17px/1.35 var(--font); -webkit-font-smoothing: antialiased; padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px)); }
+  .wrap { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  button { font: inherit; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header { padding-block: 20px 4px; }
+  .date { color: var(--text-2); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  h1 { font-size: clamp(28px, 7vw, 34px); font-weight: 700; letter-spacing: -.02em; margin: 2px 0 0; text-wrap: balance; }
+  .demo { display: flex; gap: 10px; align-items: flex-start; background: var(--card); border-radius: 14px; padding: 10px 14px; margin-top: 14px; font-size: 14px; color: var(--text-2); box-shadow: var(--shadow); }
+  .demo b { color: var(--text); font-weight: 600; }
+  .demo .link { border: 0; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; border-radius: 14px; padding: 6px 12px; cursor: pointer; margin-top: 8px; display: inline-block; }
+  .demo ol { margin: 6px 0 0; padding-left: 18px; }
+  .demo code { font-size: 12px; background: var(--icon-bg); padding: 1px 5px; border-radius: 5px; color: var(--text); overflow-wrap: anywhere; }
+  .demo.live svg { color: var(--green); }
+  .demo svg { flex: none; width: 18px; height: 18px; color: var(--accent); margin-top: 1px; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 4px; margin: 0 -4px -6px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 14px; padding: 8px 14px 8px 10px; box-shadow: var(--shadow); }
+  .chip svg { width: 22px; height: 22px; }
+  .chip b { display: block; font-size: 13px; font-weight: 600; }
+  .chip span { color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 24px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .tile { position: relative; text-align: left; border: 0; color: var(--text); cursor: pointer; background: var(--tile-off); border-radius: 18px; padding: 12px; min-height: 76px; display: flex; align-items: center; gap: 10px; transition: transform .15s ease, background .2s ease; }
+  .tile:active { transform: scale(.96); }
+  .tile.on { background: var(--tile-on); color: var(--text-on); box-shadow: var(--shadow); }
+  .tile > .txt { min-width: 0; padding-right: 18px; }
+  .ico { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--icon-bg); color: var(--icon-off); }
+  .ico svg { width: 20px; height: 20px; }
+  .tile.on .ico { background: var(--c); color: var(--on-accent); }
+  .name { font-size: 15px; font-weight: 600; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; hyphens: auto; }
+  .st { font-size: 13px; color: var(--text-2); margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .tile.on .st { color: var(--text-on-2); }
+  .more { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--text-2); font-size: 14px; letter-spacing: 1px; }
+  .tile.on .more { color: var(--text-on-2); }
+
+  .convo { position: fixed; left: 0; right: 0; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: center; pointer-events: none; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .panel { width: 100%; max-width: 620px; max-height: 46vh; overflow-y: auto; pointer-events: auto; background: var(--glass); backdrop-filter: saturate(180%) blur(30px); -webkit-backdrop-filter: saturate(180%) blur(30px); border-radius: 22px; box-shadow: var(--shadow); padding: 12px; }
+  .row { display: flex; margin: 4px 0; }
+  .row.me { justify-content: flex-end; }
+  .bubble { max-width: 82%; padding: 8px 13px; border-radius: 18px; background: var(--bubble); font-size: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .row.me .bubble { background: var(--accent); color: var(--on-accent); }
+  .note { text-align: center; color: var(--text-2); font-size: 13px; margin: 6px 0; }
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-2); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: flex; justify-content: center; }
+  form { position: relative; width: 100%; max-width: 620px; display: flex; align-items: center; gap: 6px; background: var(--glass); backdrop-filter: saturate(180%) blur(30px); -webkit-backdrop-filter: saturate(180%) blur(30px); border-radius: 30px; padding: 6px 6px 6px 18px; box-shadow: var(--shadow); border: .5px solid var(--sep); }
+  form::before { content: ""; position: absolute; inset: -2px; border-radius: 32px; z-index: -1; opacity: 0; transition: opacity .3s; background: conic-gradient(from var(--a, 0deg), var(--orange), var(--red), #bf5af2, var(--accent), var(--teal), var(--orange)); filter: blur(8px); }
+  form.listening::before { opacity: .85; animation: turn 3s linear infinite; }
+  @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes turn { to { --a: 360deg; } }
+  #input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--text); font: inherit; padding: 10px 0; }
+  #input::placeholder { color: var(--text-2); }
+  .round { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: transparent; color: var(--accent); }
+  .round svg { width: 22px; height: 22px; }
+  .round.send { background: var(--accent); color: var(--on-accent); }
+  .round.mic.on { color: var(--red); }
+
+  .sheet-bg { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { width: 100%; max-width: 420px; background: var(--card); border-radius: 22px 22px 0 0; padding: 16px max(20px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+  @media (min-width: 640px) { .sheet-bg { align-items: center; } .sheet { border-radius: 22px; } }
+  .handle { width: 36px; height: 5px; border-radius: 3px; background: var(--sep); margin: 0 auto 14px; }
+  .sheet h3 { margin: 0; font-size: 20px; text-align: center; }
+  .sub { text-align: center; color: var(--text-2); font-size: 14px; margin: 2px 0 18px; }
+  .big { display: block; width: 100%; height: 46px; border-radius: 12px; border: 0; font-weight: 600; cursor: pointer; background: var(--icon-bg); color: var(--text); margin-bottom: 18px; }
+  .big.on { background: var(--accent); color: var(--on-accent); }
+  .slider-label { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-2); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+  .seg { display: flex; background: var(--icon-bg); border-radius: 10px; padding: 2px; margin-top: 14px; max-width: 340px; }
+  .seg a { flex: 1; text-align: center; padding: 7px 0; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; }
+  .seg a[aria-current="page"] { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; margin-top: 20px; }
+  .group h2 { margin: 0 0 8px 4px; display: flex; align-items: center; gap: 8px; }
+  .group h2 .count { font-size: 15px; font-weight: 600; color: var(--text-2); }
+  .card { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: .5px solid var(--sep); min-height: 46px; }
+  .item:last-child { border-bottom: 0; }
+  .item .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .item .meta { display: block; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .item.done .grow { color: var(--text-2); text-decoration: line-through; }
+  .check { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--icon-off); background: transparent; cursor: pointer; display: grid; place-items: center; color: var(--on-accent); padding: 0; }
+  .check.on { background: var(--accent); border-color: var(--accent); }
+  .check svg { width: 14px; height: 14px; }
+  .del { flex: none; border: 0; background: transparent; color: var(--text-2); cursor: pointer; font-size: 20px; line-height: 1; padding: 4px 6px; border-radius: 8px; }
+  .del:hover { color: var(--red); }
+  .add { display: flex; gap: 8px; padding: 8px 10px 8px 14px; }
+  .add input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 16px; padding: 6px 0; outline: none; }
+  .add input::placeholder { color: var(--text-2); }
+  .add button { border: 0; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; padding: 6px 8px; }
+  .empty-row { padding: 14px; color: var(--text-2); font-size: 15px; }
+  .sync { font-size: 12px; color: var(--text-2); margin: 18px 4px 0; }
+  .toast { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); background: var(--card); box-shadow: var(--shadow); border-radius: 14px; padding: 10px 16px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); }
+  @media (prefers-reduced-motion: reduce) { *, form::before { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="date" id="date"></div>
+    <h1 id="greet">Thuis</h1>
+    <div class="demo">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 5a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 12 7Zm1 10h-2v-6h2Z"/></svg>
+      <div id="banner"><b>Voorbeeldapparaten.</b> Gesprekken, taken, notities, herinneringen en geheugen werken echt. Koppel Jarvis thuis als connector om je echte Google Home te bedienen.</div>
+    </div>
+    <nav class="seg" aria-label="Weergave"><a href="#woning" id="tabHome">Woning</a><a href="#lijstjes" id="tabLists">Lijstjes</a></nav>
+  </header>
+  <section id="viewHome">
+    <div class="chips" id="chips"></div>
+    <main id="rooms"></main>
+  </section>
+  <section id="viewLists" hidden>
+    <div class="lists">
+      <div class="group"><h2>Herinneringen <span class="count" id="remCount"></span></h2><div class="card" id="remList"></div></div>
+      <div class="group"><h2>Taken <span class="count" id="todoCount"></span></h2><div class="card"><div id="todoList"></div>
+        <form class="add" id="todoForm"><input id="todoInput" placeholder="Nieuwe taak" aria-label="Nieuwe taak" autocomplete="off"><button>Voeg toe</button></form></div></div>
+      <div class="group"><h2>Notities <span class="count" id="noteCount"></span></h2><div class="card"><div id="noteList"></div>
+        <form class="add" id="noteForm"><input id="noteInput" placeholder="Nieuwe notitie" aria-label="Nieuwe notitie" autocomplete="off"><button>Bewaar</button></form></div></div>
+      <div class="group"><h2>Wat Jarvis onthoudt</h2><div class="card" id="factList"></div></div>
+    </div>
+    <p class="sync" id="sync"></p>
+  </section>
+</div>
+
+<div class="convo"><div class="panel" id="panel" aria-live="polite" hidden></div></div>
+
+<div class="bar">
+  <form id="form">
+    <input id="input" type="text" placeholder="Vraag Jarvis iets…" autocomplete="off" enterkeyhint="send" aria-label="Vraag Jarvis iets">
+    <button type="button" class="round mic" id="mic" aria-label="Spreek" hidden>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.59a6 6 0 0 0 5-5.91Z"/></svg>
+    </button>
+    <button type="submit" class="round send" id="send" aria-label="Verstuur">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a1 1 0 0 1 .7.3l6 6a1 1 0 1 1-1.4 1.4L13 7.42V19a1 1 0 1 1-2 0V7.41L6.7 11.7a1 1 0 0 1-1.4-1.4l6-6A1 1 0 0 1 12 4Z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div class="sheet-bg" id="sheetbg" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = id => document.getElementById(id);
+document.documentElement.lang = "nl";
+const TITLE = "meesterbrein";
+const ICONS = {
+  light: '<path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2Zm-2 18a1 1 0 0 0 0 2h4a1 1 0 0 0 0-2Z"/>',
+  outlet: '<path d="M8 2a1 1 0 0 1 1 1v4h6V3a1 1 0 1 1 2 0v4h1a1 1 0 0 1 1 1v3a7 7 0 0 1-6 6.93V21a1 1 0 1 1-2 0v-3.07A7 7 0 0 1 5 11V8a1 1 0 0 1 1-1h1V3a1 1 0 0 1 1-1Z"/>',
+  thermostat: '<path d="M12 2a3 3 0 0 0-3 3v8.76a5 5 0 1 0 6 0V5a3 3 0 0 0-3-3Zm0 18a3 3 0 0 1-1-5.83V9h2v5.17A3 3 0 0 1 12 20Z"/>',
+  speaker: '<path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm5 18a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0-11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>',
+  tv: '<path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-7v2h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>',
+  blinds: '<path d="M3 3h18a1 1 0 1 1 0 2h-1v12h-7v2.27a2 2 0 1 1-2 0V17H4V5H3a1 1 0 0 1 0-2Zm3 4v2h12V7Zm0 4v2h12v-2Z"/>',
+  lock: '<path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3Z"/>',
+};
+ICONS.fan = ICONS.outlet; ICONS.vacuum = ICONS.outlet;
+ICONS.scene = '<path d="M12 2l2.4 6.2L21 9l-5 4.4L17.5 20 12 16.6 6.5 20 8 13.4 3 9l6.6-.8Z"/>';
+const COLORS = { fan: "var(--teal)", vacuum: "var(--green)", scene: "var(--orange)", light: "var(--yellow)", outlet: "var(--green)", thermostat: "var(--orange)", speaker: "var(--accent)", tv: "var(--accent)", blinds: "var(--teal)", lock: "var(--teal)" };
+const svg = k => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS[k] || ICONS.outlet}</svg>`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- gegevens: privé per persoon, gesynchroniseerd tussen apparaten ---------- */
+const DEFAULT_DEVICES = [
+  { id: "plafondlamp", name: "Plafondlamp", room: "Woonkamer", kind: "light", on: true, brightness: 70 },
+  { id: "leeslamp", name: "Leeslamp", room: "Woonkamer", kind: "light", on: false, brightness: 40 },
+  { id: "thermostaat", name: "Thermostaat", room: "Woonkamer", kind: "thermostat", on: true, temperature: 20.5, current: 19.8 },
+  { id: "tv", name: "Chromecast", room: "Woonkamer", kind: "tv", on: false, volume: 25 },
+  { id: "spots", name: "Spots", room: "Keuken", kind: "light", on: true, brightness: 40 },
+  { id: "nest-audio", name: "Nest Audio", room: "Keuken", kind: "speaker", on: true, volume: 35, media: "Jazz" },
+  { id: "koffie", name: "Koffiezetapparaat", room: "Keuken", kind: "outlet", on: false },
+  { id: "bedlamp", name: "Bedlamp", room: "Slaapkamer", kind: "light", on: false, brightness: 30 },
+  { id: "rolgordijn", name: "Rolgordijn", room: "Slaapkamer", kind: "blinds", on: true },
+  { id: "voordeur", name: "Voordeur", room: "Hal", kind: "lock", on: false },
+];
+const blank = () => ({ devices: structuredClone(DEFAULT_DEVICES), todos: [], notes: [], facts: {}, reminders: [] });
+let state = blank();
+let docRef = null, writing = false, dirty = false, synced = false;
+const uid = () => Math.random().toString(36).slice(2, 8);
+
+function loadLocal() { try { const v = JSON.parse(localStorage.getItem("jarvis-state")); if (v && Array.isArray(v.devices)) state = { ...blank(), ...v }; } catch (e) {} }
+function saveLocal() { try { localStorage.setItem("jarvis-state", JSON.stringify(state)); } catch (e) {} }
+async function persist() {
+  saveLocal();
+  if (!docRef) return;
+  if (writing) { dirty = true; return; }
+  writing = true;
+  try { await docRef.set(JSON.parse(JSON.stringify(state))); setSync(); }
+  catch (e) { setSync("Opslaan lukte niet; je wijzigingen staan wel in deze browser."); }
+  writing = false;
+  if (dirty) { dirty = false; persist(); }
+}
+function setSync(msg) {
+  $("sync").textContent = msg || (docRef ? (synced ? "Bewaard in je account en gesynchroniseerd met je andere apparaten." : "Verbinden met je account…") : "Bewaard in deze browser.");
+}
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 3500); }
+
+/* ---------- echte apparaten via de connector "Jarvis" ---------- */
+const SERVER = "Jarvis";
+let mcp = null, live = false, liveDevices = [], unwatch = null;
+const devicesNow = () => live ? liveDevices : state.devices;
+function normalize(d) {
+  return { id: d.id, name: d.name, room: d.room || "Overig", kind: d.kind || "outlet", on: !!d.on, state: d.state,
+           brightness: d.brightness, temperature: d.temperature, current: d.current_temperature ?? d.current, volume: d.volume, media: d.media };
+}
+const SETUP = `<ol><li>Start Jarvis op je computer met <code>python -m jarvis web --connector</code>.</li>
+  <li>Maak hem bereikbaar via internet: <code>tailscale funnel --bg 8000</code>.</li>
+  <li>Voeg in claude.ai bij Instellingen → Connectors een eigen connector toe met de naam <b>Jarvis</b> en het adres dat Jarvis toont (eindigend op /mcp/…).</li></ol>`;
+function banner(kind, extra = "") {
+  const b = $("banner"), box = b.parentElement;
+  box.classList.toggle("live", kind === "live");
+  if (kind === "live") b.innerHTML = `<b>Verbonden met Jarvis thuis.</b> Je bedient je echte apparaten.`;
+  else if (kind === "ask") b.innerHTML = `<b>Jarvis thuis is gekoppeld.</b> Geef deze pagina toestemming om je apparaten te bedienen.<br><button class="link" id="connectBtn">Verbind met je huis</button>`;
+  else if (kind === "setup") b.innerHTML = `<b>Voorbeeldapparaten.</b> Om je echte Google Home te bedienen, koppel je Jarvis één keer als connector:${SETUP}`;
+  else b.innerHTML = `<b>Voorbeeldapparaten.</b> ${extra}`;
+  const btn = $("connectBtn"); if (btn) btn.onclick = connect;
+}
+function mcpMessage(e) {
+  switch (e && e.code) {
+    case "server_not_connected": case "selection_required": case "server_not_found": return null;
+    case "needs_reauth": return "Verbind Jarvis opnieuw in claude.ai bij Instellingen → Connectors.";
+    case "not_in_manifest": case "approval_required": case "consent_required": return "Deze pagina mag Jarvis thuis niet gebruiken. Je kunt dat later toestaan via het menu Rechten van de pagina.";
+    case "blocked_by_policy": return "Je organisatie staat deze connector niet toe.";
+    case "server_unavailable": return "Jarvis thuis is niet bereikbaar. Staat je computer aan en draait Jarvis met --connector?";
+    case "tool_error": return e.message || "Jarvis thuis meldde een fout.";
+    default: return "Verbinden met Jarvis thuis lukte niet.";
+  }
+}
+function goDemo(e) {
+  live = false; if (unwatch) { unwatch(); unwatch = null; }
+  const msg = mcpMessage(e);
+  if (msg === null) banner("setup"); else banner("demo", msg);
+  render();
+}
+function setLive(payload) {
+  liveDevices = (payload && payload.devices || []).map(normalize);
+  live = true; banner("live"); render();
+}
+async function connect() {
+  try {
+    const res = await mcp.callTool(SERVER, "home_devices", {}, { cache: false });
+    setLive(res.payload);
+    if (!liveDevices.length) banner("demo", "Jarvis thuis is verbonden, maar vond nog geen apparaten. Koppel Google Home of Home Assistant op je computer (zie de README).");
+    unwatch = mcp.watchTool(SERVER, "home_devices", null, ev => {
+      if (ev.type === "data") { if (live) setLive(ev.result.payload); }
+      else if (["needs_reauth", "server_not_connected", "blocked_by_policy", "approval_required", "not_in_manifest"].includes(ev.error.code)) goDemo(ev.error);
+    }, { refetchInterval: 30000 });
+  } catch (e) { goDemo(e); }
+}
+async function liveControl(id, action, value) {
+  const d = liveDevices.find(x => x.id === id || x.name.toLowerCase() === String(id).toLowerCase());
+  if (d && ["turn_on", "turn_off", "toggle"].includes(action)) { d.on = action === "toggle" ? !d.on : action === "turn_on"; render(); }
+  try {
+    const res = await mcp.callTool(SERVER, "home_control", value == null ? { device: id, action } : { device: id, action, value: Number(value) });
+    mcp.invalidate(SERVER, "home_devices").catch(() => {});
+    return res.payload;
+  } catch (e) {
+    toast(mcpMessage(e) || "Jarvis thuis is niet meer gekoppeld.");
+    mcp.invalidate(SERVER, "home_devices").catch(() => {});
+    throw new Error(mcpMessage(e) || "Jarvis thuis is niet gekoppeld");
+  }
+}
+async function control(id, action, value) { return live ? liveControl(id, action, value) : applyDevice(id, action, value); }
+
+/* ---------- woning ---------- */
+function header() {
+  const now = new Date(), h = now.getHours();
+  const narrow = innerWidth < 430;
+  $("date").textContent = now.toLocaleDateString("nl-NL", narrow ? { weekday: "short", day: "numeric", month: "short" } : { weekday: "long", day: "numeric", month: "long" });
+  const part = h < 6 ? "Goedenacht" : h < 12 ? "Goedemorgen" : h < 18 ? "Goedemiddag" : "Goedenavond";
+  $("greet").textContent = `${part}, ${TITLE}`;
+}
+function stateText(d) {
+  if (d.kind === "thermostat") return d.current != null ? `${d.current}° · doel ${d.temperature ?? "–"}°` : (d.on ? "Aan" : "Uit");
+  if (d.kind === "scene") return "Scène";
+  if (d.kind === "lock") return d.on ? "Open" : "Op slot";
+  if (d.kind === "blinds") return d.on ? "Open" : "Dicht";
+  if (d.kind === "speaker" || d.kind === "tv") return d.on ? (d.media || (d.state && !["on", "off", "playing", "idle"].includes(d.state) ? (d.state === "paused" ? "Gepauzeerd" : d.state) : "Aan")) : "Uit";
+  if (d.kind === "light" && d.on) return `${d.brightness}%`;
+  return d.on ? "Aan" : "Uit";
+}
+function chips() {
+  const ds = devicesNow();
+  const lights = ds.filter(d => d.kind === "light" && d.on).length;
+  const media = ds.filter(d => (d.kind === "speaker" || d.kind === "tv") && d.on).length;
+  const t = ds.find(d => d.kind === "thermostat");
+  const items = [];
+  if (t && t.current != null) items.push(["thermostat", "var(--orange)", "Klimaat", `${t.current}° binnen`]);
+  items.push(["light", "var(--yellow)", "Verlichting", lights ? `${lights} aan` : "Alles uit"], ["speaker", "var(--accent)", "Media", media ? `${media} speelt` : "Stil"]);
+  const open = state.todos.filter(x => !x.done).length;
+  if (open) items.push(["outlet", "var(--green)", "Taken", `${open} open`]);
+  $("chips").innerHTML = items.map(([k, c, a, b]) => `<div class="chip"><span style="color:${c}">${svg(k)}</span><div><b>${a}</b><span>${b}</span></div></div>`).join("");
+}
+const ORDER = ["Woonkamer", "Keuken", "Slaapkamer", "Hal"];
+function renderHome() {
+  chips();
+  const ds = devicesNow();
+  const rank = r => r === "Overig" ? 99 : ORDER.includes(r) ? ORDER.indexOf(r) : 50;
+  const rooms = [...new Set(ds.map(d => d.room))].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, "nl"));
+  $("rooms").innerHTML = rooms.map(room => `<h2>${esc(room)}</h2><div class="grid">${ds.filter(d => d.room === room).map(d => `
+    <button class="tile ${d.on ? "on" : ""}" style="--c:${COLORS[d.kind]}" data-id="${esc(d.id)}" aria-pressed="${d.on}">
+      <span class="ico">${svg(d.kind)}</span>
+      <span class="txt"><div class="name">${esc(d.name)}</div><div class="st">${esc(stateText(d))}</div></span>
+      ${["light", "thermostat", "speaker", "tv"].includes(d.kind) ? `<span class="more" data-more="${esc(d.id)}" aria-hidden="true">•••</span>` : ""}
+    </button>`).join("")}</div>`).join("");
+}
+function applyDevice(id, action, value) {
+  const d = state.devices.find(x => x.id === id || x.name.toLowerCase() === String(id).toLowerCase());
+  if (!d) throw new Error(`Apparaat '${id}' bestaat niet`);
+  const v = Number(value);
+  switch (action) {
+    case "turn_on": d.on = true; break;
+    case "turn_off": d.on = false; break;
+    case "toggle": d.on = !d.on; break;
+    case "set_brightness": if (d.kind !== "light") throw new Error("Alleen lampen hebben helderheid"); d.brightness = Math.max(1, Math.min(100, Math.round(v))); d.on = true; break;
+    case "set_temperature": if (d.kind !== "thermostat") throw new Error("Alleen de thermostaat heeft een temperatuur"); d.temperature = Math.max(10, Math.min(28, Math.round(v * 2) / 2)); break;
+    case "set_volume": if (!["speaker", "tv"].includes(d.kind)) throw new Error("Alleen speakers en tv's hebben volume"); d.volume = Math.max(0, Math.min(100, Math.round(v))); break;
+    case "lock": d.on = false; break;
+    case "unlock": d.on = true; break;
+    default: throw new Error(`Onbekende actie ${action}`);
+  }
+  persist(); render(); return { ok: true, device: d.name, state: stateText(d) };
+}
+$("rooms").addEventListener("click", e => {
+  const more = e.target.closest("[data-more]"); if (more) { e.stopPropagation(); openSheet(more.dataset.more); return; }
+  const tile = e.target.closest(".tile"); if (!tile) return;
+  const d = devicesNow().find(x => x.id === tile.dataset.id);
+  const action = d.kind === "scene" ? "activate" : d.kind === "lock" ? (d.on ? "lock" : "unlock") : "toggle";
+  control(d.id, action).catch(() => {});
+});
+function openSheet(id) {
+  const d = devicesNow().find(x => x.id === id);
+  const s = d.kind === "light" ? ["Helderheid", "set_brightness", d.brightness, 1, 100, "%", 1]
+          : d.kind === "thermostat" ? ["Temperatuur", "set_temperature", d.temperature, 10, 28, "°", .5]
+          : ["Volume", "set_volume", d.volume, 0, 100, "%", 1];
+  $("sheet").innerHTML = `<div class="handle"></div><h3>${esc(d.name)}</h3><div class="sub">${esc(d.room)} · ${esc(stateText(d))}</div>
+    <button class="big ${d.on ? "on" : ""}" id="sheetToggle">${d.on ? "Uitzetten" : "Aanzetten"}</button>
+    <div class="slider-label"><span>${s[0]}</span><span id="sv">${s[2]}${s[5]}</span></div>
+    <input type="range" id="sheetRange" min="${s[3]}" max="${s[4]}" step="${s[6]}" value="${s[2] ?? s[3]}" aria-label="${s[0]}">`;
+  $("sheetToggle").onclick = () => { control(id, "toggle").catch(() => {}); closeSheet(); };
+  $("sheetRange").oninput = e => $("sv").textContent = e.target.value + s[5];
+  $("sheetRange").onchange = e => control(id, s[1], e.target.value).catch(() => {});
+  $("sheetbg").hidden = false;
+}
+function closeSheet() { $("sheetbg").hidden = true; }
+$("sheetbg").addEventListener("click", e => { if (e.target === $("sheetbg")) closeSheet(); });
+
+/* ---------- lijstjes ---------- */
+const CHECK = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/></svg>';
+const fmtWhen = t => {
+  const d = new Date(t), now = new Date(), mins = Math.round((t - Date.now()) / 60000);
+  if (mins < 60 && mins >= 0) return mins <= 0 ? "nu" : `over ${mins} min`;
+  const sameDay = d.toDateString() === now.toDateString();
+  return (sameDay ? "vandaag " : d.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" }) + " ") + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+};
+function renderLists() {
+  const rems = state.reminders.filter(r => !r.fired).sort((a, b) => a.due - b.due);
+  $("remCount").textContent = rems.length || "";
+  $("remList").innerHTML = rems.length ? rems.map(r => `<div class="item"><span class="grow">${esc(r.text)}<span class="meta">${esc(fmtWhen(r.due))}</span></span><button class="del" data-del-rem="${r.id}" aria-label="Verwijder herinnering">×</button></div>`).join("")
+    : `<div class="empty-row">Geen herinneringen. Zeg bijvoorbeeld: "Herinner me over 10 minuten aan de pizza."</div>`;
+  const todos = [...state.todos].sort((a, b) => a.done - b.done);
+  $("todoCount").textContent = state.todos.filter(t => !t.done).length || "";
+  $("todoList").innerHTML = todos.map(t => `<div class="item ${t.done ? "done" : ""}"><button class="check ${t.done ? "on" : ""}" data-check="${t.id}" aria-label="${t.done ? "Markeer als open" : "Afvinken"}">${t.done ? CHECK : ""}</button><span class="grow">${esc(t.text)}</span><button class="del" data-del-todo="${t.id}" aria-label="Verwijder taak">×</button></div>`).join("");
+  $("noteCount").textContent = state.notes.length || "";
+  $("noteList").innerHTML = [...state.notes].reverse().map(n => `<div class="item"><span class="grow">${esc(n.text)}<span class="meta">${new Date(n.created).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</span></span><button class="del" data-del-note="${n.id}" aria-label="Verwijder notitie">×</button></div>`).join("");
+  const facts = Object.entries(state.facts);
+  $("factList").innerHTML = facts.length ? facts.map(([k, v]) => `<div class="item"><span class="grow">${esc(k)}<span class="meta">${esc(v)}</span></span><button class="del" data-del-fact="${esc(k)}" aria-label="Vergeet dit">×</button></div>`).join("")
+    : `<div class="empty-row">Nog niets. Vertel Jarvis iets over jezelf, bijvoorbeeld: "Mijn moeder is op 12 maart jarig."</div>`;
+  setSync();
+}
+$("viewLists").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.check) { const t = state.todos.find(x => x.id === b.dataset.check); t.done = !t.done; }
+  else if (b.dataset.delTodo) state.todos = state.todos.filter(x => x.id !== b.dataset.delTodo);
+  else if (b.dataset.delNote) state.notes = state.notes.filter(x => x.id !== b.dataset.delNote);
+  else if (b.dataset.delRem) state.reminders = state.reminders.filter(x => x.id !== b.dataset.delRem);
+  else if (b.dataset.delFact) delete state.facts[b.dataset.delFact];
+  else return;
+  persist(); render();
+});
+$("todoForm").onsubmit = e => { e.preventDefault(); const v = $("todoInput").value.trim(); if (!v) return; state.todos.push({ id: uid(), text: v, done: false }); $("todoInput").value = ""; persist(); render(); };
+$("noteForm").onsubmit = e => { e.preventDefault(); const v = $("noteInput").value.trim(); if (!v) return; state.notes.push({ id: uid(), text: v, created: Date.now() }); $("noteInput").value = ""; persist(); render(); };
+
+/* ---------- weergave kiezen ---------- */
+function route() {
+  const lists = location.hash === "#lijstjes";
+  $("viewHome").hidden = lists; $("viewLists").hidden = !lists;
+  $("tabHome").toggleAttribute("aria-current", !lists); $("tabLists").toggleAttribute("aria-current", lists);
+  if (!lists) $("tabHome").setAttribute("aria-current", "page"); else $("tabLists").setAttribute("aria-current", "page");
+}
+addEventListener("hashchange", route);
+function render() { header(); renderHome(); renderLists(); }
+
+/* ---------- herinneringen laten afgaan ---------- */
+function checkReminders() {
+  const due = state.reminders.filter(r => !r.fired && r.due <= Date.now());
+  if (!due.length) return;
+  due.forEach(r => { r.fired = true; toast("Herinnering: " + r.text); bubble("", "Herinnering: " + r.text); if (tts) tts.speak("Herinnering: " + r.text).catch(() => {}); });
+  persist(); render();
+}
+
+/* ---------- rekenmachine (veilig, zonder eval) ---------- */
+function calculate(expr) {
+  const src = String(expr).replace(/,/g, ".").replace(/×/g, "*").replace(/÷/g, "/").replace(/\s+/g, "");
+  let i = 0;
+  const FN = { sqrt: Math.sqrt, sin: Math.sin, cos: Math.cos, tan: Math.tan, log: Math.log10, ln: Math.log, abs: Math.abs, round: Math.round, floor: Math.floor, ceil: Math.ceil, exp: Math.exp };
+  const CONST = { pi: Math.PI, e: Math.E };
+  const peek = () => src[i];
+  function expr_() { let v = term(); while (peek() === "+" || peek() === "-") { const op = src[i++]; const r = term(); v = op === "+" ? v + r : v - r; } return v; }
+  function term() { let v = power(); while (peek() === "*" || peek() === "/" || peek() === "%") { const op = src[i++]; const r = power(); v = op === "*" ? v * r : op === "/" ? v / r : v % r; } return v; }
+  function power() { const b = unary(); if (peek() === "^" || (peek() === "*" && src[i + 1] === "*")) { i += peek() === "^" ? 1 : 2; return Math.pow(b, power()); } return b; }
+  function unary() { if (peek() === "-") { i++; return -unary(); } if (peek() === "+") { i++; return unary(); } return atom(); }
+  function atom() {
+    if (peek() === "(") { i++; const v = expr_(); if (src[i++] !== ")") throw new Error("haakje ontbreekt"); return v; }
+    const num = /^\d+(\.\d+)?/.exec(src.slice(i)); if (num) { i += num[0].length; return parseFloat(num[0]); }
+    const id = /^[a-z]+/i.exec(src.slice(i));
+    if (id) { const n = id[0].toLowerCase(); i += id[0].length;
+      if (n in CONST) return CONST[n];
+      if (n in FN) { if (src[i++] !== "(") throw new Error("( verwacht na " + n); const v = expr_(); if (src[i++] !== ")") throw new Error("haakje ontbreekt"); return FN[n](v); } }
+    throw new Error("Onverwacht teken bij positie " + (i + 1));
+  }
+  const v = expr_(); if (i < src.length) throw new Error("Onverwacht teken bij positie " + (i + 1));
+  if (!isFinite(v)) throw new Error("Geen eindige uitkomst");
+  return { expressie: expr, uitkomst: Math.round(v * 1e10) / 1e10 };
+}
+
+/* ---------- gesprek met Jarvis ---------- */
+const panel = $("panel");
+const history = [];
+let busy = false, ctl = null, sample = null, tts = null, viaVoice = false;
+function bubble(who, text) {
+  panel.hidden = false;
+  const row = document.createElement("div"); row.className = "row " + who;
+  const b = document.createElement("div"); b.className = "bubble"; b.textContent = text; row.appendChild(b);
+  panel.appendChild(row); panel.scrollTop = panel.scrollHeight; return b;
+}
+function note(text) { panel.hidden = false; const n = document.createElement("div"); n.className = "note"; n.textContent = text; panel.appendChild(n); panel.scrollTop = panel.scrollHeight; }
+
+const TOOLS = [
+  { name: "lijst_apparaten", description: "Alle apparaten in huis met id, kamer en huidige status.", inputSchema: { type: "object", properties: {} },
+    execute: async () => {
+      if (live) { try { setLive((await mcp.callTool(SERVER, "home_devices", {}, { cache: false })).payload); } catch (e) {} }
+      return devicesNow().map(d => ({ id: d.id, naam: d.name, kamer: d.room, soort: d.kind, aan: d.on, status: stateText(d) }));
+    } },
+  { name: "bedien_apparaat", description: "Bedient één apparaat op id of naam. action: turn_on, turn_off, toggle, set_brightness (procent), set_temperature (°C), set_volume (procent), play, pause, stop, next, previous, open, close, lock, unlock, activate. Voor meerdere apparaten: roep dit per apparaat aan, of gebruik google_home_opdracht als die er is.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, action: { type: "string", enum: ["turn_on", "turn_off", "toggle", "set_brightness", "set_temperature", "set_volume", "play", "pause", "stop", "next", "previous", "open", "close", "lock", "unlock", "activate"] }, value: { type: "number" } }, required: ["id", "action"] },
+    execute: ({ id, action, value }) => control(id, action, value) },
+  { name: "rekenen", description: "Rekent een expressie exact uit: + - * / % ^, haakjes, sqrt, sin, cos, tan, log, ln, abs, round, pi, e. Gebruik dit voor elke berekening; schrijf procenten als vermenigvuldiging (17% van 2340 = 0.17*2340).",
+    inputSchema: { type: "object", properties: { expressie: { type: "string" } }, required: ["expressie"] }, execute: ({ expressie }) => calculate(expressie) },
+  { name: "taken", description: "Takenlijst. actie: toevoegen (tekst), lijst, afvinken (id), verwijderen (id).",
+    inputSchema: { type: "object", properties: { actie: { type: "string", enum: ["toevoegen", "lijst", "afvinken", "verwijderen"] }, tekst: { type: "string" }, id: { type: "string" } }, required: ["actie"] },
+    execute: ({ actie, tekst, id }) => {
+      if (actie === "lijst") return state.todos;
+      if (actie === "toevoegen") { if (!tekst) throw new Error("tekst ontbreekt"); const t = { id: uid(), text: tekst, done: false }; state.todos.push(t); persist(); render(); return t; }
+      const t = state.todos.find(x => x.id === id); if (!t) throw new Error("Taak niet gevonden; vraag eerst de lijst op");
+      if (actie === "afvinken") t.done = true; else state.todos = state.todos.filter(x => x.id !== id);
+      persist(); render(); return { ok: true };
+    } },
+  { name: "notities", description: "Notities. actie: toevoegen (tekst), zoeken (zoekterm; leeg = alles), verwijderen (id).",
+    inputSchema: { type: "object", properties: { actie: { type: "string", enum: ["toevoegen", "zoeken", "verwijderen"] }, tekst: { type: "string" }, zoekterm: { type: "string" }, id: { type: "string" } }, required: ["actie"] },
+    execute: ({ actie, tekst, zoekterm = "", id }) => {
+      if (actie === "zoeken") return state.notes.filter(n => n.text.toLowerCase().includes(zoekterm.toLowerCase()));
+      if (actie === "toevoegen") { if (!tekst) throw new Error("tekst ontbreekt"); const n = { id: uid(), text: tekst, created: Date.now() }; state.notes.push(n); persist(); render(); return n; }
+      const before = state.notes.length; state.notes = state.notes.filter(n => n.id !== id);
+      if (state.notes.length === before) throw new Error("Notitie niet gevonden"); persist(); render(); return { ok: true };
+    } },
+  { name: "onthoud", description: "Slaat een blijvend persoonlijk feit op (onderwerp + waarde), of vergeet het met vergeet: true.",
+    inputSchema: { type: "object", properties: { onderwerp: { type: "string" }, waarde: { type: "string" }, vergeet: { type: "boolean" } }, required: ["onderwerp"] },
+    execute: ({ onderwerp, waarde, vergeet }) => {
+      const k = onderwerp.trim().toLowerCase();
+      if (vergeet) { delete state.facts[k]; } else { if (!waarde) throw new Error("waarde ontbreekt"); state.facts[k] = waarde; }
+      persist(); render(); return { ok: true };
+    } },
+  { name: "herinnering", description: "Zet een herinnering of timer: tekst plus óf over_minuten óf om (lokale tijd 'YYYY-MM-DDTHH:MM'). Of actie 'lijst' / 'verwijderen' (id). Herinneringen gaan af zolang Jarvis ergens open staat.",
+    inputSchema: { type: "object", properties: { actie: { type: "string", enum: ["zetten", "lijst", "verwijderen"] }, tekst: { type: "string" }, over_minuten: { type: "number" }, om: { type: "string" }, id: { type: "string" } }, required: ["actie"] },
+    execute: ({ actie, tekst, over_minuten, om, id }) => {
+      if (actie === "lijst") return state.reminders.filter(r => !r.fired).map(r => ({ id: r.id, tekst: r.text, wanneer: fmtWhen(r.due) }));
+      if (actie === "verwijderen") { state.reminders = state.reminders.filter(r => r.id !== id); persist(); render(); return { ok: true }; }
+      if (!tekst) throw new Error("tekst ontbreekt");
+      let due;
+      if (over_minuten != null) due = Date.now() + Number(over_minuten) * 60000;
+      else if (om) { due = new Date(om).getTime(); if (isNaN(due)) throw new Error("Ongeldige tijd; gebruik YYYY-MM-DDTHH:MM"); }
+      else throw new Error("Geef over_minuten of om");
+      const r = { id: uid(), text: tekst, due, fired: false }; state.reminders.push(r); persist(); render();
+      return { ok: true, wanneer: fmtWhen(due) };
+    } },
+];
+
+const LIVE_TOOLS = [
+  { name: "google_home_opdracht", description: "Stuurt een opdracht in gewone taal naar Google Assistant thuis, alsof de gebruiker 'Hey Google' zegt. Voor kamers, groepen, scènes, routines, kleuren en apparaten die niet in de lijst staan. Bijvoorbeeld 'zet de woonkamer op 30 procent warm wit'.",
+    inputSchema: { type: "object", properties: { opdracht: { type: "string" } }, required: ["opdracht"] },
+    execute: async ({ opdracht }) => { const r = await mcp.callTool(SERVER, "google_home_command", { command: opdracht }); mcp.invalidate(SERVER, "home_devices").catch(() => {}); return r.payload; } },
+  { name: "weer", description: "Actueel weer en verwachting voor een plaats (leeg = standaardstad).",
+    inputSchema: { type: "object", properties: { plaats: { type: "string" }, dagen: { type: "integer" } } },
+    execute: async ({ plaats, dagen }) => (await mcp.callTool(SERVER, "get_weather", { ...(plaats ? { location: plaats } : {}), ...(dagen ? { days: dagen } : {}) })).payload },
+];
+
+function prompt() {
+  const now = new Date();
+  const facts = Object.entries(state.facts).map(([k, v]) => `${k}: ${v}`).join("; ");
+  const intro = `Je bent Jarvis, de persoonlijke assistent van de gebruiker, thuis en onderweg. Spreek natuurlijk, warm en kort (een of twee zinnen), in de taal van de gebruiker (standaard Nederlands), zonder markdown of emoji's. Spreek de gebruiker af en toe aan met "${TITLE}". Na een actie bevestig je kort wat er gebeurd is.
+Je tools: apparaten bekijken en bedienen, rekenen (reken nooit uit je hoofd), taken, notities, herinneringen/timers en onthouden. Sla persoonlijke dingen die later handig zijn (namen, voorkeuren, verjaardagen) op met onthoud. Verzin nooit resultaten van tools.
+${live ? "Je bent verbonden met Jarvis thuis: de apparaten zijn echt. Gebruik google_home_opdracht voor kamers, groepen, scènes en kleuren, en weer voor het weer." : "De apparaten zijn voorbeelden (Jarvis thuis is niet verbonden), en het weer kun je nu niet opvragen."} Op het web zoeken kan in deze versie niet; zeg dat eerlijk en kort als ernaar gevraagd wordt.
+Huidige lokale tijd: ${now.toLocaleString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} (${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}).
+${facts ? "Wat je over de gebruiker weet: " + facts : "Je weet nog niets over de gebruiker."}`;
+  const turns = history.slice(-11); // oneven aantal: begint altijd met een vraag
+  return [{ role: "user", content: intro + "\n\nVraag: " + turns[0].content }, ...turns.slice(1)];
+}
+
+async function send(text) {
+  text = text.trim(); if (!text || busy) return;
+  if (!sample) { note("Praten met Jarvis is in deze weergave niet beschikbaar. De tegels en lijstjes werken wel."); return; }
+  busy = true; $("input").value = "";
+  bubble("me", text); history.push({ role: "user", content: text });
+  const row = document.createElement("div"); row.className = "row"; row.innerHTML = '<div class="bubble typing"><i></i><i></i><i></i></div>';
+  panel.appendChild(row); panel.scrollTop = panel.scrollHeight;
+  ctl = new AbortController();
+  let out = null;
+  try {
+    const { text: reply } = await sample(prompt(), {
+      tools: live ? [...TOOLS, ...LIVE_TOOLS] : TOOLS, modelTier: "quick", cache: false, signal: ctl.signal,
+      onText: ({ text: t }) => { if (!out) { row.remove(); out = bubble("", ""); } out.textContent = t; panel.scrollTop = panel.scrollHeight; },
+    });
+    if (!out) { row.remove(); out = bubble("", reply); }
+    history.push({ role: "assistant", content: reply || "Klaar." });
+    if (viaVoice && tts && reply) tts.speak(reply.slice(0, 2000)).catch(() => {});
+  } catch (e) {
+    row.remove(); history.pop();
+    const msg = { not_granted: "Je hebt Jarvis geen toestemming gegeven om Claude te gebruiken. De tegels en lijstjes werken wel.",
+                  rate_limited: "Even te veel vragen tegelijk. Probeer het zo nog eens.", aborted: "Gestopt." }[e.code] || "Dat lukte niet. Probeer het nog eens.";
+    if (e.text && out) out.textContent = e.text; else note(msg);
+  }
+  busy = false; viaVoice = false;
+}
+$("form").onsubmit = e => { e.preventDefault(); send($("input").value); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeSheet(); panel.hidden = true; } });
+document.addEventListener("click", e => { if (!e.target.closest(".panel, #form, .sheet-bg, .tile, .card")) panel.hidden = true; });
+
+/* ---------- microfoon ---------- */
+let dict = null, listening = false, spoken = "";
+function setListening(on) { listening = on; $("form").classList.toggle("listening", on); $("mic").classList.toggle("on", on); $("input").placeholder = on ? "Ik luister…" : "Vraag Jarvis iets…"; }
+$("mic").onclick = () => {
+  if (listening) { dict.stop().catch(() => {}); return; }
+  spoken = ""; $("input").value = "";
+  dict.start().catch(e => { setListening(false); if (e && e.code === "not_granted") { $("mic").hidden = true; toast("Microfoon niet toegestaan. Je kunt typen."); } });
+};
+
+/* ---------- opstarten ---------- */
+(async () => {
+  loadLocal(); route(); render();
+  setInterval(() => { header(); checkReminders(); if (!$("viewLists").hidden) renderLists(); }, 15000);
+  if (!window.claude) return;
+  const [s, d, t, db, user, m, perms] = await Promise.all(["sample", "dictation", "tts", "db", "user", "mcp", "permissions"].map(n => claude.use(n)));
+  sample = s; dict = d; tts = t; mcp = m;
+  if (mcp) {
+    (async () => {
+      let listed = null;
+      try { listed = (await mcp.listTools(SERVER)).servers.find(x => x.server === SERVER); } catch (e) {}
+      if (!listed || !listed.tools.length) { banner("setup"); return; }
+      if (listed.authStatus === "needs_reauth") { banner("demo", mcpMessage({ code: "needs_reauth" })); return; }
+      const st = perms ? await perms.state("mcp:" + SERVER).catch(() => "unavailable") : "prompt";
+      if (st === "granted") connect(); else if (st === "denied") banner("demo", mcpMessage({ code: "not_in_manifest" })); else banner("ask");
+    })();
+  } else banner("demo", "Om je echte Google Home te bedienen, open je deze pagina op claude.ai.");
+  if (!sample) note("Praten met Jarvis is in deze weergave niet beschikbaar. De tegels en lijstjes werken wel.");
+  if (dict) {
+    $("mic").hidden = false;
+    dict.onPartial(({ text }) => { $("input").value = (spoken + " " + text).trim(); });
+    dict.onFinal(({ text }) => { spoken = (spoken + " " + text).trim(); $("input").value = spoken; });
+    dict.onState(({ state: st }) => {
+      if (st === "listening") setListening(true);
+      else if (st === "idle") { setListening(false); if (spoken) { viaVoice = true; send(spoken); spoken = ""; } }
+    });
+  }
+  const id = user ? await user.id() : null;
+  if (db && id) {
+    docRef = db.doc(`data/users/${id}/jarvis`);
+    setSync();
+    const timer = setTimeout(() => setSync("Je account is nog niet bereikbaar; wijzigingen staan voorlopig in deze browser."), 10000);
+    let first = true;
+    docRef.onSnapshot(snap => {
+      if (!snap.metadata.fromCache) { clearTimeout(timer); synced = true; }
+      if (snap.exists) { state = { ...blank(), ...snap.data() }; saveLocal(); render(); checkReminders(); }
+      else if (first && !snap.metadata.fromCache) persist(); // eerste keer: lokale gegevens meenemen naar je account
+      if (!snap.metadata.fromCache) first = false;
+      setSync();
+    }, () => { clearTimeout(timer); docRef = null; setSync("Synchroniseren lukt niet; je gegevens staan in deze browser."); });
+  } else setSync();
+})();
+</script>
