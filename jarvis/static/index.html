@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J.A.R.V.I.S.</title>
+<style>
+  :root {
+    --bg: #04090f; --panel: rgba(8, 24, 38, .72); --line: rgba(0, 200, 255, .25);
+    --cyan: #33d6ff; --cyan-dim: #1a7fa0; --text: #d8f6ff; --muted: #6f9aab; --warn: #ffb347;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 20%, #0b2233 0%, var(--bg) 60%);
+    color: var(--text); font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; overflow: hidden;
+  }
+  body::before {  /* subtiel raster */
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px; opacity: .12;
+  }
+  header { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; letter-spacing: .25em; font-size: 12px; color: var(--muted); }
+  header b { color: var(--cyan); }
+  #clock { font-variant-numeric: tabular-nums; }
+
+  .reactor { position: relative; width: 190px; height: 190px; margin: 6px 0 12px; flex: none; cursor: pointer; }
+  .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--cyan-dim); }
+  .ring.r1 { border-style: dashed; animation: spin 18s linear infinite; }
+  .ring.r2 { inset: 18px; border-color: var(--cyan); border-left-color: transparent; border-right-color: transparent; animation: spin 6s linear infinite reverse; }
+  .ring.r3 { inset: 38px; border-width: 6px; border-color: rgba(51,214,255,.35); }
+  .core { position: absolute; inset: 62px; border-radius: 50%; background: radial-gradient(circle, #e9fdff 0%, var(--cyan) 35%, rgba(51,214,255,.05) 72%); box-shadow: 0 0 40px var(--cyan); transition: transform .2s, box-shadow .2s; }
+  .reactor.listening .core { animation: pulse 1s ease-in-out infinite; }
+  .reactor.thinking .r2 { animation-duration: 1s; }
+  .reactor.speaking .core { box-shadow: 0 0 80px var(--cyan); transform: scale(1.12); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 50% { transform: scale(1.2); box-shadow: 0 0 90px var(--cyan); } }
+  #state { text-align: center; color: var(--muted); font-size: 12px; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 10px; }
+
+  main { width: 100%; max-width: 900px; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 16px 16px; }
+  #log { flex: 1; overflow-y: auto; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); backdrop-filter: blur(6px); }
+  .msg { margin: 8px 0; max-width: 85%; padding: 9px 13px; border-radius: 10px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { margin-left: auto; background: rgba(51,214,255,.12); border: 1px solid rgba(51,214,255,.3); }
+  .msg.jarvis { background: rgba(255,255,255,.04); border-left: 3px solid var(--cyan); }
+  .msg.system { margin: 6px auto; color: var(--warn); font-size: 13px; text-align: center; }
+  .tools { display: block; color: var(--muted); font-size: 11px; letter-spacing: .1em; margin-top: 4px; }
+
+  form { display: flex; gap: 8px; margin-top: 10px; }
+  input[type=text] { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35); color: var(--text); font: inherit; outline: none; }
+  input[type=text]:focus { border-color: var(--cyan); }
+  button { padding: 0 16px; border-radius: 10px; border: 1px solid var(--cyan-dim); background: rgba(51,214,255,.1); color: var(--cyan); font: inherit; cursor: pointer; }
+  button:hover { background: rgba(51,214,255,.2); }
+  button.on { background: var(--cyan); color: var(--bg); }
+  .opts { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+  .opts label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  @media (max-width: 560px) { .reactor { width: 130px; height: 130px; } .ring.r2 { inset: 12px; } .ring.r3 { inset: 26px; } .core { inset: 42px; } .msg { max-width: 95%; } }
+</style>
+</head>
+<body>
+<header><span><b>J.A.R.V.I.S.</b> &nbsp;ONLINE</span><span id="clock"></span></header>
+<div class="reactor" id="reactor" title="Klik om te praten">
+  <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="core"></div>
+</div>
+<div id="state">Stand-by</div>
+<main>
+  <div id="log" aria-live="polite"></div>
+  <form id="form">
+    <input id="input" type="text" placeholder="Typ een opdracht, of klik op de reactor om te praten…" autocomplete="off">
+    <button type="button" id="mic" title="Microfoon">🎙</button>
+    <button type="submit">Verstuur</button>
+  </form>
+  <div class="opts">
+    <label><input type="checkbox" id="speak" checked> Antwoorden uitspreken</label>
+    <label><input type="checkbox" id="wake"> Altijd luisteren (wekwoord “Jarvis”)</label>
+    <button type="button" id="reset" style="padding:2px 10px;font-size:12px">Gesprek wissen</button>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const log = $("log"), input = $("input"), reactor = $("reactor"), stateEl = $("state");
+let title = "meester", lang = "nl-NL", busy = false;
+const LOCALES = { nl: "nl-NL", en: "en-GB", de: "de-DE", fr: "fr-FR" };
+
+function setState(s, label) { reactor.className = "reactor " + s; stateEl.textContent = label; }
+function add(role, text, tools) {
+  const d = document.createElement("div");
+  d.className = "msg " + role; d.textContent = text;
+  if (tools && tools.length) { const t = document.createElement("span"); t.className = "tools"; t.textContent = "⚙ " + tools.join(" · "); d.appendChild(t); }
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+setInterval(() => $("clock").textContent = new Date().toLocaleString("nl-NL", { weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" }), 1000);
+
+// --- spraakuitvoer ---
+function speak(text) {
+  if (!$("speak").checked || !("speechSynthesis" in window)) return Promise.resolve();
+  return new Promise(res => {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = 1.05; u.pitch = .9;
+    const v = speechSynthesis.getVoices().find(v => v.lang === lang && /male|daniel|xander|frank/i.test(v.name))
+           || speechSynthesis.getVoices().find(v => v.lang.startsWith(lang.slice(0, 2)));
+    if (v) u.voice = v;
+    u.onstart = () => setState("speaking", "Spreekt");
+    u.onend = u.onerror = () => { setState("", "Stand-by"); res(); };
+    speechSynthesis.speak(u);
+  });
+}
+
+// --- versturen ---
+async function send(text) {
+  text = text.trim(); if (!text || busy) return;
+  busy = true; add("user", text); input.value = ""; setState("thinking", "Denkt na");
+  try {
+    const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
+    const data = await r.json();
+    const reply = data.reply || data.error || "Geen antwoord.";
+    add("jarvis", reply, data.tools); busy = false; await speak(reply);
+  } catch (e) { add("system", "Verbinding met JARVIS verbroken."); busy = false; }
+  setState("", "Stand-by"); if ($("wake").checked) startListening();
+}
+$("form").onsubmit = e => { e.preventDefault(); send(input.value); };
+$("reset").onclick = async () => { await fetch("/api/reset", { method: "POST" }); log.innerHTML = ""; add("system", "Gesprek gewist."); };
+
+// --- spraakherkenning ---
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+function startListening() {
+  if (!SR) { add("system", "Spraakherkenning wordt niet ondersteund in deze browser (probeer Chrome of Edge)."); return; }
+  if (listening || busy) return;
+  rec = new SR(); rec.lang = lang; rec.interimResults = true; rec.continuous = $("wake").checked;
+  let finalText = "";
+  rec.onstart = () => { listening = true; $("mic").classList.add("on"); setState("listening", $("wake").checked ? "Luistert naar “Jarvis”" : "Luistert"); };
+  rec.onresult = ev => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const t = ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) {
+        if ($("wake").checked) {
+          const m = t.toLowerCase().match(/\b(jarvis|jervis|travis)\b[\s,.!]*(.*)/);
+          if (m && m[2].trim()) { rec.stop(); send(m[2]); return; }
+          if (m) { speak("Ja?"); }
+        } else finalText += t;
+      } else interim += t;
+    }
+    if (!$("wake").checked) input.value = finalText + interim;
+  };
+  rec.onerror = ev => { if (ev.error === "not-allowed") add("system", "Geen toegang tot de microfoon."); };
+  rec.onend = () => {
+    listening = false; $("mic").classList.remove("on");
+    if (!$("wake").checked && finalText.trim()) send(finalText);
+    else if ($("wake").checked && !busy) setTimeout(startListening, 300);
+    else if (!busy) setState("", "Stand-by");
+  };
+  rec.start();
+}
+function toggleMic() { if (listening) { $("wake").checked = false; rec.stop(); } else startListening(); }
+$("mic").onclick = toggleMic; reactor.onclick = toggleMic;
+$("wake").onchange = () => { if ($("wake").checked) startListening(); else if (rec) rec.stop(); };
+
+// --- status & herinneringen ---
+async function poll() {
+  try {
+    const s = await (await fetch("/api/status")).json();
+    title = s.title; lang = LOCALES[s.language] || s.language;
+    for (const r of s.reminders || []) { const t = `Herinnering, ${title}: ${r.text}`; add("system", "⏰ " + t); speak(t); }
+  } catch (e) {}
+}
+poll().then(() => add("jarvis", `Goedendag, ${title}. Alle systemen zijn operationeel. Waarmee kan ik u helpen?`));
+setInterval(poll, 15000);
+speechSynthesis && speechSynthesis.getVoices();
+</script>
+</body>
+</html>
