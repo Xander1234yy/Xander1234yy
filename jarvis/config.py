@@ -28,6 +28,9 @@ class Config:
     history_turns: int = field(default_factory=lambda: int(os.environ.get("JARVIS_HISTORY_TURNS", "20")))
     host: str = field(default_factory=lambda: os.environ.get("JARVIS_HOST", "127.0.0.1"))
     port: int = field(default_factory=lambda: int(os.environ.get("JARVIS_PORT", "8000")))
+    pin: str = field(default_factory=lambda: os.environ.get("JARVIS_PIN", ""))
+    cert_file: str = field(default_factory=lambda: os.environ.get("JARVIS_CERT", ""))
+    key_file: str = field(default_factory=lambda: os.environ.get("JARVIS_KEY", ""))
 
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir)

@@ -6,6 +6,12 @@
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" href="/icon-192.png">
 <title>Jarvis</title>
 <style>
   :root {
@@ -33,7 +39,33 @@
   .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
 
   /* kop */
-  header { padding: 28px 0 8px; }
+  header { padding: calc(20px + env(safe-area-inset-top)) 0 8px; }
+  .top { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
+  .actions { display: flex; gap: 6px; }
+  .pill { border: 0; background: rgba(142,142,147,.16); color: var(--accent); font: inherit; font-size: 14px; font-weight: 600; border-radius: 16px; padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .pill svg { width: 16px; height: 16px; }
+
+  /* inloggen */
+  .lock { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+  .lock.show { display: flex; }
+  .lock img { width: 64px; height: 64px; border-radius: 15px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .lock h2 { margin: 0; font-size: 20px; }
+  .lock p { margin: 4px 0 0; color: var(--text-2); font-size: 15px; min-height: 20px; }
+  .lock p.err { color: var(--red); }
+  .dots { display: flex; gap: 16px; margin: 22px 0 30px; }
+  .dots i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--text); transition: background .1s; }
+  .dots i.on { background: var(--text); }
+  .dots.shake { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+  .keys { display: grid; grid-template-columns: repeat(3, 76px); gap: 16px 24px; }
+  .keys button { width: 76px; height: 76px; border-radius: 50%; border: 0; background: rgba(142,142,147,.2); color: var(--text); font: inherit; font-size: 30px; font-weight: 400; cursor: pointer; transition: background .1s; }
+  .keys button:active { background: rgba(142,142,147,.45); }
+  .keys button.ghost { background: transparent; font-size: 16px; }
+  #qr { display: flex; justify-content: center; margin: 4px 0 14px; }
+  #qr img, #qr canvas { border-radius: 12px; background: #fff; padding: 10px; }
+  .steps { color: var(--text-2); font-size: 14px; padding-left: 20px; margin: 0; }
+  .steps li { margin: 4px 0; }
+  .url { text-align: center; font-weight: 600; font-size: 15px; word-break: break-all; margin-bottom: 12px; color: var(--accent); }
   .date { color: var(--text-2); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
   h1 { font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 0; }
   .chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 4px 14px; margin: 0 -4px -10px; scrollbar-width: none; }
@@ -135,7 +167,15 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="date" id="date"></div>
+    <div class="top">
+      <div class="date" id="date"></div>
+      <div class="actions">
+        <button class="pill" id="phoneBtn" type="button" aria-label="Op je telefoon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 1h8a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Zm2 18a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2Z"/></svg>Telefoon
+        </button>
+        <button class="pill" id="logoutBtn" type="button" hidden>Uitloggen</button>
+      </div>
+    </div>
     <h1 id="greet">Thuis</h1>
     <div class="chips" id="chips"></div>
   </header>
@@ -158,6 +198,17 @@
 
 <div class="sheet-bg" id="sheetbg"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
+
+<div class="lock" id="lock">
+  <img src="/icon-180.png" alt="">
+  <h2>Jarvis</h2>
+  <p id="lockMsg">Voer je pincode in</p>
+  <div class="dots" id="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="keys" id="keys">
+    <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button>
+    <button>7</button><button>8</button><button>9</button><button class="ghost" data-k="clear">Wis</button><button>0</button><button class="ghost" data-k="back">⌫</button>
+  </div>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -185,7 +236,8 @@ function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add
 
 function header() {
   const now = new Date(), h = now.getHours();
-  $("date").textContent = now.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+  const narrow = innerWidth < 430;
+  $("date").textContent = now.toLocaleDateString("nl-NL", narrow ? { weekday: "short", day: "numeric", month: "short" } : { weekday: "long", day: "numeric", month: "long" });
   const part = h < 6 ? "Goedenacht" : h < 12 ? "Goedemorgen" : h < 18 ? "Goedemiddag" : "Goedenavond";
   $("greet").textContent = title ? `${part}, ${title}` : part;
 }
@@ -236,7 +288,7 @@ function render() {
 
 async function loadDevices() {
   try {
-    const r = await fetch("/api/devices"); const data = await r.json();
+    const r = await api("/api/devices"); const data = await r.json();
     devices = data.devices || []; backends = data.backends || {}; render();
   } catch (e) {}
 }
@@ -246,7 +298,7 @@ async function control(id, action, value) {
   const tile = document.querySelector(`.tile[data-id="${CSS.escape(id)}"]`);
   if (tile) tile.classList.add("busy");
   try {
-    const r = await fetch("/api/devices/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ device: id, action, value }) });
+    const r = await api("/api/devices/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ device: id, action, value }) });
     const data = await r.json();
     if (!data.ok) toast(data.error || "Dat lukte niet.");
     else if (d && ["turn_on", "turn_off", "toggle"].includes(action)) { d.on = action === "toggle" ? !d.on : action === "turn_on"; render(); }
@@ -312,7 +364,7 @@ async function send(text, viaVoice = false) {
   const typing = document.createElement("div"); typing.className = "row"; typing.innerHTML = `<div class="bubble typing"><i></i><i></i><i></i></div>`;
   panel.appendChild(typing); panel.scrollTop = panel.scrollHeight;
   try {
-    const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
+    const r = await api("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
     const data = await r.json(); typing.remove();
     const reply = data.reply || data.error || "Er ging iets mis.";
     bubble("", reply); speak(reply);
@@ -329,6 +381,7 @@ document.addEventListener("click", e => { if (!e.target.closest(".panel, form, .
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null;
 $("mic").onclick = () => {
+  if (!window.isSecureContext) { toast("De microfoon werkt op je telefoon alleen via https. Zie de README: 'Op je telefoon'."); return; }
   if (!SR) { toast("Spraak werkt in Safari, Chrome en Edge."); return; }
   if (rec) { rec.stop(); return; }
   rec = new SR(); rec.lang = lang; rec.interimResults = true;
@@ -346,13 +399,77 @@ $("mic").onclick = () => {
 /* ---------- start ---------- */
 async function poll() {
   try {
-    const s = await (await fetch("/api/status")).json();
+    const s = await (await api("/api/status")).json();
     title = s.title; lang = LOCALES[s.language] || s.language; header();
     for (const r of s.reminders || []) { toast("Herinnering: " + r.text); lastWasVoice = true; speak("Herinnering: " + r.text); }
   } catch (e) {}
 }
-header(); poll(); loadDevices();
-setInterval(poll, 15000); setInterval(loadDevices, 20000); setInterval(header, 60000);
+/* ---------- inloggen ---------- */
+let pin = "", pinLen = 6, started = false;
+async function api(path, opts = {}) {
+  const r = await fetch(path, { credentials: "same-origin", ...opts });
+  if (r.status === 401 && !path.endsWith("/login")) { showLogin(); throw new Error("inloggen vereist"); }
+  return r;
+}
+function showLogin(msg) { pin = ""; drawDots(); $("lock").classList.add("show"); if (msg) $("lockMsg").textContent = msg; }
+function drawDots() { [...$("dots").children].forEach((d, i) => d.classList.toggle("on", i < pin.length)); }
+async function tryPin() {
+  const r = await api("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) });
+  const data = await r.json().catch(() => ({}));
+  if (r.ok) { $("lock").classList.remove("show"); $("lockMsg").className = ""; $("logoutBtn").hidden = false; start(); return; }
+  $("dots").classList.add("shake"); setTimeout(() => $("dots").classList.remove("shake"), 400);
+  $("lockMsg").textContent = data.error || "Onjuiste pincode"; $("lockMsg").className = "err";
+  if (navigator.vibrate) navigator.vibrate(200);
+  pin = ""; setTimeout(drawDots, 350);
+}
+function press(k) {
+  if (k === "back") pin = pin.slice(0, -1); else if (k === "clear") pin = ""; else if (pin.length < pinLen) pin += k;
+  drawDots(); if (pin.length === pinLen) tryPin();
+}
+$("keys").addEventListener("click", e => { const b = e.target.closest("button"); if (b) press(b.dataset.k || b.textContent); });
+document.addEventListener("keydown", e => {
+  if (!$("lock").classList.contains("show")) return;
+  if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === "Backspace") press("back");
+});
+$("logoutBtn").onclick = async () => { await api("/api/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); location.reload(); };
+
+/* ---------- op je telefoon ---------- */
+$("phoneBtn").onclick = async () => {
+  let info = {}; try { info = await (await api("/api/phone")).json(); } catch (e) {}
+  const url = info.url;
+  $("sheet").innerHTML = `<div class="handle"></div><h3>Jarvis op je telefoon</h3><div class="sub">Scan de code met de camera van je telefoon</div>
+    ${url ? `<div id="qr"></div><div class="url">${esc(url)}</div>
+      <ol class="steps"><li>Zorg dat je telefoon op hetzelfde wifi zit.</li><li>Open de link en voer je pincode in.</li>
+      <li>iPhone: tik op <b>Deel → Zet op beginscherm</b>. Android: menu <b>⋮ → App installeren</b>.</li>
+      ${info.https ? "" : "<li>Wil je ook praten via de telefoon? Gebruik dan https (zie README).</li>"}</ol>`
+    : `<ol class="steps"><li>Stop Jarvis en start opnieuw met <b>python -m jarvis web --telefoon</b>.</li><li>Kom dan hier terug voor de QR-code.</li><li>Buiten de deur? Gebruik Tailscale (zie README).</li></ol>`}`;
+  $("sheet").dataset.id = ""; $("sheetbg").classList.add("show");
+  if (url) {
+    if (!window.QRCode) await new Promise((ok, fail) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); }).catch(() => {});
+    if (window.QRCode) new QRCode($("qr"), { text: url, width: 180, height: 180 });
+  }
+};
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+const isPhone = matchMedia("(pointer: coarse)").matches || (navigator.maxTouchPoints > 0 && innerWidth < 820);
+if (standalone || isPhone) $("phoneBtn").hidden = true;
+
+/* ---------- opstarten ---------- */
+function start() {
+  if (started) return; started = true;
+  header(); poll(); loadDevices();
+  setInterval(poll, 15000); setInterval(loadDevices, 20000); setInterval(header, 60000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && started) { loadDevices(); poll(); } });
+(async () => {
+  header();
+  try {
+    const s = await (await fetch("/api/session", { credentials: "same-origin" })).json();
+    $("logoutBtn").hidden = !s.auth;
+    if (s.pin_length) { pinLen = s.pin_length; $("dots").innerHTML = "<i></i>".repeat(pinLen); }
+    if (s.auth && !s.ok) showLogin(); else start();
+  } catch (e) { toast("Jarvis is niet bereikbaar. Draait hij nog op je computer?"); }
+})();
+if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("/sw.js").catch(() => {});
 if ("speechSynthesis" in window) speechSynthesis.getVoices();
 </script>
 </body>

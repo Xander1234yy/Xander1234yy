@@ -70,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("client_secret", nargs="?", help="koppel-google: pad naar client_secret.json")
     parser.add_argument("--no-wake-word", action="store_true", help="spraakmodus: luister zonder 'Jarvis'")
     parser.add_argument("--port", type=int, help="poort voor de webmodus")
+    parser.add_argument("--telefoon", action="store_true",
+                        help="webmodus: ook bereikbaar vanaf je telefoon op hetzelfde wifi (met pincode)")
+    parser.add_argument("--pin", help="webmodus: eigen pincode (standaard wordt er een gemaakt)")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-q", "--query", help="stel één vraag en sluit af")
     args = parser.parse_args(argv)
@@ -79,6 +82,10 @@ def main(argv: list[str] | None = None) -> int:
     config = Config()
     if args.port:
         config.port = args.port
+    if args.telefoon:
+        config.host = "0.0.0.0"
+    if args.pin:
+        config.pin = args.pin
 
     if args.mode == "koppel-google":
         from .home.assistant import GoogleAssistant

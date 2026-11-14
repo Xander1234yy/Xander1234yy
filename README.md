@@ -22,10 +22,48 @@ Je persoonlijke assistent voor thuis. Je typt of praat gewoon, en Jarvis regelt 
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements-home.txt                   # inclusief Google Home-ondersteuning
 export ANTHROPIC_API_KEY=sk-ant-...                    # Windows: set ANTHROPIC_API_KEY=...
-python -m jarvis web                                   # open http://127.0.0.1:8000
+python -m jarvis web --telefoon                         # op je computer én telefoon
 ```
 
-Een API-sleutel maak je aan op <https://console.anthropic.com>. Tip: open de pagina op je iPhone en kies *Deel → Zet op beginscherm*, dan werkt Jarvis als een app. Je telefoon kan alleen bij Jarvis als je `JARVIS_HOST=0.0.0.0` instelt. Doe dat alleen op je eigen thuisnetwerk.
+Een API-sleutel maak je aan op <https://console.anthropic.com>.
+
+## Op je telefoon
+
+<p><img src="docs/phone.png" alt="Jarvis op de iPhone: pincode, woning en details"></p>
+
+### Thuis, op hetzelfde wifi
+
+```bash
+python -m jarvis web --telefoon
+```
+
+Jarvis laat het adres en een pincode zien, bijvoorbeeld `http://192.168.1.23:8000` met code `412168`. Je kunt ook op de computer op **Telefoon** klikken en de QR-code scannen.
+
+1. Open het adres op je telefoon en voer de pincode in. Je blijft een jaar ingelogd.
+2. **iPhone:** tik in Safari op *Deel* en dan *Zet op beginscherm*. **Android:** tik in Chrome op het menu ⋮ en dan *App installeren*.
+3. Jarvis staat nu als app op je beginscherm, schermvullend, met een eigen icoon.
+
+Wil je zelf een code kiezen? Gebruik `--pin 123456` (4 tot 8 cijfers). Na 5 foute pogingen moet je 5 minuten wachten.
+
+> **Microfoon:** telefoons staan de microfoon alleen toe via een beveiligde verbinding (https). Thuis via `http://` kun je tegels bedienen en typen; om te praten gebruik je de optie hieronder.
+
+### Overal, ook buiten de deur, met microfoon (aanbevolen)
+
+Met [Tailscale](https://tailscale.com) (gratis voor persoonlijk gebruik) krijgt Jarvis een privé https-adres dat alleen jouw apparaten kunnen openen. Dat werkt via 4G, op je werk of op vakantie.
+
+1. Installeer Tailscale op je computer en op je telefoon, en log op beide in met hetzelfde account.
+2. Start Jarvis op je computer en deel hem via Tailscale:
+   ```bash
+   python -m jarvis web --pin 123456
+   tailscale serve --bg 8000
+   ```
+3. Tailscale toont een adres zoals `https://mijn-pc.tailnet-1234.ts.net`. Open dat op je telefoon en zet het op je beginscherm. De microfoon werkt nu ook.
+
+### Jarvis altijd aan laten staan
+
+Je telefoon bedient Jarvis via de computer waar hij op draait. Die moet dus aan staan. Een Raspberry Pi of oude laptop is ideaal: gebruik `deploy/jarvis.service` om Jarvis automatisch te laten starten (de stappen staan in het bestand).
+
+Heb je zelf een certificaat (bijvoorbeeld via `tailscale cert`)? Dan kan Jarvis ook zelf https serveren met `JARVIS_CERT=cert.pem JARVIS_KEY=key.pem`.
 
 ## Google Home koppelen
 
@@ -89,7 +127,9 @@ Voor de spraakmodus in de terminal: `pip install -r requirements-voice.txt` (mac
 | `JARVIS_CAST` | `1` | Speakers en Chromecasts automatisch zoeken |
 | `JARVIS_WEB_SEARCH` | `1` | Webzoeken aan of uit |
 | `JARVIS_ALLOW_SHELL` | `0` | Shell-commando's toestaan (met bevestiging in de terminal) |
-| `JARVIS_HOST` / `JARVIS_PORT` | `127.0.0.1` / `8000` | Adres van de web-app |
+| `JARVIS_HOST` / `JARVIS_PORT` | `127.0.0.1` / `8000` | Adres van de web-app (`--telefoon` zet de host op `0.0.0.0`) |
+| `JARVIS_PIN` | automatisch | Pincode voor toegang vanaf andere apparaten (4 tot 8 cijfers) |
+| `JARVIS_CERT` / `JARVIS_KEY` | – | Eigen https-certificaat |
 
 ## Voor ontwikkelaars
 
@@ -102,14 +142,16 @@ jarvis/
 │   ├── homeassistant.py #   Home Assistant REST API
 │   └── cast.py          #   Google Cast (Nest-speakers, Chromecast)
 ├── memory.py            # geheugen, notities, taken en herinneringen
-├── web.py               # webserver en API
+├── web.py               # webserver en API (http/https)
+├── auth.py              # pincode en sessies
 ├── voice.py             # spraakmodus
-└── static/index.html    # de app
+└── static/              # de app (index.html, manifest, service worker, iconen)
 ```
 
 Tests: `pip install pytest && python -m pytest`
 
 ## Veiligheid
 
-- De web-app heeft geen login. Zet hem nooit open op internet.
+- Zodra Jarvis bereikbaar is vanaf andere apparaten, is een pincode verplicht. Sessies zijn `HttpOnly`/`SameSite=Strict`-cookies, en na 5 foute pogingen volgt een blokkade.
+- Zet Jarvis niet rechtstreeks open op internet (geen port forwarding). Gebruik Tailscale voor toegang buiten de deur.
 - De Google-token geeft toegang tot je Assistent. Hij staat alleen lokaal, met rechten `600`.

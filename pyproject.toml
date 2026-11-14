@@ -21,4 +21,4 @@ jarvis = "jarvis.__main__:main"
 packages = ["jarvis", "jarvis.home"]
 
 [tool.setuptools.package-data]
-jarvis = ["static/*.html"]
+jarvis = ["static/*"]
