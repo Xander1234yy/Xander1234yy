@@ -1,0 +1,701 @@
+<title>Dagcoach</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one phone-first column — sticky date bar, score + coach up top, 14-day trend, then log cards in an auto-fit grid. */
+:root {
+  --bg: #F2F5F7; --surface: #FFFFFF; --sunk: #E8EDF1; --ink: #13212A; --muted: #586A75; --line: #D8E0E6;
+  --accent: #0A6B75; --accent-ink: #FFFFFF; --accent-soft: #D3EBED;
+  --good: #23824F; --warn: #B87710; --bad: #BE3B34; --heart: #C9413B;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0C1317; --surface: #141F26; --sunk: #0F181E; --ink: #E4EDF1; --muted: #8DA0AB; --line: #25333C;
+  --accent: #4DBDC6; --accent-ink: #062327; --accent-soft: #15383C;
+  --good: #58C186; --warn: #E2A640; --bad: #EE6A61; --heart: #F06861; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0C1317; --surface: #141F26; --sunk: #0F181E; --ink: #E4EDF1; --muted: #8DA0AB; --line: #25333C;
+  --accent: #4DBDC6; --accent-ink: #062327; --accent-soft: #15383C;
+  --good: #58C186; --warn: #E2A640; --bad: #EE6A61; --heart: #F06861; color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45 }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+button, input, select { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance }
+
+/* Top bar */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line) }
+.top .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px }
+.brand { font-family: var(--f-display); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; margin-right: auto; display: flex; align-items: center; gap: 8px }
+.brand svg { color: var(--accent) }
+.datenav { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px }
+.datenav button { border: 0; background: none; border-radius: 999px; min-width: 34px; height: 32px; padding: 0 10px }
+.datenav button:hover { background: var(--sunk) }
+#dateLabel { font-weight: 600; min-width: 112px; text-align: center; white-space: nowrap }
+@media (max-width: 440px) { .brand-word { display: none } #dateLabel { min-width: 0; font-size: 14px } }
+input[data-text] { font-family: var(--f-body) !important }
+.iconbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; width: 40px; height: 40px; display: grid; place-items: center }
+.iconbtn:hover { border-color: var(--accent) }
+
+.banner { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); font-size: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap }
+.banner button { margin-left: auto }
+
+main.wrap { display: grid; gap: 20px; padding-block: 18px 48px }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px }
+@media (max-width: 760px) { .hero { grid-template-columns: minmax(0, 1fr) } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px }
+.scorebox { display: grid; gap: 14px; justify-items: center }
+.ring { position: relative; width: 190px; max-width: 100%; aspect-ratio: 1 }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg) }
+.ring .track { stroke: var(--sunk) }
+.ring .arc { transition: stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1), stroke .3s }
+.ring .mid { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; text-align: center }
+.ring .big { font-family: var(--f-display); font-weight: 700; font-size: 56px; line-height: 1; letter-spacing: -0.03em }
+.ring .of { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; letter-spacing: .02em }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor }
+.s-good { color: var(--good) } .s-ok { color: var(--accent) } .s-warn { color: var(--warn) } .s-bad { color: var(--bad) } .s-none { color: var(--muted) }
+.pill.s-good, .pill.s-ok, .pill.s-warn, .pill.s-bad, .pill.s-none { background: color-mix(in srgb, currentColor 13%, transparent) }
+.parts { width: 100%; display: grid; gap: 7px; margin: 0; padding: 0; list-style: none }
+.parts li { display: grid; grid-template-columns: 96px minmax(0, 1fr) 34px; align-items: center; gap: 8px; font-size: 13px }
+.parts .bar { height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden }
+.parts .bar i { display: block; height: 100%; border-radius: 3px; background: currentColor; transition: width .6s }
+.parts .v { text-align: right; color: var(--muted); font-size: 12px }
+
+.coach { display: grid; gap: 14px; align-content: start }
+.coach-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.coach-head h2 { font-size: 22px; margin-right: auto }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 14px; font-weight: 600 }
+.btn:hover { border-color: var(--accent) }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+.btn.primary:hover { filter: brightness(1.08) }
+.btn:disabled { opacity: .55; cursor: default }
+.btn.small { padding: 5px 10px; font-size: 13px; border-radius: 8px }
+.headline { font-family: var(--f-display); font-size: 24px; font-weight: 500; line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; max-width: 34ch }
+.coach-muted { color: var(--muted); max-width: 62ch }
+.actions { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px }
+.actions li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; background: var(--sunk); border-radius: 10px }
+.actions .n { font-family: var(--f-data); font-size: 12px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink) }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px }
+.notes div { font-size: 14px; min-width: 0 }
+.notes h4 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted) }
+.notes ul { margin: 0; padding-left: 18px }
+.stamp { font-size: 12px; color: var(--muted) }
+
+/* Trend */
+.trend-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px }
+@media (max-width: 760px) { .trend-grid { grid-template-columns: minmax(0, 1fr) } }
+.sec-title { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px }
+.sec-title h2 { font-size: 18px }
+.sec-title span { color: var(--muted); font-size: 13px }
+.chart svg { width: 100%; height: auto; display: block }
+.chart .grid { stroke: var(--line) }
+.chart .lbl { fill: var(--muted); font: 11px var(--f-body) }
+.chart .ln { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round }
+.chart .area { fill: var(--accent); opacity: .12 }
+.chart .dot { fill: var(--surface); stroke: var(--accent); stroke-width: 2 }
+.chart .dot.cur { fill: var(--accent) }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.stat { background: var(--sunk); border-radius: 10px; padding: 12px; min-width: 0 }
+.stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted) }
+.stat .v { font-family: var(--f-data); font-size: 20px; margin-top: 2px; font-variant-numeric: tabular-nums }
+.stat .v small { font-size: 12px; color: var(--muted); margin-left: 2px }
+
+/* Log cards */
+.log { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; align-items: start }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; min-width: 0 }
+.card-h { display: flex; align-items: center; gap: 8px }
+.card-h h3 { font-size: 17px; margin-right: auto }
+.card-h .ico { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent) }
+.card.heart .card-h .ico { background: color-mix(in srgb, var(--heart) 15%, transparent); color: var(--heart) }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.f { display: grid; gap: 4px; min-width: 0 }
+.f.full { grid-column: 1 / -1 }
+.f > label, .f > .lab { font-size: 12px; color: var(--muted); font-weight: 500 }
+.inp { position: relative; display: flex; align-items: center }
+.inp input, .inp select, .f > input, .f > select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 8px 10px; font-family: var(--f-data); font-size: 15px }
+.f > select, .inp select { font-family: var(--f-body) }
+.inp input:focus, .f > input:focus, .f > select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft) }
+.inp .u { position: absolute; right: 10px; font-size: 12px; color: var(--muted); pointer-events: none }
+.inp input { padding-right: 42px }
+.seg { display: flex; gap: 4px }
+.seg button { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 0; font-family: var(--f-data); font-size: 14px }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+.derived { font-size: 13px; color: var(--muted) }
+.derived b { color: var(--ink); font-family: var(--f-data); font-weight: 500 }
+.quick { display: flex; flex-wrap: wrap; gap: 6px }
+.chk { display: flex; flex-wrap: wrap; gap: 6px }
+.chk label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; cursor: pointer; background: var(--bg) }
+.chk input { accent-color: var(--accent); margin: 0 }
+.chk label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft) }
+.biz { display: grid; gap: 8px; padding: 10px; background: var(--sunk); border-radius: 10px }
+.biz-name { font-weight: 600; font-size: 14px }
+.biz .fields { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+.empty-note { font-size: 13px; color: var(--muted) }
+.linkbtn { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; text-decoration: underline; text-underline-offset: 2px }
+
+/* Settings sheet */
+.sheet-bg { position: fixed; inset: 0; background: rgba(8, 16, 20, .45); z-index: 20; display: grid; place-items: end center }
+@media (min-width: 700px) { .sheet-bg { place-items: center } }
+.sheet { background: var(--surface); width: min(640px, 100%); max-height: 88vh; overflow: auto; border-radius: 18px 18px 0 0; padding: 20px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display: grid; gap: 18px }
+@media (min-width: 700px) { .sheet { border-radius: 18px } }
+.sheet-h { display: flex; align-items: center }
+.sheet-h h2 { font-size: 22px; margin-right: auto }
+.sheet h3 { font-size: 15px; margin-bottom: 8px }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px }
+.chips span { display: inline-flex; align-items: center; gap: 4px; background: var(--sunk); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 14px }
+.chips button { border: 0; background: none; width: 22px; height: 22px; border-radius: 50%; color: var(--muted) }
+.chips button:hover { background: var(--line); color: var(--ink) }
+.addrow { display: flex; gap: 8px }
+.addrow input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 9px; padding: 8px 10px }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 999px; font-size: 13px; z-index: 30 }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>
+      <span class="brand-word">Dagcoach</span>
+    </div>
+    <nav class="datenav" aria-label="Dag kiezen">
+      <button id="prevDay" aria-label="Vorige dag">‹</button>
+      <span id="dateLabel">Vandaag</span>
+      <button id="nextDay" aria-label="Volgende dag">›</button>
+    </nav>
+    <button class="iconbtn" id="openSettings" aria-label="Doelen en instellingen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+    </button>
+  </div>
+  <div class="wrap"><div id="banner" class="banner" hidden></div></div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="panel scorebox">
+      <div class="ring" aria-live="polite">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="track" cx="60" cy="60" r="52" fill="none" stroke-width="10"/>
+          <circle class="arc" id="arc" cx="60" cy="60" r="52" fill="none" stroke-width="10" stroke-linecap="round" stroke="currentColor" stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+        </svg>
+        <div class="mid">
+          <div class="big num" id="scoreBig">–</div>
+          <div class="of">dagscore</div>
+        </div>
+      </div>
+      <span class="pill s-none" id="scorePill">Nog geen data</span>
+      <ul class="parts" id="parts"></ul>
+    </div>
+
+    <div class="panel coach">
+      <div class="coach-head">
+        <h2>Coach</h2>
+        <span class="pill s-none" id="aiPill" hidden></span>
+        <button class="btn primary" id="askCoach">Vraag de coach</button>
+      </div>
+      <div id="coachBody">
+        <p class="coach-muted">Vul je dag in en vraag de coach om advies. De coach leest je data van vandaag en de afgelopen week en geeft je een score en de acties die vandaag het meeste opleveren.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="trend-grid">
+    <div class="panel chart">
+      <div class="sec-title"><h2>Laatste 14 dagen</h2><span>dagscore</span></div>
+      <div id="chart"></div>
+    </div>
+    <div class="panel">
+      <div class="sec-title"><h2>Deze week</h2><span>7 dagen t/m geselecteerde dag</span></div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+
+  <section class="log" id="log"></section>
+</main>
+
+<div class="sheet-bg" id="sheetBg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-h"><h2 id="sheetTitle">Doelen</h2><button class="iconbtn" id="closeSettings" aria-label="Sluiten">✕</button></div>
+    <div class="fields" id="goalFields"></div>
+    <div>
+      <h3>Supplementen</h3>
+      <div class="chips" id="suppChips"></div>
+      <form class="addrow" id="suppAdd"><input id="suppNew" placeholder="Bijv. Zink" aria-label="Nieuw supplement"><button class="btn small" type="submit">Toevoegen</button></form>
+    </div>
+    <div>
+      <h3>Bedrijven</h3>
+      <div class="chips" id="bizChips"></div>
+      <form class="addrow" id="bizAdd"><input id="bizNew" placeholder="Naam van je bedrijf" aria-label="Nieuw bedrijf"><button class="btn small" type="submit">Toevoegen</button></form>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const num = v => (v === "" || v == null || isNaN(+v)) ? null : +v;
+const pad = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromIso = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = fromIso(s); d.setDate(d.getDate() + n); return iso(d); };
+const keyOf = s => "day-" + s;
+const clone = o => JSON.parse(JSON.stringify(o ?? {}));
+const get = (o, path) => path.split(".").reduce((a, k) => a == null ? undefined : a[k], o);
+const setPath = (o, path, v) => { const ks = path.split("."); let c = o; ks.slice(0, -1).forEach(k => { if (typeof c[k] !== "object" || c[k] === null) c[k] = {}; c = c[k]; }); if (v === null || v === "" ) delete c[ks.at(-1)]; else c[ks.at(-1)] = v; };
+const DAYS_NL = ["zo", "ma", "di", "wo", "do", "vr", "za"];
+const MONTHS_NL = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const toMin = t => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2200); }
+
+/* ---------- state ---------- */
+const DEFAULT_SETTINGS = {
+  goals: { sleep: 8, trainMin: 45, caffeine: 300, caffeineCutoff: "14:00", protein: 160, kcal: 2600, water: 3, steps: 10000, budget: 50, bizHours: 4 },
+  supplements: ["Creatine", "Vitamine D", "Magnesium", "Omega-3"],
+  businesses: [{ id: "b1", name: "Mijn bedrijf" }]
+};
+const S = {
+  mode: "loading",   // loading | db | local | demo
+  date: iso(new Date()),
+  days: {},          // key -> day object
+  settings: clone(DEFAULT_SETTINGS),
+  db: null, uid: null, sample: null,
+  realBackup: null
+};
+const editedAt = {};
+
+/* ---------- scoring ---------- */
+const PARTS = [
+  ["sleep", "Slaap", 20], ["train", "Training", 15], ["stim", "Stimulanten", 10], ["food", "Voeding", 15],
+  ["money", "Financiën", 10], ["supps", "Supplementen", 5], ["health", "Gezondheid", 10], ["heart", "Hart", 10], ["biz", "Business", 5]
+];
+function sleepHours(d) {
+  const b = toMin(d?.sleep?.bed), w = toMin(d?.sleep?.wake);
+  if (b == null || w == null) return null;
+  return Math.round(((w - b + 1440) % 1440) / 6) / 10;
+}
+function baseline(date, path) {
+  const vals = [];
+  for (let i = 1; i <= 14; i++) { const v = num(get(S.days[keyOf(addDays(date, -i))], path)); if (v != null) vals.push(v); }
+  return vals.length >= 3 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
+function avg(arr) { const a = arr.filter(v => v != null && !isNaN(v)); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; }
+
+function score(date) {
+  const d = S.days[keyOf(date)]; const g = S.settings.goals;
+  const p = {};
+  if (!d) return { total: null, parts: p };
+  const h = sleepHours(d);
+  if (h != null) { const s1 = clamp(1 - Math.abs(h - g.sleep) / 3); const q = num(d.sleep?.quality); p.sleep = q ? s1 * .6 + q / 5 * .4 : s1; }
+  else if (num(d.sleep?.quality)) p.sleep = num(d.sleep.quality) / 5;
+  const tt = d.train?.type, tm = num(d.train?.minutes), rpe = num(d.train?.rpe);
+  if (tt === "Rust") p.train = .75; else if (tm != null) p.train = clamp(tm / g.trainMin) * (rpe ? .8 + .2 * clamp(rpe / 7) : 1);
+  const caf = num(d.stim?.caffeine), alc = num(d.stim?.alcohol), nic = num(d.stim?.nicotine), last = d.stim?.last;
+  if (caf != null || alc != null || nic != null || last) {
+    let v = 1;
+    if (caf != null && caf > g.caffeine) v -= clamp((caf - g.caffeine) / g.caffeine) * .6;
+    if (last && toMin(last) > toMin(g.caffeineCutoff)) v -= .2;
+    if (alc) v -= .15 * alc;
+    if (nic) v -= .1 * nic;
+    p.stim = clamp(v);
+  }
+  const food = avg([
+    num(d.food?.protein) != null ? clamp(d.food.protein / g.protein) : null,
+    num(d.food?.kcal) != null ? 1 - clamp(Math.abs(d.food.kcal - g.kcal) / (g.kcal * .4)) : null,
+    num(d.food?.water) != null ? clamp(d.food.water / g.water) : null
+  ]); if (food != null) p.food = food;
+  const sp = num(d.money?.spent); if (sp != null) p.money = sp <= g.budget ? 1 : clamp(g.budget / sp);
+  if (d.supps && S.settings.supplements.length) p.supps = S.settings.supplements.filter(s => d.supps[s]).length / S.settings.supplements.length;
+  const hl = avg([
+    num(d.health?.mood) != null ? d.health.mood / 5 : null,
+    num(d.health?.energy) != null ? d.health.energy / 5 : null,
+    num(d.health?.stress) != null ? (6 - d.health.stress) / 5 : null,
+    num(d.health?.steps) != null ? clamp(d.health.steps / g.steps) : null
+  ]); if (hl != null) p.health = hl;
+  const hrv = num(d.heart?.hrv), rhr = num(d.heart?.rhr);
+  const bh = baseline(date, "heart.hrv"), br = baseline(date, "heart.rhr");
+  const ht = avg([
+    hrv != null ? (bh ? clamp((hrv / bh - .7) / .4) : clamp((hrv - 20) / 60)) : null,
+    rhr != null ? (br ? clamp((br / rhr - .9) / .15) : clamp((80 - rhr) / 30)) : null
+  ]); if (ht != null) p.heart = ht;
+  const bh2 = Object.values(d.biz || {}).reduce((a, b) => a + (num(b?.hours) || 0), 0);
+  if (d.biz && Object.keys(d.biz).length) p.biz = clamp(bh2 / g.bizHours);
+  let sw = 0, sv = 0;
+  PARTS.forEach(([k, , w]) => { if (p[k] != null) { sw += w; sv += p[k] * w; } });
+  return { total: sw ? Math.round(100 * sv / sw) : null, parts: p };
+}
+const band = s => s == null ? "none" : s >= 80 ? "good" : s >= 62 ? "ok" : s >= 45 ? "warn" : "bad";
+const bandLabel = { good: "Topdag", ok: "Goed op koers", warn: "Kan beter", bad: "Herstel nodig", none: "Nog geen data" };
+
+/* ---------- log card definitions ---------- */
+const I = {
+  sleep: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/>',
+  train: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
+  stim: '<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3M12 3v3"/>',
+  food: '<path d="M12 21c-4 0-7-3-7-8 0-4 3-6 5-6 1 0 1.5.5 2 .5s1-.5 2-.5c2 0 5 2 5 6 0 5-3 8-7 8Z"/><path d="M12 7c0-2 1-4 3-4"/>',
+  money: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+  supps: '<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-35 12 12)"/><path d="m9.5 8.5 5 7"/>',
+  health: '<path d="M12 3v18M3 12h18"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/>',
+  biz: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>'
+};
+const field = (path, label, unit, attrs = "") => `<div class="f"><label for="i-${path}">${label}</label><div class="inp"><input id="i-${path}" data-path="${path}" inputmode="decimal" ${attrs}>${unit ? `<span class="u">${unit}</span>` : ""}</div></div>`;
+const timeF = (path, label) => `<div class="f"><label for="i-${path}">${label}</label><input type="time" id="i-${path}" data-path="${path}"></div>`;
+const seg = (path, label, n, full = true) => `<div class="f ${full ? "full" : ""}"><span class="lab">${label}</span><div class="seg" role="group" aria-label="${label}">${Array.from({ length: n }, (_, i) => `<button type="button" data-seg="${path}" data-val="${i + 1}" aria-pressed="false">${i + 1}</button>`).join("")}</div></div>`;
+const card = (k, title, body, extra = "") => `<article class="card ${extra}" data-card="${k}"><div class="card-h"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg></span><h3>${title}</h3><span class="pill s-none" data-chip="${k}">–</span></div>${body}</article>`;
+
+function buildLog() {
+  const st = S.settings;
+  $("#log").innerHTML = [
+    card("sleep", "Slaap", `<div class="fields">${timeF("sleep.bed", "Naar bed")}${timeF("sleep.wake", "Opgestaan")}${seg("sleep.quality", "Kwaliteit (1–5)", 5)}</div><div class="derived" id="sleepDerived"></div>`),
+    card("train", "Training", `<div class="fields"><div class="f full"><label for="i-train.type">Type</label><select id="i-train.type" data-path="train.type"><option value="">Kies…</option><option>Kracht</option><option>Cardio</option><option>Sport</option><option>Mobiliteit</option><option>Rust</option></select></div>${field("train.minutes", "Duur", "min")}${field("train.rpe", "Zwaarte (RPE 1–10)", "")}</div>`),
+    card("stim", "Stimulanten", `<div class="fields">${field("stim.caffeine", "Cafeïne", "mg")}${timeF("stim.last", "Laatste cafeïne")}${field("stim.alcohol", "Alcohol", "eh")}${field("stim.nicotine", "Nicotine", "x")}</div><div class="quick" aria-label="Snel cafeïne toevoegen"><button class="btn small" data-caf="65">+ espresso 65</button><button class="btn small" data-caf="95">+ koffie 95</button><button class="btn small" data-caf="160">+ energy 160</button><button class="btn small" data-caf="200">+ pre-workout 200</button></div><div class="derived" id="stimDerived"></div>`),
+    card("food", "Voeding & macro's", `<div class="fields">${field("food.kcal", "Calorieën", "kcal")}${field("food.protein", "Eiwit", "g")}${field("food.carbs", "Koolhydraten", "g")}${field("food.fat", "Vet", "g")}${field("food.water", "Water", "L")}</div><div class="derived" id="foodDerived"></div>`),
+    card("money", "Financiën", `<div class="fields">${field("money.spent", "Uitgegeven", "€")}${field("money.earned", "Verdiend", "€")}<div class="f full"><label for="i-money.note">Grootste uitgave</label><input id="i-money.note" data-path="money.note" data-text="1" placeholder="Bijv. boodschappen"></div></div><div class="derived" id="moneyDerived"></div>`),
+    card("supps", "Supplementen", st.supplements.length ? `<div class="chk">${st.supplements.map(s => `<label><input type="checkbox" data-supp="${esc(s)}"> ${esc(s)}</label>`).join("")}</div>` : `<p class="empty-note">Nog geen supplementen. <button class="linkbtn" data-open-settings>Voeg ze toe</button></p>`),
+    card("health", "Gezondheid", `<div class="fields">${field("health.weight", "Gewicht", "kg")}${field("health.steps", "Stappen", "")}${seg("health.mood", "Stemming (1–5)", 5)}${seg("health.energy", "Energie (1–5)", 5)}${seg("health.stress", "Stress (1–5)", 5)}</div>`),
+    card("heart", "Hart", `<div class="fields">${field("heart.rhr", "Rusthartslag", "bpm")}${field("heart.hrv", "HRV", "ms")}${field("heart.sys", "Bloeddruk boven", "mmHg")}${field("heart.dia", "Bloeddruk onder", "mmHg")}</div><div class="derived" id="heartDerived"></div>`, "heart"),
+    card("biz", "Business", st.businesses.length ? st.businesses.map(b => `<div class="biz"><div class="biz-name">${esc(b.name)}</div><div class="fields">${field(`biz.${b.id}.hours`, "Diep werk", "uur")}${field(`biz.${b.id}.revenue`, "Omzet", "€")}<div class="f full"><label for="i-biz.${b.id}.win">Winst van vandaag</label><input id="i-biz.${b.id}.win" data-path="biz.${b.id}.win" data-text="1" placeholder="Wat heb je opgeleverd?"></div></div></div>`).join("") : `<p class="empty-note">Nog geen bedrijven. <button class="linkbtn" data-open-settings>Voeg er een toe</button></p>`)
+  ].join("");
+}
+
+/* ---------- rendering ---------- */
+function curDay() { return S.days[keyOf(S.date)] || {}; }
+
+function fillInputs() {
+  const d = curDay();
+  document.querySelectorAll("[data-path]").forEach(el => {
+    if (el === document.activeElement) return;
+    const v = get(d, el.dataset.path); el.value = v ?? "";
+  });
+  document.querySelectorAll("[data-seg]").forEach(b => b.setAttribute("aria-pressed", String(String(get(d, b.dataset.seg)) === b.dataset.val)));
+  document.querySelectorAll("[data-supp]").forEach(c => c.checked = !!d.supps?.[c.dataset.supp]);
+}
+
+function renderDerived() {
+  const d = curDay(), g = S.settings.goals;
+  const h = sleepHours(d);
+  $("#sleepDerived").innerHTML = h != null ? `Geslapen: <b>${h.toFixed(1)} u</b> · doel ${g.sleep} u` : `Vul bedtijd en opstaan in, dan rekent Dagcoach je slaapduur uit.`;
+  const caf = num(d.stim?.caffeine), last = d.stim?.last;
+  const late = last && toMin(last) > toMin(g.caffeineCutoff);
+  $("#stimDerived").innerHTML = `Limiet <b>${g.caffeine} mg</b>${caf != null ? ` · nog <b>${Math.max(0, g.caffeine - caf)} mg</b> over` : ""}${late ? ` · na ${g.caffeineCutoff} kost cafeïne slaapkwaliteit` : ""}`;
+  const p = num(d.food?.protein), c = num(d.food?.carbs), f = num(d.food?.fat);
+  const calc = (p || 0) * 4 + (c || 0) * 4 + (f || 0) * 9;
+  $("#foodDerived").innerHTML = `Eiwit <b>${p ?? 0}/${g.protein} g</b>${calc ? ` · macro's tellen op tot <b>${Math.round(calc)} kcal</b>` : ""}`;
+  const sp = num(d.money?.spent), er = num(d.money?.earned);
+  $("#moneyDerived").innerHTML = `Dagbudget <b>€${g.budget}</b>${sp != null || er != null ? ` · netto <b>${((er || 0) - (sp || 0)) >= 0 ? "+" : "−"}€${Math.abs((er || 0) - (sp || 0)).toFixed(0)}</b>` : ""}`;
+  const bh = baseline(S.date, "heart.hrv"), br = baseline(S.date, "heart.rhr");
+  const hrv = num(d.heart?.hrv), rhr = num(d.heart?.rhr);
+  const parts = [];
+  if (bh) parts.push(`HRV-basis <b>${Math.round(bh)} ms</b>${hrv != null ? ` (${hrv >= bh ? "+" : "−"}${Math.abs(Math.round((hrv / bh - 1) * 100))}%)` : ""}`);
+  if (br) parts.push(`rust-basis <b>${Math.round(br)} bpm</b>${rhr != null ? ` (${rhr <= br ? "−" : "+"}${Math.abs(Math.round(rhr - br))})` : ""}`);
+  $("#heartDerived").innerHTML = parts.length ? parts.join(" · ") : "Na 3 dagen hartdata vergelijkt Dagcoach je met je eigen basislijn.";
+}
+
+function renderScore() {
+  const { total, parts } = score(S.date);
+  const b = band(total);
+  $("#scoreBig").textContent = total ?? "–";
+  const arc = $("#arc"); arc.style.strokeDashoffset = 326.7 * (1 - (total ?? 0) / 100);
+  arc.closest(".ring").className = "ring s-" + b;
+  const pill = $("#scorePill"); pill.className = "pill s-" + b; pill.textContent = bandLabel[b];
+  $("#parts").innerHTML = PARTS.map(([k, label]) => {
+    const v = parts[k]; const pb = v == null ? "none" : band(v * 100);
+    return `<li class="s-${pb}"><span style="color:var(--ink)">${label}</span><span class="bar"><i style="width:${v == null ? 0 : Math.round(v * 100)}%"></i></span><span class="v num">${v == null ? "—" : Math.round(v * 100)}</span></li>`;
+  }).join("");
+  document.querySelectorAll("[data-chip]").forEach(c => {
+    const v = parts[c.dataset.chip]; const pb = v == null ? "none" : band(v * 100);
+    c.className = "pill s-" + pb; c.textContent = v == null ? "–" : Math.round(v * 100);
+  });
+}
+
+function renderCoach() {
+  const ai = curDay().ai, body = $("#coachBody"), pill = $("#aiPill");
+  if (!ai) {
+    pill.hidden = true;
+    body.innerHTML = `<p class="coach-muted">Vul je dag in en vraag de coach om advies. De coach leest je data van vandaag en de afgelopen week en geeft je een score en de acties die vandaag het meeste opleveren.</p>`;
+    return;
+  }
+  pill.hidden = false; const b = band(ai.score); pill.className = "pill s-" + b; pill.textContent = `Coach: ${ai.score}`;
+  const t = ai.at ? new Date(ai.at) : null;
+  body.innerHTML = `<div style="display:grid;gap:14px">
+    <p class="headline" style="margin:0">${esc(ai.headline)}</p>
+    ${ai.acties?.length ? `<ol class="actions">${ai.acties.map((a, i) => `<li><span class="n">${i + 1}</span><span>${esc(a)}</span></li>`).join("")}</ol>` : ""}
+    <div class="notes">
+      ${ai.sterk?.length ? `<div><h4 class="s-good">Gaat goed</h4><ul>${ai.sterk.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+      ${ai.let_op?.length ? `<div><h4 class="s-warn">Let op</h4><ul>${ai.let_op.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>` : ""}
+    </div>
+    ${t ? `<span class="stamp">Advies van ${pad(t.getHours())}:${pad(t.getMinutes())} · vraag opnieuw nadat je meer hebt ingevuld</span>` : ""}
+  </div>`;
+}
+
+function renderChart() {
+  const W = 600, H = 170, L = 30, R = 12, T = 12, B = 26;
+  const dates = Array.from({ length: 14 }, (_, i) => addDays(S.date, i - 13));
+  const pts = dates.map(d => score(d).total);
+  const x = i => L + i * (W - L - R) / 13, y = v => T + (100 - v) / 100 * (H - T - B);
+  let grid = [0, 50, 100].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="lbl" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  let segs = [], cur = [];
+  pts.forEach((v, i) => { if (v == null) { if (cur.length) segs.push(cur); cur = []; } else cur.push([x(i), y(v)]); });
+  if (cur.length) segs.push(cur);
+  const lines = segs.map(s => s.length > 1 ? `<path class="area" d="M${s[0][0]},${y(0)} ${s.map(p => "L" + p.join(",")).join(" ")} L${s.at(-1)[0]},${y(0)}Z"/><polyline class="ln" points="${s.map(p => p.join(",")).join(" ")}"/>` : "").join("");
+  const dots = pts.map((v, i) => v == null ? "" : `<circle class="dot ${i === 13 ? "cur" : ""}" cx="${x(i)}" cy="${y(v)}" r="${i === 13 ? 5 : 3.5}"/>`).join("");
+  const lbls = dates.map((d, i) => (i % 2 === 1 || i === 13) ? `<text class="lbl" x="${x(i)}" y="${H - 6}" text-anchor="middle">${DAYS_NL[fromIso(d).getDay()]} ${fromIso(d).getDate()}</text>` : "").join("");
+  const any = pts.some(v => v != null);
+  $("#chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dagscore over 14 dagen">${grid}${lines}${dots}${lbls}${any ? "" : `<text class="lbl" x="${W / 2}" y="${H / 2}" text-anchor="middle">Je trend verschijnt zodra je een paar dagen hebt ingevuld</text>`}</svg>`;
+}
+
+function renderStats() {
+  const ds = Array.from({ length: 7 }, (_, i) => S.days[keyOf(addDays(S.date, -i))]).filter(Boolean);
+  const sl = avg(ds.map(sleepHours)), hrv = avg(ds.map(d => num(d.heart?.hrv)));
+  const spent = ds.reduce((a, d) => a + (num(d.money?.spent) || 0), 0);
+  const tmin = ds.reduce((a, d) => a + (num(d.train?.minutes) || 0), 0);
+  const caf = avg(ds.map(d => num(d.stim?.caffeine)));
+  const bizH = ds.reduce((a, d) => a + Object.values(d.biz || {}).reduce((x, b) => x + (num(b?.hours) || 0), 0), 0);
+  const st = [["Gem. slaap", sl != null ? sl.toFixed(1) : "–", "u"], ["Gem. HRV", hrv != null ? Math.round(hrv) : "–", "ms"], ["Training", tmin || "–", "min"], ["Uitgegeven", spent ? "€" + Math.round(spent) : "–", ""], ["Gem. cafeïne", caf != null ? Math.round(caf) : "–", "mg"], ["Diep werk", bizH ? bizH.toFixed(1) : "–", "u"]];
+  $("#stats").innerHTML = st.map(([k, v, u]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}${v !== "–" && u ? `<small>${u}</small>` : ""}</div></div>`).join("");
+}
+
+function renderDate() {
+  const today = iso(new Date()), d = fromIso(S.date);
+  const rel = S.date === today ? "Vandaag" : S.date === addDays(today, -1) ? "Gisteren" : null;
+  $("#dateLabel").textContent = rel ? `${rel}, ${d.getDate()} ${MONTHS_NL[d.getMonth()]}` : `${DAYS_NL[d.getDay()]} ${d.getDate()} ${MONTHS_NL[d.getMonth()]}`;
+  $("#nextDay").disabled = S.date >= today;
+}
+
+function renderBanner() {
+  const b = $("#banner");
+  if (S.mode === "demo") { b.hidden = false; b.innerHTML = `<span><b>Voorbeeldmodus.</b> Dit zijn verzonnen voorbeelddagen; er wordt niets opgeslagen.</span><button class="btn small" id="exitDemo">Stoppen</button>`; return; }
+  const empty = !Object.keys(S.days).length;
+  if (S.mode === "local") { b.hidden = false; b.innerHTML = `<span>Je data wordt alleen in deze browser bewaard. Open Dagcoach ingelogd op claude.ai om op al je apparaten te synchroniseren.</span>${empty ? `<button class="btn small" id="startDemo">Bekijk met voorbeelddata</button>` : ""}`; return; }
+  if (S.mode === "db" && empty) { b.hidden = false; b.innerHTML = `<span>Welkom! Begin met het invullen van vandaag hieronder, of kijk eerst hoe het eruitziet met twee weken voorbeelddata.</span><button class="btn small" id="startDemo">Bekijk met voorbeelddata</button>`; return; }
+  if (S.mode === "loading") { b.hidden = false; b.innerHTML = `<span>Je data wordt geladen…</span>`; return; }
+  b.hidden = true;
+}
+
+function renderAll() { renderDate(); fillInputs(); renderDerived(); renderScore(); renderCoach(); renderChart(); renderStats(); renderBanner(); }
+function renderLive() { renderDerived(); renderScore(); renderChart(); renderStats(); }
+
+/* ---------- persistence ---------- */
+const LS_KEY = "dagcoach-v1";
+const timers = {}, inflight = {}, queued = {};
+function persistLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ days: S.days, settings: S.settings })); } catch (e) {} }
+async function writeDoc(key) {
+  if (S.mode === "demo") return;
+  if (S.mode === "db") {
+    const body = key === "settings" ? S.settings : S.days[key];
+    const ref = S.db.collection("data/users/" + S.uid).doc(key);
+    if (!body || !Object.keys(body).length) return ref.delete();
+    return ref.set(clone(body));
+  }
+  persistLocal();
+}
+async function flush(key) {
+  if (inflight[key]) { queued[key] = true; return; }
+  inflight[key] = true;
+  try { await writeDoc(key); }
+  catch (e) {
+    if (e?.code === "unavailable") { await new Promise(r => setTimeout(r, 800 + Math.random() * 800)); try { await writeDoc(key); } catch (e2) { toast("Opslaan mislukt, probeer het zo opnieuw"); } }
+    else if (e?.code === "quota_exceeded") toast("Opslag is vol: verwijder oude dagen");
+    else toast("Opslaan mislukt");
+  } finally {
+    inflight[key] = false;
+    if (queued[key]) { queued[key] = false; flush(key); }
+  }
+}
+function save(key, delay = 600) { editedAt[key] = Date.now(); clearTimeout(timers[key]); timers[key] = setTimeout(() => flush(key), delay); }
+
+function updateDay(mut) {
+  const k = keyOf(S.date); const d = clone(S.days[k]); mut(d); d.date = S.date;
+  S.days[k] = d; save(k); renderLive();
+}
+
+/* ---------- events ---------- */
+document.addEventListener("input", e => {
+  const el = e.target; if (!el.dataset.path) return;
+  const v = el.dataset.text || el.type === "time" || el.tagName === "SELECT" ? (el.value || null) : num(el.value.replace(",", "."));
+  updateDay(d => setPath(d, el.dataset.path, v));
+});
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.dataset.supp != null) updateDay(d => { d.supps = d.supps || {}; d.supps[el.dataset.supp] = el.checked; });
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.seg) {
+    const cur = String(get(curDay(), t.dataset.seg)) === t.dataset.val;
+    updateDay(d => setPath(d, t.dataset.seg, cur ? null : +t.dataset.val));
+    t.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(!cur && b === t)));
+  } else if (t.dataset.caf) {
+    const now = new Date();
+    updateDay(d => { setPath(d, "stim.caffeine", (num(d.stim?.caffeine) || 0) + +t.dataset.caf); setPath(d, "stim.last", `${pad(now.getHours())}:${pad(now.getMinutes())}`); });
+    fillInputs(); toast(`+${t.dataset.caf} mg cafeïne`);
+  } else if (t.hasAttribute("data-open-settings")) openSettings();
+  else if (t.id === "startDemo") startDemo();
+  else if (t.id === "exitDemo") exitDemo();
+});
+$("#prevDay").onclick = () => { S.date = addDays(S.date, -1); renderAll(); };
+$("#nextDay").onclick = () => { if (S.date < iso(new Date())) { S.date = addDays(S.date, 1); renderAll(); } };
+
+/* ---------- settings ---------- */
+const GOALS = [["sleep", "Slaap", "u"], ["trainMin", "Training per dag", "min"], ["caffeine", "Max. cafeïne", "mg"], ["caffeineCutoff", "Cafeïne niet na", "time"], ["protein", "Eiwit", "g"], ["kcal", "Calorieën", "kcal"], ["water", "Water", "L"], ["steps", "Stappen", ""], ["budget", "Dagbudget", "€"], ["bizHours", "Diep werk", "uur"]];
+function renderSettings() {
+  const g = S.settings.goals;
+  $("#goalFields").innerHTML = GOALS.map(([k, l, u]) => u === "time"
+    ? `<div class="f"><label for="g-${k}">${l}</label><input type="time" id="g-${k}" data-goal="${k}" value="${esc(g[k])}"></div>`
+    : `<div class="f"><label for="g-${k}">${l}</label><div class="inp"><input id="g-${k}" data-goal="${k}" inputmode="decimal" value="${esc(g[k])}">${u ? `<span class="u">${u}</span>` : ""}</div></div>`).join("");
+  $("#suppChips").innerHTML = S.settings.supplements.map((s, i) => `<span>${esc(s)}<button type="button" data-rm-supp="${i}" aria-label="${esc(s)} verwijderen">✕</button></span>`).join("") || `<span class="empty-note" style="background:none;padding:0">Geen supplementen</span>`;
+  $("#bizChips").innerHTML = S.settings.businesses.map((b, i) => `<span>${esc(b.name)}<button type="button" data-rm-biz="${i}" aria-label="${esc(b.name)} verwijderen">✕</button></span>`).join("") || `<span class="empty-note" style="background:none;padding:0">Geen bedrijven</span>`;
+}
+function settingsChanged() { save("settings"); buildLog(); renderAll(); renderSettings(); }
+function openSettings() { renderSettings(); $("#sheetBg").hidden = false; $("#closeSettings").focus(); }
+function closeSettings() { $("#sheetBg").hidden = true; $("#openSettings").focus(); }
+$("#openSettings").onclick = openSettings;
+$("#closeSettings").onclick = closeSettings;
+$("#sheetBg").addEventListener("click", e => { if (e.target.id === "sheetBg") closeSettings(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#sheetBg").hidden) closeSettings(); });
+$("#goalFields").addEventListener("input", e => {
+  const k = e.target.dataset.goal; if (!k) return;
+  const v = e.target.type === "time" ? e.target.value : num(e.target.value.replace(",", "."));
+  if (v == null || v === "" || (typeof v === "number" && v <= 0)) return;
+  S.settings.goals[k] = v; save("settings"); renderAll();
+});
+$("#sheetBg").addEventListener("click", e => {
+  const s = e.target.closest("[data-rm-supp]"), b = e.target.closest("[data-rm-biz]");
+  if (s) { S.settings.supplements.splice(+s.dataset.rmSupp, 1); settingsChanged(); }
+  if (b) { S.settings.businesses.splice(+b.dataset.rmBiz, 1); settingsChanged(); }
+});
+$("#suppAdd").onsubmit = e => { e.preventDefault(); const v = $("#suppNew").value.trim(); if (!v || S.settings.supplements.includes(v)) return; S.settings.supplements.push(v); $("#suppNew").value = ""; settingsChanged(); };
+$("#bizAdd").onsubmit = e => { e.preventDefault(); const v = $("#bizNew").value.trim(); if (!v) return; S.settings.businesses.push({ id: "b" + Date.now().toString(36), name: v }); $("#bizNew").value = ""; settingsChanged(); };
+
+/* ---------- AI coach ---------- */
+function compact(d) { if (!d) return null; const c = clone(d); delete c.ai; if (c.biz) { const m = {}; Object.entries(c.biz).forEach(([id, v]) => { m[S.settings.businesses.find(b => b.id === id)?.name || id] = v; }); c.biz = m; } const h = sleepHours(d); if (h != null) c.sleep = { ...c.sleep, uren: h }; return c; }
+$("#askCoach").onclick = async () => {
+  const btn = $("#askCoach");
+  if (!S.sample) { toast(S.mode === "loading" ? "Even geduld, Dagcoach start nog op" : "De AI-coach is hier niet beschikbaar"); return; }
+  const today = compact(S.days[keyOf(S.date)]);
+  if (!today || Object.keys(today).length <= 1) { toast("Vul eerst iets in voor deze dag"); return; }
+  const week = Array.from({ length: 7 }, (_, i) => addDays(S.date, i - 7)).map(d => ({ datum: d, score: score(d).total, ...compact(S.days[keyOf(d)]) })).filter(x => Object.keys(x).length > 2);
+  const local = score(S.date);
+  const prompt = `Je bent een directe, nuchtere persoonlijke performance-coach. Analyseer de data van de gebruiker en geef een dagscore en concreet advies voor de rest van vandaag. Baseer alles op de cijfers, verwijs naar concrete waarden en verzin geen data. Geen medisch advies; verwijs bij afwijkende hart- of bloeddrukwaarden kort naar een arts.
+
+Doelen: ${JSON.stringify(S.settings.goals)}
+Supplementen in schema: ${JSON.stringify(S.settings.supplements)}
+Datum: ${S.date} (${DAYS_NL[fromIso(S.date).getDay()]})
+Vandaag: ${JSON.stringify(today)}
+Vorige 7 dagen (oud naar nieuw): ${JSON.stringify(week)}
+Berekende basisscore vandaag: ${local.total}/100, per onderdeel (0-1): ${JSON.stringify(local.parts)}
+
+Uitleg velden: sleep.quality 1-5, train.rpe 1-10, stim.caffeine mg, stim.last tijd laatste cafeïne, stim.alcohol eenheden, health.mood/energy/stress 1-5, heart.rhr bpm, heart.hrv ms, money in euro, biz per bedrijf: hours diep werk, revenue omzet, win.
+
+Antwoord met alleen JSON in het Nederlands, precies deze vorm:
+{"score": 0-100, "headline": "één zin van max 12 woorden over hoe de dag ervoor staat", "acties": ["3 of 4 concrete acties voor vandaag, elk max 18 woorden, belangrijkste eerst"], "sterk": ["1 of 2 dingen die goed gaan"], "let_op": ["0 tot 2 waarschuwingen of patronen uit de week"]}`;
+  btn.disabled = true; btn.textContent = "Coach denkt na…";
+  try {
+    const r = await S.sample.json(prompt, { cache: false });
+    if (!r || typeof r !== "object") throw { code: "invalid_json" };
+    const ai = { score: clamp(Math.round(+r.score || 0), 0, 100), headline: String(r.headline || ""), acties: (r.acties || []).map(String).slice(0, 4), sterk: (r.sterk || []).map(String).slice(0, 2), let_op: (r.let_op || []).map(String).slice(0, 2), at: new Date().toISOString() };
+    updateDay(d => { d.ai = ai; }); renderCoach();
+  } catch (e) {
+    const msg = { not_granted: "Je hebt de coach geen toestemming gegeven", sampling_disabled: "Claude is niet beschikbaar voor dit account", rate_limited: "Te veel vragen achter elkaar, probeer het straks opnieuw", invalid_json: "De coach gaf een onleesbaar antwoord, probeer opnieuw", session_expired: "Log opnieuw in op claude.ai", cancelled: "" }[e?.code] ?? "De coach is even niet bereikbaar, probeer opnieuw";
+    if (msg) toast(msg);
+    if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e?.code)) { btn.hidden = true; }
+  } finally { btn.disabled = false; btn.textContent = "Vraag de coach"; }
+};
+
+/* ---------- demo data ---------- */
+function demoDays() {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const r = (a, b, dp = 0) => +(a + rnd() * (b - a)).toFixed(dp);
+  const out = {}; const today = iso(new Date());
+  for (let i = 13; i >= 0; i--) {
+    const date = addDays(today, -i); const tough = rnd() < .25;
+    const bedH = tough ? r(0, 1) : r(22.5, 23.7, 1); const bm = Math.round((bedH % 1) * 60), bh = Math.floor(bedH) % 24;
+    const wakeM = r(6.2, 7.4, 1);
+    const day = {
+      date, example: true,
+      sleep: { bed: `${pad(bh)}:${pad(bm - bm % 5)}`, wake: `${pad(Math.floor(wakeM))}:${pad(Math.round((wakeM % 1) * 60) - Math.round((wakeM % 1) * 60) % 5)}`, quality: tough ? r(2, 3) : r(3, 5) },
+      train: rnd() < .2 ? { type: "Rust" } : { type: ["Kracht", "Cardio", "Kracht", "Sport"][Math.floor(rnd() * 4)], minutes: r(30, 75), rpe: r(5, 9) },
+      stim: { caffeine: tough ? r(300, 450) : r(95, 290), last: tough ? "16:30" : "11:30", alcohol: rnd() < .15 ? r(1, 4) : 0 },
+      food: { kcal: r(2100, 3000), protein: r(110, 185), carbs: r(180, 320), fat: r(55, 110), water: r(1.5, 3.5, 1) },
+      money: { spent: r(8, tough ? 140 : 70), earned: rnd() < .3 ? r(100, 900) : 0 },
+      supps: Object.fromEntries(S.settings.supplements.map(s => [s, rnd() < .8])),
+      health: { weight: r(80.5, 82, 1), steps: r(4500, 13500), mood: tough ? r(2, 3) : r(3, 5), energy: tough ? r(2, 3) : r(3, 5), stress: tough ? r(3, 5) : r(1, 3) },
+      heart: { rhr: tough ? r(58, 64) : r(50, 56), hrv: tough ? r(38, 50) : r(55, 78) },
+      biz: Object.fromEntries(S.settings.businesses.map(b => [b.id, { hours: r(1, 6, 1), revenue: rnd() < .4 ? r(50, 600) : 0 }]))
+    };
+    if (i === 0) day.ai = { score: 78, headline: "Sterk hersteld, nu je focus bewaken voor de middag", acties: ["Plan je zwaarste werkblok vóór 13:00, je energie en HRV zijn nu het hoogst.", "Geen cafeïne meer na 14:00, je zit al dicht bij je limiet.", "Haal nog 40 g eiwit binnen met je avondeten.", "Maak een wandeling van 20 minuten om je stappendoel te halen."], sterk: ["HRV ligt boven je basislijn: goed hersteld.", "Vijf dagen op rij je supplementen genomen."], let_op: ["Op dagen na laat naar bed zakt je stemming en stijgen je uitgaven."], at: new Date().toISOString(), example: true };
+    out[keyOf(date)] = day;
+  }
+  return out;
+}
+function startDemo() { S.realBackup = { mode: S.mode, days: S.days }; S.mode = "demo"; S.days = demoDays(); S.date = iso(new Date()); renderAll(); window.scrollTo({ top: 0 }); }
+function exitDemo() { if (!S.realBackup) return; S.mode = S.realBackup.mode; S.days = S.realBackup.days; S.realBackup = null; renderAll(); }
+
+/* ---------- boot ---------- */
+buildLog(); renderAll();
+
+function useLocal() {
+  S.mode = "local";
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) { const o = JSON.parse(raw); S.days = o.days || {}; if (o.settings) S.settings = { ...clone(DEFAULT_SETTINGS), ...o.settings, goals: { ...DEFAULT_SETTINGS.goals, ...(o.settings.goals || {}) } }; } } catch (e) {}
+  buildLog(); renderAll();
+}
+
+(async () => {
+  const use = window.claude?.use?.bind(window.claude);
+  if (!use) { useLocal(); return; }
+  const [db, user, sample] = await Promise.all([use("db"), use("user"), use("sample")].map(p => p.catch(() => null)));
+  S.sample = sample;
+  const uid = user ? await user.id().catch(() => null) : null;
+  if (!db || !uid) { useLocal(); return; }
+  S.db = db; S.uid = uid;
+  const loadTimer = setTimeout(() => { if (S.mode === "loading") { const b = $("#banner"); b.hidden = false; b.innerHTML = "<span>Je opgeslagen data is nog niet bereikbaar. Wat je nu invult wordt opgeslagen zodra de verbinding er is.</span>"; } }, 10000);
+  let first = true;
+  db.collection("data/users/" + uid).onSnapshot(snap => {
+    const live = S.mode === "demo" ? S.realBackup : S;
+    let touchedCur = false, settingsChangedRemote = false;
+    snap.docChanges().forEach(ch => {
+      const id = ch.doc.id;
+      const recent = inflight[id] || timers[id] && Date.now() - (editedAt[id] || 0) < 2500;
+      if (recent && !first) return;
+      if (id === "settings") {
+        if (ch.type === "removed") return;
+        const o = ch.doc.data(); S.settings = { ...clone(DEFAULT_SETTINGS), ...clone(o), goals: { ...DEFAULT_SETTINGS.goals, ...(o.goals || {}) } };
+        settingsChangedRemote = true;
+      } else if (id.startsWith("day-")) {
+        if (ch.type === "removed") delete live.days[id]; else live.days[id] = clone(ch.doc.data());
+        if (id === keyOf(S.date)) touchedCur = true;
+      }
+    });
+    if (!snap.metadata.fromCache) clearTimeout(loadTimer);
+    if (S.mode === "loading") S.mode = "db";
+    else if (S.realBackup) S.realBackup.mode = "db";
+    if (first || settingsChangedRemote) { buildLog(); renderAll(); }
+    else if (S.mode !== "demo") { if (touchedCur) fillInputs(); renderLive(); renderCoach(); renderBanner(); }
+    first = false;
+  }, err => {
+    clearTimeout(loadTimer);
+    if (S.mode === "loading") useLocal();
+    else toast("Verbinding met je opgeslagen data verbroken");
+  });
+})();
+})();
+</script>
