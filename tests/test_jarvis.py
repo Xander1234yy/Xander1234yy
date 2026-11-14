@@ -15,6 +15,8 @@ from jarvis.tools import ToolBox, safe_eval
 @pytest.fixture
 def cfg(tmp_path, monkeypatch):
     monkeypatch.setenv("JARVIS_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("JARVIS_CAST", "0")
+    monkeypatch.delenv("HOME_ASSISTANT_URL", raising=False)
     return Config()
 
 

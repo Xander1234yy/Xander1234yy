@@ -1,4 +1,4 @@
-"""Het brein van JARVIS: een Claude-agentlus met tools, geheugen en webzoekfunctie."""
+"""Het brein van Jarvis: een Claude-agentlus met tools, geheugen en webzoekfunctie."""
 from __future__ import annotations
 
 import datetime as dt
@@ -11,25 +11,28 @@ import anthropic
 
 from .config import Config
 from .memory import Memory
+from .home import SmartHome
 from .tools import ToolBox
 
 log = logging.getLogger("jarvis")
 
-SYSTEM_PROMPT = """Je bent J.A.R.V.I.S. (Just A Rather Very Intelligent System), de persoonlijke AI-butler van de gebruiker.
+SYSTEM_PROMPT = """Je bent Jarvis, de persoonlijke assistent van de gebruiker, thuis en onderweg.
 
-Persoonlijkheid:
-- Beleefd, kalm, droog-geestig en uiterst competent, als een Britse butler met een vleugje ironie.
-- Spreek de gebruiker aan met "{title}".
+Hoe je klinkt:
+- Natuurlijk, warm en to the point, zoals een slimme vriend. Geen robottaal, geen "Als AI...", geen "Alle systemen operationeel", geen overdreven butler-toon.
+- Spreek de gebruiker af en toe aan met "{title}", niet in elke zin.
 - Antwoord in de taal van de gebruiker (standaard: {language_name}).
-- Houd antwoorden kort en spreekbaar: meestal 1-3 zinnen, want je antwoorden worden vaak hardop voorgelezen. Gebruik geen markdown-tabellen, en alleen opsommingen als er echt om een lijst wordt gevraagd.
+- Kort en spreekbaar: meestal één of twee zinnen, want je wordt vaak hardop voorgelezen. Geen markdown, geen tabellen, geen emoji's.
+- Na een actie bevestig je kort wat er gebeurd is ("Lampen in de woonkamer staan op 30%."), zonder uitleg over hoe je dat deed.
 
-Werkwijze:
-- Gebruik je tools proactief: tijd, weer, rekenen, notities, taken, herinneringen, websites openen, systeemstatus{extra_tools}.
-- Reken nooit uit je hoofd; gebruik altijd de rekentool.
-- Zoek actuele informatie (nieuws, sport, koersen, feiten na je kennisdatum) op het web en noem kort je bron.
-- Als de gebruiker iets persoonlijks vertelt dat later nuttig is (naam, voorkeuren, verjaardagen, afspraken), sla het op met remember_fact.
-- Als een tool faalt, leg kort uit wat er misging en stel een alternatief voor.
-- Verzin nooit resultaten van tools."""
+Wat je doet:
+- Gebruik je tools: tijd, weer, rekenen, notities, taken, herinneringen, websites openen, systeemstatus{extra_tools}.
+- Smart home: bedien de Google Home-apparaten van de gebruiker. Gebruik home_control voor één bekend apparaat, en google_home_command voor kamers, groepen, scènes, routines, kleuren of als je het apparaat niet kent. Bekijk home_devices als je wilt weten wat er is of wat de status is.
+- Als smart home nog niet gekoppeld is, vertel dan in één zin hoe ("python -m jarvis koppel-google").
+- Reken nooit uit je hoofd; gebruik de rekentool.
+- Zoek actuele informatie op het web en noem kort de bron.
+- Sla persoonlijke dingen die later handig zijn (namen, voorkeuren, verjaardagen) op met remember_fact.
+- Verzin nooit resultaten van tools. Als iets mislukt, zeg dat eerlijk en kort."""
 
 LANGUAGE_NAMES = {"nl": "Nederlands", "en": "English", "de": "Deutsch", "fr": "Français"}
 
@@ -39,7 +42,8 @@ class Jarvis:
                  confirm: Callable[[str], bool] | None = None):
         self.config = config or Config()
         self.memory = Memory(self.config.data_dir / "memory.json")
-        self.tools = ToolBox(self.config, self.memory, confirm=confirm)
+        self.home = SmartHome(self.config)
+        self.tools = ToolBox(self.config, self.memory, confirm=confirm, home=self.home)
         self.client = client or anthropic.Anthropic()
         self.messages: list[dict] = []
         self._lock = threading.Lock()
@@ -106,7 +110,7 @@ class Jarvis:
                 )
             except anthropic.AuthenticationError:
                 self.messages.pop()
-                return ("Mijn excuses, ik heb geen geldige API-sleutel. "
+                return ("Ik heb nog geen geldige API-sleutel. "
                         "Stel ANTHROPIC_API_KEY in of log in met 'ant auth login'.")
             except anthropic.RateLimitError:
                 self.messages.pop()
@@ -122,11 +126,11 @@ class Jarvis:
             self.messages.append({"role": "assistant", "content": response.content})
 
             if response.stop_reason == "refusal":
-                return "Daar kan ik u helaas niet mee helpen."
+                return "Daar kan ik je helaas niet mee helpen."
             if response.stop_reason == "pause_turn":
                 continue
             if response.stop_reason != "tool_use":
-                return self._text_of(response) or "Tot uw dienst."
+                return self._text_of(response) or "Klaar."
 
             results = []
             for block in response.content:
@@ -143,7 +147,7 @@ class Jarvis:
                                     "content": f"Fout: {exc}", "is_error": True})
             self.messages.append({"role": "user", "content": results})
 
-        return "Dit verzoek kostte te veel stappen; kunt u het anders formuleren?"
+        return "Dat lukte niet in één keer. Kun je het anders zeggen?"
 
     @staticmethod
     def _text_of(response) -> str:

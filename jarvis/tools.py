@@ -102,6 +102,27 @@ TOOL_DEFINITIONS: list[dict] = [
         "input_schema": _obj({}),
     },
     {
+        "name": "home_devices",
+        "description": "Toont alle smart-home-apparaten (Google Home / Home Assistant / Nest-speakers en Chromecasts) met kamer en huidige status, en welke koppelingen actief zijn.",
+        "input_schema": _obj({}),
+    },
+    {
+        "name": "home_control",
+        "description": "Bedient één smart-home-apparaat op naam of id. Werkt ook voor apparaten die alleen in de Google Home-app staan. Gebruik voor meerdere apparaten tegelijk of scènes liever google_home_command.",
+        "input_schema": _obj({
+            "device": {"type": "string", "description": "Naam of id, bv. 'Woonkamerlamp' of 'light.woonkamer'"},
+            "action": {"type": "string", "enum": ["turn_on", "turn_off", "toggle", "set_brightness", "set_temperature",
+                                                  "set_volume", "play", "pause", "stop", "next", "previous",
+                                                  "open", "close", "lock", "unlock", "activate"]},
+            "value": {"type": "number", "description": "Helderheid/volume in procent, of temperatuur in °C"},
+        }, ["device", "action"]),
+    },
+    {
+        "name": "google_home_command",
+        "description": "Stuurt een opdracht in gewone taal naar Google Assistant, precies alsof de gebruiker 'Hey Google' zegt. Bedient alles in de Google Home-app: kamers, groepen, routines, scènes, kleuren, thermostaat, tv's. Bv. 'zet alle lampen in de woonkamer op 30 procent warm wit'.",
+        "input_schema": _obj({"command": {"type": "string"}}, ["command"]),
+    },
+    {
         "name": "run_shell",
         "description": "Voert een shell-commando uit op de computer van de gebruiker en geeft de uitvoer terug. Alleen beschikbaar als de gebruiker dit heeft ingeschakeld.",
         "input_schema": _obj({"command": {"type": "string"}}, ["command"]),
@@ -155,9 +176,11 @@ def _http_json(url: str, timeout: float = 10) -> Any:
 class ToolBox:
     """Voert tool-aanroepen van Claude uit."""
 
-    def __init__(self, config: Config, memory: Memory, confirm: Callable[[str], bool] | None = None):
+    def __init__(self, config: Config, memory: Memory, confirm: Callable[[str], bool] | None = None,
+                 home: Any = None):
         self.config = config
         self.memory = memory
+        self.home = home
         self.confirm = confirm  # vraagt toestemming voor gevoelige acties (shell)
 
     @property
@@ -295,6 +318,24 @@ class ToolBox:
             if hasattr(os, "getloadavg"):
                 info["load_avg"] = os.getloadavg()
         return info
+
+    def _require_home(self):
+        if self.home is None:
+            raise RuntimeError("Smart home is niet beschikbaar.")
+        return self.home
+
+    def _t_home_devices(self) -> dict:
+        home = self._require_home()
+        if not home.configured:
+            return {"backends": home.backends,
+                    "hint": "Nog niets gekoppeld. Zie de README: 'python -m jarvis koppel-google' of Home Assistant instellen."}
+        return home.summary()
+
+    def _t_home_control(self, device: str, action: str, value: float | None = None) -> dict:
+        return self._require_home().control(device, action, value)
+
+    def _t_google_home_command(self, command: str) -> dict:
+        return self._require_home().command(command)
 
     def _t_run_shell(self, command: str) -> dict:
         if not self.config.allow_shell:

@@ -41,7 +41,7 @@ class Voice:
                 return
 
     def say(self, text: str) -> None:
-        print(f"JARVIS: {text}")
+        print(f"Jarvis: {text}")
         with self._speak_lock:
             self.engine.say(text)
             self.engine.runAndWait()
@@ -68,7 +68,7 @@ class Voice:
         threading.Thread(target=self._reminder_loop, daemon=True).start()
         with self.sr.Microphone() as mic:
             self.recognizer.adjust_for_ambient_noise(mic, duration=1)
-            self.say(f"Alle systemen online. Tot uw dienst, {self.jarvis.config.user_title}.")
+            self.say(f"Hoi {self.jarvis.config.user_title}, ik luister.")
             while True:
                 heard = self.listen(mic)
                 if not heard:

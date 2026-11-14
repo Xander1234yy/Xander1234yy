@@ -1,4 +1,4 @@
-"""Web-HUD voor JARVIS: een kleine HTTP-server (alleen standaardbibliotheek) met een JSON-API."""
+"""Webinterface voor Jarvis: een kleine HTTP-server (alleen standaardbibliotheek) met een JSON-API."""
 from __future__ import annotations
 
 import json
@@ -15,7 +15,7 @@ def make_handler(jarvis: Jarvis):
     index_html = resources.files("jarvis").joinpath("static/index.html").read_bytes()
 
     class Handler(BaseHTTPRequestHandler):
-        server_version = "JARVIS/1.0"
+        server_version = "Jarvis/1.1"
 
         def log_message(self, fmt, *args):  # stiller dan de standaard
             log.debug(fmt, *args)
@@ -42,6 +42,11 @@ def make_handler(jarvis: Jarvis):
                     "reminders": jarvis.due_reminders(),
                     "todos": jarvis.memory.todos(), "facts": jarvis.memory.facts(),
                 })
+            elif self.path == "/api/devices":
+                try:
+                    self._json(200, jarvis.home.summary())
+                except Exception as exc:
+                    self._json(500, {"error": str(exc)})
             else:
                 self._json(404, {"error": "niet gevonden"})
 
@@ -59,6 +64,13 @@ def make_handler(jarvis: Jarvis):
                 used: list[str] = []
                 reply = jarvis.ask(text, on_tool=lambda name, _a: used.append(name))
                 return self._json(200, {"reply": reply, "tools": used})
+            if self.path == "/api/devices/control":
+                try:
+                    result = jarvis.home.control(str(data.get("device", "")), str(data.get("action", "")),
+                                                 data.get("value"))
+                    return self._json(200, {"ok": True, "result": result})
+                except Exception as exc:
+                    return self._json(400, {"ok": False, "error": str(exc)})
             if self.path == "/api/reset":
                 jarvis.reset()
                 return self._json(200, {"ok": True})
@@ -70,10 +82,10 @@ def make_handler(jarvis: Jarvis):
 def serve(jarvis: Jarvis) -> None:
     cfg = jarvis.config
     httpd = ThreadingHTTPServer((cfg.host, cfg.port), make_handler(jarvis))
-    print(f"JARVIS HUD online op http://{cfg.host}:{cfg.port}  (Ctrl+C om te stoppen)")
+    print(f"Jarvis draait op http://{cfg.host}:{cfg.port}  (Ctrl+C om te stoppen)")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nJARVIS gaat offline.")
+        print("\nJarvis gestopt.")
     finally:
         httpd.server_close()
