@@ -19,6 +19,7 @@ Je persoonlijke assistent voor thuis. Je typt of praat gewoon, en Jarvis regelt 
 ## Installatie
 
 ```bash
+cd jarvis-assistent
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements-home.txt                   # inclusief Google Home-ondersteuning
 export ANTHROPIC_API_KEY=sk-ant-...                    # Windows: set ANTHROPIC_API_KEY=...

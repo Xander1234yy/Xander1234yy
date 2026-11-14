@@ -1,6 +1,6 @@
 # Laat Jarvis altijd draaien op een Linux-computer of Raspberry Pi.
 #   1. Pas User, WorkingDirectory en de sleutels hieronder aan.
-#   2. sudo cp deploy/jarvis.service /etc/systemd/system/
+#   2. sudo cp jarvis-assistent/deploy/jarvis.service /etc/systemd/system/
 #   3. sudo systemctl enable --now jarvis
 #   Logboek bekijken: journalctl -u jarvis -f
 [Unit]
@@ -10,10 +10,10 @@ Wants=network-online.target
 
 [Service]
 User=pi
-WorkingDirectory=/home/pi/Xander1234yy
+WorkingDirectory=/home/pi/Xander1234yy/jarvis-assistent
 Environment=ANTHROPIC_API_KEY=sk-ant-...
 Environment=JARVIS_PIN=123456
-ExecStart=/home/pi/Xander1234yy/.venv/bin/python -m jarvis web --telefoon
+ExecStart=/home/pi/Xander1234yy/jarvis-assistent/.venv/bin/python -m jarvis web --telefoon
 Restart=on-failure
 RestartSec=5
 
