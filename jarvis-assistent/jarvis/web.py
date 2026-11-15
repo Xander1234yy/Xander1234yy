@@ -122,6 +122,8 @@ def make_handler(jarvis: Jarvis, auth: Auth, mcp: McpEndpoint | None = None):
                     return self._json(200, jarvis.home.summary())
                 except Exception as exc:
                     return self._json(500, {"error": str(exc)})
+            if path == "/api/phone" and cfg.cloud:
+                return self._json(200, {"url": "https://" + self.headers.get("Host", ""), "https": True, "exposed": True})
             if path == "/api/phone":
                 ip = lan_ip()
                 scheme = "https" if https else "http"

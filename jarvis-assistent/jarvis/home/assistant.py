@@ -24,6 +24,11 @@ class GoogleAssistant:
         self.token_path = Path(os.environ.get("GOOGLE_ASSISTANT_TOKEN",
                                               config.data_dir / "google_assistant_token.json"))
         self.language = LOCALES.get(config.language, "nl-NL")
+        token_json = os.environ.get("GOOGLE_ASSISTANT_TOKEN_JSON", "").strip()
+        if token_json and not self.token_path.exists():
+            self.token_path.parent.mkdir(parents=True, exist_ok=True)
+            self.token_path.write_text(token_json, encoding="utf-8")
+            self.token_path.chmod(0o600)
         self._lock = threading.Lock()
 
     @property

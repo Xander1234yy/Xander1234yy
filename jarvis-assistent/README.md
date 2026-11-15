@@ -94,6 +94,46 @@ Je telefoon bedient Jarvis via de computer waar hij op draait. Die moet dus aan 
 
 Heb je zelf een certificaat (bijvoorbeeld via `tailscale cert`)? Dan kan Jarvis ook zelf https serveren met `JARVIS_CERT=cert.pem JARVIS_KEY=key.pem`.
 
+## Op Vercel (altijd online, zonder computer thuis)
+
+Jarvis kan ook op [Vercel](https://vercel.com) draaien. Je opent hem dan overal via `https://<jouw-project>.vercel.app`, ook de microfoon op je telefoon, omdat Vercel https geeft. Je computer hoeft niet aan te staan.
+
+**Eenmalig instellen**
+
+1. Ga naar <https://vercel.com/new> en importeer de GitHub-repo **Xander1234yy/Xander1234yy**.
+   - *Root Directory:* `jarvis-assistent`
+   - *Framework Preset:* Other
+2. Vul bij *Environment Variables* in:
+
+   | Variabele | Waarde |
+   |---|---|
+   | `ANTHROPIC_API_KEY` | je API-sleutel (`sk-ant-…`) |
+   | `JARVIS_PIN` | je pincode, 4 tot 8 cijfers |
+   | `JARVIS_SECRET` | een lange willekeurige tekst; maak er een met `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+   | `JARVIS_CITY` | optioneel, je stad voor het weer |
+
+3. Klik op **Deploy**.
+4. Koppel opslag voor geheugen, taken en notities: in je Vercel-project ga je naar *Storage → Create Database → Upstash (Redis)* en kies je **Connect** bij dit project. Vercel zet de sleutels (`KV_REST_API_URL`/`KV_REST_API_TOKEN` of `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) er zelf bij. Klik daarna op *Redeploy*.
+5. Open het adres op je telefoon, voer je pincode in en kies *Zet op beginscherm*.
+
+**Je Google Home koppelen op Vercel**
+
+- **Google Assistant:** koppel eenmalig op je computer met `python -m jarvis koppel-google client_secret.json` (zie hieronder). Kopieer daarna de inhoud van `~/.jarvis/google_assistant_token.json` naar de variabele `GOOGLE_ASSISTANT_TOKEN_JSON` in Vercel.
+- **Home Assistant:** zet `HOME_ASSISTANT_URL` (een adres dat vanaf internet bereikbaar is, bijvoorbeeld via Nabu Casa) en `HOME_ASSISTANT_TOKEN`.
+- **Chromecasts en Nest-speakers** direct bedienen kan alleen vanaf je thuisnetwerk, dus niet op Vercel. Via Google Assistant werkt het wel ("pauzeer de muziek in de keuken").
+
+**Connector voor de telefoonversie op claude.ai**
+
+Zet in Vercel `JARVIS_CONNECTOR=1` en `JARVIS_MCP_TOKEN` (een geheime tekst van minstens 24 tekens). Voeg in claude.ai bij *Instellingen → Connectors* een eigen connector **Jarvis** toe met het adres `https://<jouw-project>.vercel.app/mcp/<JARVIS_MCP_TOKEN>`. Tailscale is dan niet nodig.
+
+**Goed om te weten**
+
+- Vercel deployt de productieversie vanaf de standaardbranch van de repo. Tot deze pull request is samengevoegd krijg je een *Preview*-adres. Wil je deze branch meteen als productie, stel dan *Settings → Git → Production Branch* in op `claude/adoring-ptolemy-elpj93`.
+- Herinneringen gaan af zolang Jarvis ergens bij je openstaat. Een server op Vercel draait alleen tijdens een verzoek.
+- Na een tijdje niets doen kan een gesprek opnieuw beginnen. Je geheugen, taken en notities blijven bewaard.
+- Elk antwoord mag maximaal 60 seconden duren.
+- Shell-commando's zijn in de cloud altijd uitgeschakeld.
+
 ## Google Home koppelen
 
 Jarvis heeft drie manieren om je huis te bedienen. Je kunt ze combineren.
@@ -173,6 +213,7 @@ jarvis/
 │   └── cast.py          #   Google Cast (Nest-speakers, Chromecast)
 ├── memory.py            # geheugen, notities, taken en herinneringen
 ├── web.py               # webserver en API (http/https)
+api/index.py             # startpunt voor Vercel (vercel.json stuurt alle verzoeken hierheen)
 ├── auth.py              # pincode en sessies
 ├── mcp_server.py        # connector voor claude.ai (MCP)
 ├── voice.py             # spraakmodus

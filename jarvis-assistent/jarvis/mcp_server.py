@@ -11,6 +11,7 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import os
 import secrets
 from typing import Any
 
@@ -87,6 +88,11 @@ TOOLS: list[dict] = [
 
 
 def load_token(jarvis: Jarvis) -> str:
+    env = os.environ.get("JARVIS_MCP_TOKEN", "").strip()
+    if env:
+        if len(env) < 24:
+            raise ValueError("JARVIS_MCP_TOKEN moet minstens 24 tekens lang zijn.")
+        return env
     path = jarvis.config.data_dir / "mcp_token"
     if path.exists():
         return path.read_text().strip()

@@ -1,31 +1,44 @@
-"""Persistent geheugen: feiten, notities, taken en herinneringen in één JSON-bestand."""
+"""Persistent geheugen: feiten, notities, taken en herinneringen (JSON-bestand of Upstash Redis)."""
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
+import urllib.request
 import uuid
 from pathlib import Path
 from typing import Any
 
 
+def _empty() -> dict[str, Any]:
+    return {"facts": {}, "notes": [], "todos": [], "reminders": []}
+
+
 class Memory:
+    """Bewaart alles in een JSON-bestand (op je eigen computer)."""
+
     def __init__(self, path: Path):
         self.path = Path(path)
         self._lock = threading.RLock()
-        self.data: dict[str, Any] = {"facts": {}, "notes": [], "todos": [], "reminders": []}
-        if self.path.exists():
-            try:
-                loaded = json.loads(self.path.read_text(encoding="utf-8"))
-                self.data.update(loaded)
-            except (json.JSONDecodeError, OSError):
-                backup = self.path.with_suffix(".corrupt.json")
-                self.path.replace(backup)
+        self.data: dict[str, Any] = _empty()
+        self.reload()
+
+    def reload(self) -> None:
+        if not self.path.exists():
+            return
+        try:
+            loaded = json.loads(self.path.read_text(encoding="utf-8"))
+            self.data = {**_empty(), **loaded}
+        except (json.JSONDecodeError, OSError):
+            backup = self.path.with_suffix(".corrupt.json")
+            self.path.replace(backup)
 
     def _save(self) -> None:
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.path)
+
 
     # --- feiten -------------------------------------------------------
     def remember(self, key: str, value: str) -> None:
@@ -101,3 +114,37 @@ class Memory:
             if due:
                 self._save()
             return due
+
+
+class RedisMemory(Memory):
+    """Bewaart alles in Upstash Redis (voor Vercel, waar geen vaste schijf is)."""
+
+    KEY = "jarvis:memory"
+
+    def __init__(self, url: str, token: str):
+        self.url, self.token = url.rstrip("/"), token
+        self._lock = threading.RLock()
+        self.data = _empty()
+        self.reload()
+
+    def _request(self, method: str, path: str, body: bytes | None = None) -> Any:
+        req = urllib.request.Request(self.url + path, data=body, method=method,
+                                     headers={"Authorization": f"Bearer {self.token}"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8")).get("result")
+
+    def reload(self) -> None:
+        raw = self._request("GET", f"/get/{self.KEY}")
+        self.data = {**_empty(), **json.loads(raw)} if raw else _empty()
+
+    def _save(self) -> None:
+        self._request("POST", f"/set/{self.KEY}", json.dumps(self.data, ensure_ascii=False).encode("utf-8"))
+
+
+def open_memory(data_dir: Path) -> Memory:
+    """Kiest Redis als Vercel/Upstash is ingesteld, anders een bestand."""
+    url = os.environ.get("KV_REST_API_URL") or os.environ.get("UPSTASH_REDIS_REST_URL")
+    token = os.environ.get("KV_REST_API_TOKEN") or os.environ.get("UPSTASH_REDIS_REST_TOKEN")
+    if url and token:
+        return RedisMemory(url, token)
+    return Memory(Path(data_dir) / "memory.json")

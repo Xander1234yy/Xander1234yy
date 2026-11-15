@@ -21,7 +21,8 @@ class Config:
     language: str = field(default_factory=lambda: os.environ.get("JARVIS_LANGUAGE", "nl"))
     city: str = field(default_factory=lambda: os.environ.get("JARVIS_CITY", "Amsterdam"))
     data_dir: Path = field(
-        default_factory=lambda: Path(os.environ.get("JARVIS_DATA_DIR", Path.home() / ".jarvis"))
+        default_factory=lambda: Path(os.environ.get(
+            "JARVIS_DATA_DIR", "/tmp/jarvis" if os.environ.get("VERCEL") else Path.home() / ".jarvis"))
     )
     web_search: bool = field(default_factory=lambda: _bool("JARVIS_WEB_SEARCH", True))
     allow_shell: bool = field(default_factory=lambda: _bool("JARVIS_ALLOW_SHELL", False))
@@ -32,7 +33,11 @@ class Config:
     cert_file: str = field(default_factory=lambda: os.environ.get("JARVIS_CERT", ""))
     key_file: str = field(default_factory=lambda: os.environ.get("JARVIS_KEY", ""))
     connector: bool = field(default_factory=lambda: _bool("JARVIS_CONNECTOR", False))
+    secret: str = field(default_factory=lambda: os.environ.get("JARVIS_SECRET", ""))
+    cloud: bool = field(default_factory=lambda: bool(os.environ.get("VERCEL")))
 
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir)
+        if self.cloud:
+            self.allow_shell = False  # nooit shell-commando's op een server op internet
         self.data_dir.mkdir(parents=True, exist_ok=True)

@@ -10,7 +10,7 @@ from typing import Callable
 import anthropic
 
 from .config import Config
-from .memory import Memory
+from .memory import open_memory
 from .home import SmartHome
 from .tools import ToolBox
 
@@ -41,7 +41,7 @@ class Jarvis:
     def __init__(self, config: Config | None = None, client: anthropic.Anthropic | None = None,
                  confirm: Callable[[str], bool] | None = None):
         self.config = config or Config()
-        self.memory = Memory(self.config.data_dir / "memory.json")
+        self.memory = open_memory(self.config.data_dir)
         self.home = SmartHome(self.config)
         self.tools = ToolBox(self.config, self.memory, confirm=confirm, home=self.home)
         self.client = client or anthropic.Anthropic()

@@ -30,6 +30,11 @@ class Auth:
         if self.pin and not (self.pin.isdigit() and 4 <= len(self.pin) <= 8):
             raise ValueError("De pincode moet uit 4 tot 8 cijfers bestaan.")
         self.generated_pin = False
+        if config.cloud and not self.pin:
+            raise ValueError("Stel JARVIS_PIN in (4 tot 8 cijfers): Jarvis staat in de cloud open op internet.")
+        if config.cloud and len(config.secret) < 32:
+            raise ValueError("Stel JARVIS_SECRET in op een willekeurige tekst van minstens 32 tekens.")
+        self.secret = config.secret.encode() if config.secret else b""
         if not self.pin and (config.connector or not _is_loopback(config.host)):
             # Bereikbaar vanaf het netwerk of internet zonder pincode? Dan maken we er zelf een.
             pin_path = config.data_dir / "pin"
@@ -52,6 +57,8 @@ class Auth:
         return hashlib.sha256(token.encode()).hexdigest()
 
     def _load(self) -> dict[str, float]:
+        if self.secret:
+            return {}
         try:
             data = json.loads(Path(self.sessions_path).read_text())
             now = time.time()
@@ -68,11 +75,15 @@ class Auth:
             return True
         if not token:
             return False
+        if self.secret:
+            exp_s, _, sig = token.partition(".")
+            good = hmac.new(self.secret, (exp_s + ":" + self.pin).encode(), hashlib.sha256).hexdigest()
+            return exp_s.isdigit() and hmac.compare_digest(sig, good) and int(exp_s) > time.time()
         exp = self._sessions.get(self._hash(token))
         return bool(exp and exp > time.time())
 
     def logout(self, token: str | None) -> None:
-        if token:
+        if token and not self.secret:
             with self._lock:
                 self._sessions.pop(self._hash(token), None)
                 self._save()
@@ -95,6 +106,9 @@ class Auth:
                 self._failures.setdefault(client, []).append(time.time())
                 return None
             self._failures.pop(client, None)
+            if self.secret:  # ondertekend token: werkt op elke server, vervalt na een jaar
+                exp = str(int(time.time()) + SESSION_DAYS * 86400)
+                return exp + "." + hmac.new(self.secret, (exp + ":" + self.pin).encode(), hashlib.sha256).hexdigest()
             token = secrets.token_urlsafe(32)
             self._sessions[self._hash(token)] = time.time() + SESSION_DAYS * 86400
             self._save()

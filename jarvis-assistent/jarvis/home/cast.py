@@ -19,7 +19,8 @@ class CastBackend:
     CACHE_SECONDS = 300
 
     def __init__(self, config: Config):
-        self.enabled = os.environ.get("JARVIS_CAST", "1").lower() not in {"0", "false", "nee", "off"}
+        self.enabled = (os.environ.get("JARVIS_CAST", "1").lower() not in {"0", "false", "nee", "off"}
+                        and not config.cloud)  # Chromecasts zijn alleen op je eigen netwerk te vinden
         self._casts: dict[str, Any] = {}
         self._scanned = 0.0
         self._lock = threading.Lock()

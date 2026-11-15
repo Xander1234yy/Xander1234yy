@@ -1,2 +1,5 @@
 anthropic>=2.8.0
 psutil>=5.9
+# Google Assistant (bedient alles in de Google Home-app; werkt ook in de cloud)
+gassist-text>=0.0.11
+google-auth>=2.20

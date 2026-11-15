@@ -1,0 +1,8 @@
+.venv
+.env
+tests
+docs
+deploy
+online
+*.pyc
+__pycache__

@@ -1,7 +1,5 @@
 -r requirements.txt
-# Google Assistant (bedient alles in de Google Home-app)
-gassist-text>=0.0.11
-google-auth>=2.20
+# Eenmalig koppelen van Google Assistant op je computer
 google-auth-oauthlib>=1.0
-# Nest-speakers, Nest Hubs en Chromecasts op je netwerk
+# Nest-speakers, Nest Hubs en Chromecasts op je eigen netwerk
 pychromecast>=14.0
