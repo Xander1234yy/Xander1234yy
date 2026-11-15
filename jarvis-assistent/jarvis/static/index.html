@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" href="/icon-192.png">
+<title>Jarvis</title>
+<style>
+  :root {
+    --bg: #f2f2f7; --card: #ffffff; --tile-off: rgba(118,118,128,.12); --tile-on: #ffffff;
+    --text: #1c1c1e; --text-2: #6e6e73; --text-on: #1c1c1e; --sep: rgba(60,60,67,.12);
+    --accent: #007aff; --yellow: #ffb800; --orange: #ff9500; --green: #34c759; --teal: #30b0c7; --red: #ff3b30;
+    --icon-off: #8e8e93; --glass: rgba(255,255,255,.95); --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+    --bubble-me: #007aff; --bubble-me-text: #fff; --bubble: #e9e9eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000; --card: #1c1c1e; --tile-off: rgba(44,44,46,.8); --tile-on: #f2f2f7;
+      --text: #f5f5f7; --text-2: #98989d; --sep: rgba(84,84,88,.4);
+      --icon-off: #8e8e93; --glass: rgba(28,28,30,.92); --shadow: 0 8px 30px rgba(0,0,0,.5);
+      --bubble: #2c2c2e;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 17px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; min-height: 100vh; padding-bottom: 140px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+  /* kop */
+  header { padding: calc(20px + env(safe-area-inset-top)) 0 8px; }
+  .top { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
+  .actions { display: flex; gap: 6px; }
+  .pill { border: 0; background: rgba(142,142,147,.16); color: var(--accent); font: inherit; font-size: 14px; font-weight: 600; border-radius: 16px; padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .pill svg { width: 16px; height: 16px; }
+
+  /* inloggen */
+  .lock { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+  .lock.show { display: flex; }
+  .lock img { width: 64px; height: 64px; border-radius: 15px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .lock h2 { margin: 0; font-size: 20px; }
+  .lock p { margin: 4px 0 0; color: var(--text-2); font-size: 15px; min-height: 20px; }
+  .lock p.err { color: var(--red); }
+  .dots { display: flex; gap: 16px; margin: 22px 0 30px; }
+  .dots i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--text); transition: background .1s; }
+  .dots i.on { background: var(--text); }
+  .dots.shake { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+  .keys { display: grid; grid-template-columns: repeat(3, 76px); gap: 16px 24px; }
+  .keys button { width: 76px; height: 76px; border-radius: 50%; border: 0; background: rgba(142,142,147,.2); color: var(--text); font: inherit; font-size: 30px; font-weight: 400; cursor: pointer; transition: background .1s; }
+  .keys button:active { background: rgba(142,142,147,.45); }
+  .keys button.ghost { background: transparent; font-size: 16px; }
+  #qr { display: flex; justify-content: center; margin: 4px 0 14px; }
+  #qr img, #qr canvas { border-radius: 12px; background: #fff; padding: 10px; }
+  .steps { color: var(--text-2); font-size: 14px; padding-left: 20px; margin: 0; }
+  .steps li { margin: 4px 0; }
+  .url { text-align: center; font-weight: 600; font-size: 15px; word-break: break-all; margin-bottom: 12px; color: var(--accent); }
+  .date { color: var(--text-2); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+  h1 { font-size: 34px; font-weight: 700; letter-spacing: -.02em; margin: 2px 0 0; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 4px 14px; margin: 0 -4px -10px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 14px; padding: 8px 14px 8px 10px; box-shadow: var(--shadow); font-size: 14px; }
+  .chip svg { width: 22px; height: 22px; }
+  .chip b { display: block; font-size: 13px; font-weight: 600; }
+  .chip span { color: var(--text-2); font-size: 12px; }
+
+  /* kamers en tegels */
+  h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 26px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 10px; }
+  .tile {
+    position: relative; text-align: left; border: 0; font: inherit; color: var(--text); cursor: pointer;
+    background: var(--tile-off); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 18px; padding: 12px; min-height: 76px; display: flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow); transition: transform .15s ease, background .2s ease;
+  }
+  .tile:active { transform: scale(.96); }
+  .tile:not(.on) { box-shadow: none; }
+  .tile.on { background: var(--tile-on); color: var(--text-on); }
+  .tile > span:nth-child(2) { min-width: 0; padding-right: 16px; }
+  .tile.busy { opacity: .6; }
+  .ico { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgba(142,142,147,.2); color: var(--icon-off); }
+  .ico svg { width: 20px; height: 20px; }
+  .tile.on .ico { background: var(--c, var(--yellow)); color: #fff; }
+  .tile .name { font-size: 15px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; hyphens: auto; -webkit-hyphens: auto; }
+  .tile .st { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+  .tile.on .st { color: #6e6e73; }
+  .more { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+  .more:hover { background: rgba(142,142,147,.16); }
+
+  .empty { background: var(--card); border-radius: 18px; padding: 22px; box-shadow: var(--shadow); margin-top: 22px; }
+  .empty h3 { margin: 0 0 6px; font-size: 19px; }
+  .empty p, .empty li { color: var(--text-2); font-size: 15px; }
+  .empty code { background: rgba(142,142,147,.16); padding: 2px 6px; border-radius: 6px; font-size: 13px; color: var(--text); }
+
+  /* gesprek */
+  .convo { position: fixed; left: 0; right: 0; bottom: 92px; display: flex; justify-content: center; pointer-events: none; padding: 0 16px; }
+  .panel {
+    width: 100%; max-width: 620px; max-height: 46vh; overflow-y: auto; pointer-events: auto;
+    background: var(--glass); backdrop-filter: saturate(180%) blur(30px); -webkit-backdrop-filter: saturate(180%) blur(30px);
+    border-radius: 22px; box-shadow: var(--shadow); padding: 14px; display: none;
+  }
+  .panel.show { display: block; animation: rise .25s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .row { display: flex; margin: 4px 0; }
+  .row.me { justify-content: flex-end; }
+  .bubble { max-width: 82%; padding: 8px 13px; border-radius: 18px; background: var(--bubble); font-size: 16px; white-space: pre-wrap; word-wrap: break-word; }
+  .row.me .bubble { background: var(--bubble-me); color: var(--bubble-me-text); }
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-2); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+  .note { text-align: center; color: var(--text-2); font-size: 13px; margin: 6px 0; }
+
+  /* invoerbalk */
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); display: flex; justify-content: center; }
+  form {
+    position: relative; width: 100%; max-width: 620px; display: flex; align-items: center; gap: 6px;
+    background: var(--glass); backdrop-filter: saturate(180%) blur(30px); -webkit-backdrop-filter: saturate(180%) blur(30px);
+    border-radius: 30px; padding: 6px 6px 6px 18px; box-shadow: var(--shadow); border: .5px solid var(--sep);
+  }
+  form::before { /* zachte gloed tijdens luisteren */
+    content: ""; position: absolute; inset: -2px; border-radius: 32px; z-index: -1; opacity: 0; transition: opacity .3s;
+    background: conic-gradient(from var(--a, 0deg), #ff9f0a, #ff375f, #bf5af2, #0a84ff, #64d2ff, #ff9f0a); filter: blur(8px);
+  }
+  form.listening::before { opacity: .9; animation: turn 3s linear infinite; }
+  @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes turn { to { --a: 360deg; } }
+  input[type=text] { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--text); font: inherit; padding: 10px 0; }
+  input::placeholder { color: var(--text-2); }
+  .round { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: transparent; color: var(--accent); }
+  .round svg { width: 22px; height: 22px; }
+  .round.send { background: var(--accent); color: #fff; display: none; }
+  form.typed .round.send { display: grid; }
+  form.typed .round.mic { display: none; }
+  .round.mic.on { color: var(--red); }
+
+  /* paneel voor details */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.3); display: none; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet-bg.show { display: flex; }
+  .sheet { width: 100%; max-width: 420px; background: var(--card); border-radius: 22px 22px 0 0; padding: 18px 20px calc(28px + env(safe-area-inset-bottom)); animation: rise .25s ease; }
+  @media (min-width: 640px) { .sheet-bg { align-items: center; } .sheet { border-radius: 22px; } }
+  .sheet .handle { width: 36px; height: 5px; border-radius: 3px; background: var(--sep); margin: 0 auto 14px; }
+  .sheet h3 { margin: 0; font-size: 20px; text-align: center; }
+  .sheet .sub { text-align: center; color: var(--text-2); font-size: 14px; margin: 2px 0 18px; }
+  .big { display: block; margin: 0 auto 18px; width: 100%; height: 44px; border-radius: 12px; border: 0; font: inherit; font-weight: 600; cursor: pointer; background: rgba(142,142,147,.16); color: var(--text); }
+  .big.on { background: var(--accent); color: #fff; }
+  .slider-label { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-2); margin-bottom: 6px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+  .media { display: flex; justify-content: center; gap: 18px; margin-top: 14px; }
+  .media button { width: 48px; height: 48px; border-radius: 50%; border: 0; background: rgba(142,142,147,.16); color: var(--text); cursor: pointer; font-size: 18px; }
+
+  .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--card); box-shadow: var(--shadow); border-radius: 14px; padding: 10px 16px; font-size: 14px; display: none; z-index: 20; max-width: calc(100% - 32px); }
+  .toast.show { display: block; animation: rise .2s ease; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <div class="date" id="date"></div>
+      <div class="actions">
+        <button class="pill" id="phoneBtn" type="button" aria-label="Op je telefoon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 1h8a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Zm2 18a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2Z"/></svg>Telefoon
+        </button>
+        <button class="pill" id="logoutBtn" type="button" hidden>Uitloggen</button>
+      </div>
+    </div>
+    <h1 id="greet">Thuis</h1>
+    <div class="chips" id="chips"></div>
+  </header>
+  <main id="rooms"></main>
+</div>
+
+<div class="convo"><div class="panel" id="panel" aria-live="polite"></div></div>
+
+<div class="bar">
+  <form id="form">
+    <input id="input" type="text" placeholder="Vraag Jarvis iets…" autocomplete="off" enterkeyhint="send">
+    <button type="button" class="round mic" id="mic" aria-label="Spreek">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.59a6 6 0 0 0 5-5.91Z"/></svg>
+    </button>
+    <button type="submit" class="round send" aria-label="Verstuur">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a1 1 0 0 1 .7.3l6 6a1 1 0 1 1-1.4 1.4L13 7.42V19a1 1 0 1 1-2 0V7.41L6.7 11.7a1 1 0 0 1-1.4-1.4l6-6A1 1 0 0 1 12 4Z"/></svg>
+    </button>
+  </form>
+</div>
+
+<div class="sheet-bg" id="sheetbg"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="lock" id="lock">
+  <img src="/icon-180.png" alt="">
+  <h2>Jarvis</h2>
+  <p id="lockMsg">Voer je pincode in</p>
+  <div class="dots" id="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="keys" id="keys">
+    <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>6</button>
+    <button>7</button><button>8</button><button>9</button><button class="ghost" data-k="clear">Wis</button><button>0</button><button class="ghost" data-k="back">⌫</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ICONS = {
+  light: '<path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2Zm-2 18a1 1 0 0 0 0 2h4a1 1 0 0 0 0-2Z"/>',
+  outlet: '<path d="M8 2a1 1 0 0 1 1 1v4h6V3a1 1 0 1 1 2 0v4h1a1 1 0 0 1 1 1v3a7 7 0 0 1-6 6.93V21a1 1 0 1 1-2 0v-3.07A7 7 0 0 1 5 11V8a1 1 0 0 1 1-1h1V3a1 1 0 0 1 1-1Z"/>',
+  thermostat: '<path d="M12 2a3 3 0 0 0-3 3v8.76a5 5 0 1 0 6 0V5a3 3 0 0 0-3-3Zm0 18a3 3 0 0 1-1-5.83V9h2v5.17A3 3 0 0 1 12 20Z"/>',
+  speaker: '<path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm5 18a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0-11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>',
+  tv: '<path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-7v2h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>',
+  blinds: '<path d="M3 3h18a1 1 0 1 1 0 2h-1v12h-7v2.27a2 2 0 1 1-2 0V17H4V5H3a1 1 0 0 1 0-2Zm3 4v2h12V7Zm0 4v2h12v-2Z"/>',
+  lock: '<path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3Z"/>',
+  fan: '<path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm1-8c3 0 4 2.5 3 4.5l-1.5 3A4 4 0 0 0 13 8.1V3a1 1 0 0 1 0-1Zm9 11c0 3-2.5 4-4.5 3l-3-1.5a4 4 0 0 0 1.4-1.5H21a1 1 0 0 1 1 0ZM11 22c-3 0-4-2.5-3-4.5l1.5-3a4 4 0 0 0 1.5 1.4V21a1 1 0 0 1 0 1ZM2 11c0-3 2.5-4 4.5-3l3 1.5A4 4 0 0 0 8.1 11H3a1 1 0 0 1-1 0Z"/>',
+  scene: '<path d="M12 2l2.4 6.2L21 9l-5 4.4L17.5 20 12 16.6 6.5 20 8 13.4 3 9l6.6-.8Z"/>',
+  vacuum: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm0 12a7 7 0 0 1-6.7-5h13.4A7 7 0 0 1 12 19Z"/>',
+  sun: '<path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-6a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V2a1 1 0 0 1 1-1Zm0 18a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1ZM1 12a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2H2a1 1 0 0 1-1-1Zm18 0a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1Z"/>',
+};
+const COLORS = { light: "var(--yellow)", outlet: "var(--green)", thermostat: "var(--orange)", speaker: "var(--accent)", tv: "var(--accent)", blinds: "var(--teal)", lock: "var(--teal)", fan: "var(--teal)", scene: "var(--orange)", vacuum: "var(--green)" };
+const svg = k => `<svg viewBox="0 0 24 24" fill="currentColor">${ICONS[k] || ICONS.outlet}</svg>`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let title = "", lang = "nl-NL", devices = [], backends = {}, busy = false;
+const LOCALES = { nl: "nl-NL", en: "en-GB", de: "de-DE", fr: "fr-FR" };
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3200); }
+
+function header() {
+  const now = new Date(), h = now.getHours();
+  const narrow = innerWidth < 430;
+  $("date").textContent = now.toLocaleDateString("nl-NL", narrow ? { weekday: "short", day: "numeric", month: "short" } : { weekday: "long", day: "numeric", month: "long" });
+  const part = h < 6 ? "Goedenacht" : h < 12 ? "Goedemorgen" : h < 18 ? "Goedemiddag" : "Goedenavond";
+  $("greet").textContent = title ? `${part}, ${title}` : part;
+}
+
+function stateText(d) {
+  if (d.kind === "thermostat") return d.current_temperature != null ? `${d.current_temperature}° · doel ${d.temperature ?? "–"}°` : (d.on ? "Aan" : "Uit");
+  if (d.kind === "lock") return d.state === "locked" ? "Op slot" : "Open";
+  if (d.kind === "blinds") return d.on ? "Open" : "Dicht";
+  if (d.kind === "speaker" || d.kind === "tv") return d.media || (d.on ? (d.state === "paused" ? "Gepauzeerd" : d.state) : "Uit");
+  if (d.kind === "scene") return "Scène";
+  if (d.on && d.brightness != null) return `${d.brightness}%`;
+  return d.on ? "Aan" : "Uit";
+}
+
+function chips() {
+  const lights = devices.filter(d => d.kind === "light" && d.on).length;
+  const media = devices.filter(d => (d.kind === "speaker" || d.kind === "tv") && d.on).length;
+  const thermo = devices.find(d => d.kind === "thermostat" && d.current_temperature != null);
+  const items = [];
+  if (thermo) items.push(["thermostat", "var(--orange)", "Klimaat", `${thermo.current_temperature}° binnen`]);
+  items.push(["light", "var(--yellow)", "Verlichting", lights ? `${lights} aan` : "Alles uit"]);
+  if (devices.some(d => d.kind === "speaker" || d.kind === "tv")) items.push(["speaker", "var(--accent)", "Media", media ? `${media} speelt` : "Stil"]);
+  $("chips").innerHTML = devices.length ? items.map(([k, c, a, b]) => `<div class="chip"><span style="color:${c}">${svg(k)}</span><div><b>${a}</b><span>${b}</span></div></div>`).join("") : "";
+}
+
+function render() {
+  header(); chips();
+  const root = $("rooms");
+  if (!devices.length) {
+    const linked = backends.google_assistant;
+    root.innerHTML = `<div class="empty">
+      <h3>${linked ? "Google Home is gekoppeld" : "Koppel je Google Home"}</h3>
+      <p>${linked ? "Vraag Jarvis gewoon wat je wilt, bijvoorbeeld <i>“Doe de lampen in de woonkamer uit”</i>. Wil je hier ook tegels met de status zien, koppel dan Home Assistant (zie README)." :
+        "Daarna kun je al je lampen, stekkers, de thermostaat en speakers bedienen door het gewoon te vragen."}</p>
+      ${linked ? "" : `<ol><li>Maak in Google Cloud een OAuth-client aan (stappen in de README).</li><li>Draai <code>python -m jarvis koppel-google client_secret.json</code></li><li>Herstart Jarvis.</li></ol>`}
+    </div>`;
+    return;
+  }
+  const rooms = [...new Set(devices.map(d => d.room))].sort((a, b) => a === "Overig" ? 1 : b === "Overig" ? -1 : a.localeCompare(b));
+  root.innerHTML = rooms.map(room => `<h2>${esc(room)}</h2><div class="grid">${
+    devices.filter(d => d.room === room).map(d => `
+      <button class="tile ${d.on ? "on" : ""}" style="--c:${COLORS[d.kind] || "var(--yellow)"}" data-id="${esc(d.id)}">
+        <span class="ico">${svg(d.kind)}</span>
+        <span><div class="name">${esc(d.name)}</div><div class="st">${esc(stateText(d))}</div></span>
+        ${["light", "thermostat", "speaker", "tv"].includes(d.kind) ? `<span class="more" data-more="${esc(d.id)}" role="button" aria-label="Details">•••</span>` : ""}
+      </button>`).join("")}</div>`).join("");
+}
+
+async function loadDevices() {
+  try {
+    const r = await api("/api/devices"); const data = await r.json();
+    devices = data.devices || []; backends = data.backends || {}; render();
+  } catch (e) {}
+}
+
+async function control(id, action, value) {
+  const d = devices.find(x => x.id === id);
+  const tile = document.querySelector(`.tile[data-id="${CSS.escape(id)}"]`);
+  if (tile) tile.classList.add("busy");
+  try {
+    const r = await api("/api/devices/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ device: id, action, value }) });
+    const data = await r.json();
+    if (!data.ok) toast(data.error || "Dat lukte niet.");
+    else if (d && ["turn_on", "turn_off", "toggle"].includes(action)) { d.on = action === "toggle" ? !d.on : action === "turn_on"; render(); }
+  } catch (e) { toast("Geen verbinding met Jarvis."); }
+  if (tile) tile.classList.remove("busy");
+  setTimeout(loadDevices, 1200);
+}
+
+$("rooms").addEventListener("click", e => {
+  const more = e.target.closest("[data-more]");
+  if (more) { e.stopPropagation(); openSheet(more.dataset.more); return; }
+  const tile = e.target.closest(".tile"); if (!tile) return;
+  const d = devices.find(x => x.id === tile.dataset.id);
+  if (d.kind === "scene") control(d.id, "activate");
+  else if (d.kind === "lock") control(d.id, d.state === "locked" ? "unlock" : "lock");
+  else control(d.id, "toggle");
+});
+
+function openSheet(id) {
+  const d = devices.find(x => x.id === id); if (!d) return;
+  let slider = "";
+  if (d.kind === "light") slider = sliderHtml("Helderheid", "set_brightness", d.brightness ?? 100, 1, 100, "%");
+  if (d.kind === "thermostat") slider = sliderHtml("Temperatuur", "set_temperature", d.temperature ?? 20, 10, 28, "°", .5);
+  if (d.kind === "speaker" || d.kind === "tv") slider = sliderHtml("Volume", "set_volume", d.volume ?? 30, 0, 100, "%") +
+    `<div class="media"><button data-act="previous" aria-label="Vorige">⏮</button><button data-act="${d.state === "playing" ? "pause" : "play"}" aria-label="Afspelen/pauzeren">${d.state === "playing" ? "⏸" : "▶"}</button><button data-act="next" aria-label="Volgende">⏭</button></div>`;
+  $("sheet").innerHTML = `<div class="handle"></div><h3>${esc(d.name)}</h3><div class="sub">${esc(d.room)} · ${esc(stateText(d))}</div>
+    <button class="big ${d.on ? "on" : ""}" data-act="toggle">${d.on ? "Uitzetten" : "Aanzetten"}</button>${slider}`;
+  $("sheet").dataset.id = id; $("sheetbg").classList.add("show");
+}
+function sliderHtml(label, action, val, min, max, unit, step = 1) {
+  return `<div class="slider-label"><span>${label}</span><span id="sv">${val}${unit}</span></div>
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-action="${action}" data-unit="${unit}">`;
+}
+$("sheetbg").addEventListener("click", e => { if (e.target === $("sheetbg")) $("sheetbg").classList.remove("show"); });
+$("sheet").addEventListener("input", e => { if (e.target.type === "range") $("sv").textContent = e.target.value + e.target.dataset.unit; });
+$("sheet").addEventListener("change", e => { if (e.target.type === "range") control($("sheet").dataset.id, e.target.dataset.action, Number(e.target.value)); });
+$("sheet").addEventListener("click", e => { const b = e.target.closest("[data-act]"); if (b) { control($("sheet").dataset.id, b.dataset.act); if (b.dataset.act === "toggle") $("sheetbg").classList.remove("show"); } });
+
+/* ---------- gesprek ---------- */
+const panel = $("panel");
+function bubble(who, text) {
+  panel.classList.add("show");
+  const row = document.createElement("div"); row.className = "row " + who;
+  row.innerHTML = `<div class="bubble"></div>`; row.firstChild.textContent = text;
+  panel.appendChild(row); panel.scrollTop = panel.scrollHeight; return row;
+}
+function note(text) { panel.classList.add("show"); const n = document.createElement("div"); n.className = "note"; n.textContent = text; panel.appendChild(n); panel.scrollTop = panel.scrollHeight; }
+
+function speak(text) {
+  if (!("speechSynthesis" in window) || !lastWasVoice) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = lang; u.rate = 1.02;
+  const voices = speechSynthesis.getVoices();
+  const v = voices.find(v => v.lang === lang && /Xander|Daniel|Siri|Premium|Enhanced/i.test(v.name)) || voices.find(v => v.lang.startsWith(lang.slice(0, 2)));
+  if (v) u.voice = v; speechSynthesis.speak(u);
+}
+
+let lastWasVoice = false;
+async function send(text, viaVoice = false) {
+  text = text.trim(); if (!text || busy) return;
+  busy = true; lastWasVoice = viaVoice; $("input").value = ""; $("form").classList.remove("typed");
+  bubble("me", text);
+  const typing = document.createElement("div"); typing.className = "row"; typing.innerHTML = `<div class="bubble typing"><i></i><i></i><i></i></div>`;
+  panel.appendChild(typing); panel.scrollTop = panel.scrollHeight;
+  try {
+    const r = await api("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
+    const data = await r.json(); typing.remove();
+    const reply = data.reply || data.error || "Er ging iets mis.";
+    bubble("", reply); speak(reply);
+    if ((data.tools || []).some(t => t.startsWith("home") || t.startsWith("google_home"))) setTimeout(loadDevices, 1500);
+  } catch (e) { typing.remove(); note("Geen verbinding met Jarvis."); }
+  busy = false;
+}
+$("form").onsubmit = e => { e.preventDefault(); send($("input").value); };
+$("input").addEventListener("input", () => $("form").classList.toggle("typed", !!$("input").value.trim()));
+document.addEventListener("keydown", e => { if (e.key === "Escape") { panel.classList.remove("show"); $("sheetbg").classList.remove("show"); } });
+document.addEventListener("click", e => { if (!e.target.closest(".panel, form, .sheet-bg")) panel.classList.remove("show"); });
+
+/* ---------- spraak ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+$("mic").onclick = () => {
+  if (!window.isSecureContext) { toast("De microfoon werkt op je telefoon alleen via https. Zie de README: 'Op je telefoon'."); return; }
+  if (!SR) { toast("Spraak werkt in Safari, Chrome en Edge."); return; }
+  if (rec) { rec.stop(); return; }
+  rec = new SR(); rec.lang = lang; rec.interimResults = true;
+  let finalText = "";
+  rec.onstart = () => { $("form").classList.add("listening"); $("mic").classList.add("on"); $("input").placeholder = "Ik luister…"; };
+  rec.onresult = ev => { let t = ""; for (const r of ev.results) { t += r[0].transcript; if (r.isFinal) finalText = t; } $("input").value = t; };
+  rec.onerror = ev => { if (ev.error === "not-allowed") toast("Geef de browser toegang tot je microfoon."); };
+  rec.onend = () => {
+    $("form").classList.remove("listening"); $("mic").classList.remove("on"); $("input").placeholder = "Vraag Jarvis iets…"; rec = null;
+    const t = (finalText || $("input").value).trim(); if (t) send(t, true);
+  };
+  rec.start();
+};
+
+/* ---------- start ---------- */
+async function poll() {
+  try {
+    const s = await (await api("/api/status")).json();
+    title = s.title; lang = LOCALES[s.language] || s.language; header();
+    for (const r of s.reminders || []) { toast("Herinnering: " + r.text); lastWasVoice = true; speak("Herinnering: " + r.text); }
+  } catch (e) {}
+}
+/* ---------- inloggen ---------- */
+let pin = "", pinLen = 6, started = false;
+async function api(path, opts = {}) {
+  const r = await fetch(path, { credentials: "same-origin", ...opts });
+  if (r.status === 401 && !path.endsWith("/login")) { showLogin(); throw new Error("inloggen vereist"); }
+  return r;
+}
+function showLogin(msg) { pin = ""; drawDots(); $("lock").classList.add("show"); if (msg) $("lockMsg").textContent = msg; }
+function drawDots() { [...$("dots").children].forEach((d, i) => d.classList.toggle("on", i < pin.length)); }
+async function tryPin() {
+  const r = await api("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) });
+  const data = await r.json().catch(() => ({}));
+  if (r.ok) { $("lock").classList.remove("show"); $("lockMsg").className = ""; $("logoutBtn").hidden = false; start(); return; }
+  $("dots").classList.add("shake"); setTimeout(() => $("dots").classList.remove("shake"), 400);
+  $("lockMsg").textContent = data.error || "Onjuiste pincode"; $("lockMsg").className = "err";
+  if (navigator.vibrate) navigator.vibrate(200);
+  pin = ""; setTimeout(drawDots, 350);
+}
+function press(k) {
+  if (k === "back") pin = pin.slice(0, -1); else if (k === "clear") pin = ""; else if (pin.length < pinLen) pin += k;
+  drawDots(); if (pin.length === pinLen) tryPin();
+}
+$("keys").addEventListener("click", e => { const b = e.target.closest("button"); if (b) press(b.dataset.k || b.textContent); });
+document.addEventListener("keydown", e => {
+  if (!$("lock").classList.contains("show")) return;
+  if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === "Backspace") press("back");
+});
+$("logoutBtn").onclick = async () => { await api("/api/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); location.reload(); };
+
+/* ---------- op je telefoon ---------- */
+$("phoneBtn").onclick = async () => {
+  let info = {}; try { info = await (await api("/api/phone")).json(); } catch (e) {}
+  const url = info.url;
+  $("sheet").innerHTML = `<div class="handle"></div><h3>Jarvis op je telefoon</h3><div class="sub">Scan de code met de camera van je telefoon</div>
+    ${url ? `<div id="qr"></div><div class="url">${esc(url)}</div>
+      <ol class="steps"><li>Zorg dat je telefoon op hetzelfde wifi zit.</li><li>Open de link en voer je pincode in.</li>
+      <li>iPhone: tik op <b>Deel → Zet op beginscherm</b>. Android: menu <b>⋮ → App installeren</b>.</li>
+      ${info.https ? "" : "<li>Wil je ook praten via de telefoon? Gebruik dan https (zie README).</li>"}</ol>`
+    : `<ol class="steps"><li>Stop Jarvis en start opnieuw met <b>python -m jarvis web --telefoon</b>.</li><li>Kom dan hier terug voor de QR-code.</li><li>Buiten de deur? Gebruik Tailscale (zie README).</li></ol>`}`;
+  $("sheet").dataset.id = ""; $("sheetbg").classList.add("show");
+  if (url) {
+    if (!window.QRCode) await new Promise((ok, fail) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); }).catch(() => {});
+    if (window.QRCode) new QRCode($("qr"), { text: url, width: 180, height: 180 });
+  }
+};
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+const isPhone = matchMedia("(pointer: coarse)").matches || (navigator.maxTouchPoints > 0 && innerWidth < 820);
+if (standalone || isPhone) $("phoneBtn").hidden = true;
+
+/* ---------- opstarten ---------- */
+function start() {
+  if (started) return; started = true;
+  header(); poll(); loadDevices();
+  setInterval(poll, 15000); setInterval(loadDevices, 20000); setInterval(header, 60000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && started) { loadDevices(); poll(); } });
+(async () => {
+  header();
+  try {
+    const s = await (await fetch("/api/session", { credentials: "same-origin" })).json();
+    $("logoutBtn").hidden = !s.auth;
+    if (s.pin_length) { pinLen = s.pin_length; $("dots").innerHTML = "<i></i>".repeat(pinLen); }
+    if (s.auth && !s.ok) showLogin(); else start();
+  } catch (e) { toast("Jarvis is niet bereikbaar. Draait hij nog op je computer?"); }
+})();
+if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("/sw.js").catch(() => {});
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
+</script>
+</body>
+</html>

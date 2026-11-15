@@ -1,0 +1,5 @@
+-r requirements.txt
+# Eenmalig koppelen van Google Assistant op je computer
+google-auth-oauthlib>=1.0
+# Nest-speakers, Nest Hubs en Chromecasts op je eigen netwerk
+pychromecast>=14.0
