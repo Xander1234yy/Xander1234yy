@@ -70,6 +70,19 @@ TOOLS: list[dict] = [
         },
         "annotations": {"readOnlyHint": True},
     },
+    {
+        "name": "ask_jarvis",
+        "title": "Vraag aan Jarvis thuis",
+        "description": "Stelt een vraag aan Jarvis op de computer thuis, die op het web kan zoeken en al zijn tools heeft "
+                       "(actueel nieuws, sport, koersen, openingstijden, feiten). Geeft het antwoord als tekst.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"question": {"type": "string"}},
+            "required": ["question"],
+            "additionalProperties": False,
+        },
+        "annotations": {"readOnlyHint": False, "destructiveHint": False},
+    },
 ]
 
 
@@ -104,6 +117,11 @@ class McpEndpoint:
             return home.command(str(args.get("command", "")))
         if name == "get_weather":
             return json.loads(self.jarvis.tools.run("get_weather", {k: v for k, v in args.items() if v is not None}))
+        if name == "ask_jarvis":
+            question = str(args.get("question", "")).strip()[:4000]
+            if not question:
+                raise ValueError("Geen vraag meegegeven")
+            return {"answer": self.jarvis.ask(question)}
         raise KeyError(name)
 
     # --- JSON-RPC -----------------------------------------------------------

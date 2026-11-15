@@ -522,6 +522,9 @@ const LIVE_TOOLS = [
   { name: "weer", description: "Actueel weer en verwachting voor een plaats (leeg = standaardstad).",
     inputSchema: { type: "object", properties: { plaats: { type: "string" }, dagen: { type: "integer" } } },
     execute: async ({ plaats, dagen }) => (await mcp.callTool(SERVER, "get_weather", { ...(plaats ? { location: plaats } : {}), ...(dagen ? { days: dagen } : {}) })).payload },
+  { name: "zoek_op_internet", description: "Laat Jarvis thuis iets opzoeken op het web: actueel nieuws, sport, koersen, openingstijden, recente feiten. Geef een volledige, op zichzelf staande vraag mee. Duurt een paar seconden.",
+    inputSchema: { type: "object", properties: { vraag: { type: "string" } }, required: ["vraag"] },
+    execute: async ({ vraag }) => (await mcp.callTool(SERVER, "ask_jarvis", { question: vraag })).payload },
 ];
 
 function prompt() {
@@ -529,7 +532,7 @@ function prompt() {
   const facts = Object.entries(state.facts).map(([k, v]) => `${k}: ${v}`).join("; ");
   const intro = `Je bent Jarvis, de persoonlijke assistent van de gebruiker, thuis en onderweg. Spreek natuurlijk, warm en kort (een of twee zinnen), in de taal van de gebruiker (standaard Nederlands), zonder markdown of emoji's. Spreek de gebruiker af en toe aan met "${TITLE}". Na een actie bevestig je kort wat er gebeurd is.
 Je tools: apparaten bekijken en bedienen, rekenen (reken nooit uit je hoofd), taken, notities, herinneringen/timers en onthouden. Sla persoonlijke dingen die later handig zijn (namen, voorkeuren, verjaardagen) op met onthoud. Verzin nooit resultaten van tools.
-${live ? "Je bent verbonden met Jarvis thuis: de apparaten zijn echt. Gebruik google_home_opdracht voor kamers, groepen, scènes en kleuren, en weer voor het weer." : "De apparaten zijn voorbeelden (Jarvis thuis is niet verbonden), en het weer kun je nu niet opvragen."} Op het web zoeken kan in deze versie niet; zeg dat eerlijk en kort als ernaar gevraagd wordt.
+${live ? "Je bent verbonden met Jarvis thuis: de apparaten zijn echt. Gebruik google_home_opdracht voor kamers, groepen, scènes en kleuren, weer voor het weer, en zoek_op_internet voor alles wat actuele informatie van het web nodig heeft." : "De apparaten zijn voorbeelden (Jarvis thuis is niet verbonden). Het weer en op het web zoeken kunnen pas als Jarvis thuis verbonden is; zeg dat eerlijk en kort als ernaar gevraagd wordt."}
 Huidige lokale tijd: ${now.toLocaleString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} (${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}).
 ${facts ? "Wat je over de gebruiker weet: " + facts : "Je weet nog niets over de gebruiker."}`;
   const turns = history.slice(-11); // oneven aantal: begint altijd met een vraag

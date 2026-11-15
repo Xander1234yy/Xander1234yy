@@ -16,6 +16,15 @@ Je persoonlijke assistent voor thuis. Je typt of praat gewoon, en Jarvis regelt 
 - **Notities, takenlijst, herinneringen en timers**
 - **Websites openen en je systeem controleren**
 
+## Snel starten
+
+Download of clone deze repo, ga naar de map `jarvis-assistent` en start:
+
+- **Mac / Linux:** `./start.sh`
+- **Windows:** dubbelklik op `start.bat`
+
+De eerste keer installeert het script alles en vraagt het je API-sleutel; die wordt bewaard in `.env`, dat niet in git komt. Daarna toont Jarvis het adres voor je computer en telefoon, met een pincode. Voor de telefoonversie op claude.ai start je met `./start.sh --connector` (zie hieronder).
+
 ## Installatie
 
 ```bash
@@ -75,9 +84,9 @@ Er is ook een online versie van Jarvis die je zonder installatie op je telefoon 
    ```
    Je krijgt een adres zoals `https://mijn-pc.tailnet-1234.ts.net`.
 3. Ga in claude.ai naar *Instellingen → Connectors → Eigen connector toevoegen*. Kies als naam precies **Jarvis**, en als adres het Tailscale-adres plus het connector-pad, bijvoorbeeld `https://mijn-pc.tailnet-1234.ts.net/mcp/AbC123…`.
-4. Open de online versie en tik op **Verbind met je huis**. De tegels tonen nu je echte apparaten, en je kunt Jarvis vragen "doe de woonkamer op 30 procent" of "hoe wordt het weer morgen?".
+4. Open de online versie en tik op **Verbind met je huis**. De tegels tonen nu je echte apparaten, en je kunt Jarvis vragen "doe de woonkamer op 30 procent", "hoe wordt het weer morgen?" of "wat is het laatste nieuws?".
 
-De connector biedt vier tools: `home_devices`, `home_control`, `google_home_command` en `get_weather`. Met `--connector` is de webapp ook via internet bereikbaar. Daarom is de pincode in deze stand altijd verplicht, en zonder het geheime pad geeft de connector alleen "niet gevonden".
+De connector biedt vijf tools: `home_devices`, `home_control`, `google_home_command`, `get_weather` en `ask_jarvis`. Met die laatste stelt de telefoonversie vragen aan Jarvis thuis, die wel op het web kan zoeken. Met `--connector` is de webapp ook via internet bereikbaar. Daarom is de pincode in deze stand altijd verplicht, en zonder het geheime pad geeft de connector alleen "niet gevonden".
 
 ### Jarvis altijd aan laten staan
 

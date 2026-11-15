@@ -51,7 +51,7 @@ def test_handshake_and_tools(mcp):
     assert init["result"]["capabilities"]["tools"] is not None
     assert rpc(url, {"jsonrpc": "2.0", "method": "notifications/initialized"})[0] == 202
     names = [t["name"] for t in rpc(url, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})[1]["result"]["tools"]]
-    assert names == ["home_devices", "home_control", "google_home_command", "get_weather"]
+    assert names == ["home_devices", "home_control", "google_home_command", "get_weather", "ask_jarvis"]
 
 
 def test_tool_calls(mcp):
@@ -69,3 +69,12 @@ def test_tool_calls(mcp):
 def test_connector_forces_pin(mcp):
     _, _, auth = mcp
     assert auth.enabled and len(auth.pin) == 6
+
+
+def test_ask_jarvis(mcp, monkeypatch):
+    base, token, _ = mcp
+    from jarvis.brain import Jarvis as J
+    monkeypatch.setattr(J, "ask", lambda self, q, on_tool=None: f"Antwoord op: {q}")
+    res = rpc(f"{base}/mcp/{token}", {"jsonrpc": "2.0", "id": 6, "method": "tools/call",
+              "params": {"name": "ask_jarvis", "arguments": {"question": "Wie won gisteren?"}}})[1]["result"]
+    assert res["structuredContent"] == {"answer": "Antwoord op: Wie won gisteren?"}
