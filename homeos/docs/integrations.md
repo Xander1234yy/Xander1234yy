@@ -76,6 +76,19 @@ dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeO
 - De oude **TRÅDFRI-gateway** heeft geen officiële API en geen Matter: niet ondersteund (alternatief: DIRIGERA).
 - **Nodig van jou:** heb je een DIRIGERA-hub of een TRÅDFRI-gateway, en welke IKEA-producten heb je?
 
+### Airco — Daikin Onecta ✅ mogelijk (via de cloud)
+- Officiële **Daikin Onecta Cloud API** via het Daikin Developer Portal (gratis voor privé-ontwikkelaars). Koppelen met
+  OAuth2: je logt één keer in met je Daikin-account en HomeOS krijgt een token. Dat token wordt versleuteld in de
+  connector bewaard en nooit in Supabase.
+- Limiet volgens Daikin: **200 verzoeken per dag per gebruiker** (sliding window), maximaal 20 per minuut. HomeOS leest
+  de status daarom ongeveer elke 10 minuten (± 145 per dag) en houdt de rest vrij voor opdrachten. Blijft het budget
+  op, dan meldt HomeOS dat eerlijk in plaats van oude waarden als live te tonen.
+- Verwachte functies (afhankelijk van wat de unit via de API meldt): aan/uit, modus (koelen, verwarmen, ventileren,
+  drogen, auto), gewenste temperatuur, ventilatorstand, kamer- en buitentemperatuur. Hiervoor komen nieuwe
+  capabilities (`climate`) en opdrachten in `@homeos/shared`.
+- Opdrachten lopen via de Daikin-cloud (niet lokaal). De unit moet in de Onecta-app staan (wifi-adapter verbonden).
+- Te controleren bij de bouw: welke redirect-URL's het portal toestaat voor een lokaal draaiende app.
+
 ### Apple TV
 - Geen officiële API voor lokale bediening door derden; dit blijft onderzoek. Er wordt geen onbewezen protocol gebruikt.
 
@@ -84,5 +97,6 @@ Bronnen: [Tuya-koppeling (Home Assistant-community)](https://community.home-assi
 [TP-Link FAQ RTSP/ONVIF](https://tp-link.com/support/faq/2680), [Tapo D235-belgebeurtenissen (TP-Link-community)](https://community.tp-link.com/en/home/forum/topic/736506),
 [IKEA: wat is de Matter-bridge](https://www.ikea.com/gb/en/customer-service/knowledge/articles/cdbc4637-5d63-4893-b382-20987cafecc4.html),
 [IKEA-nieuwsbericht DIRIGERA Matter-bridge](https://www.ikea.com/global/en/newsroom/innovation/ikea-dirigera-matter-bridge-240911),
-[matter.js](https://github.com/project-chip/matter.js).
+[matter.js](https://github.com/project-chip/matter.js),
+[Daikin Developer Portal](https://www.daikin.eu/en_us/product-group/control-systems/daikin-developer-portal.html).
 De officiële documentatie van Tuya en SolarEdge wordt aan het begin van fase 4 opnieuw gecontroleerd.

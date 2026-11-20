@@ -105,6 +105,7 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
             <Planned phase={4}>Smart Life / Tuya-stekkers (officiële Tuya Cloud API)</Planned>
             <Planned phase={4}>SolarEdge (officiële Monitoring API)</Planned>
             <Planned phase={4}>IKEA Home smart (Matter via de DIRIGERA-hub)</Planned>
+            <Planned phase={4}>Daikin Onecta-airco (officiële Onecta Cloud API)</Planned>
             <Planned phase={4}>Tapo-deurbel (alleen wat TP-Link officieel ondersteunt)</Planned>
             <Planned phase={4}>Apple TV (onderzoek naar een toegestane route)</Planned>
           </div>
