@@ -18,6 +18,7 @@ import type { Logger } from "@homeos/integrations";
 import { tokensEqual } from "./identity";
 import { RateLimiter } from "./rate-limit";
 import type { DeviceRegistry, OpResult } from "./registry";
+import type { HueService } from "./hue-service";
 
 export interface ServerOptions {
   registry: DeviceRegistry;
@@ -28,6 +29,7 @@ export interface ServerOptions {
   commandLimitPerMin: number;
   /** Toegestane Host-headers (bescherming tegen DNS-rebinding). */
   allowedHosts: string[];
+  hue: HueService;
 }
 
 const MAX_BODY = 64 * 1024;
@@ -110,6 +112,30 @@ export function createConnectorServer(o: ServerOptions) {
       pattern: new RegExp(`^/v1/scenes/${seg}/activate$`),
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
+    },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list() }) },
+    { method: "POST", pattern: /^\/v1\/integrations\/hue\/discover$/, handler: async () => o.hue.discover() },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/hue\/pair$/,
+      command: true,
+      handler: async ({ body }) => {
+        const { host } = parse(z.object({ host: z.string().trim().max(64) }), await body());
+        const r = await o.hue.pair(host);
+        if (!r.ok) {
+          const status = r.code === "LINK_BUTTON_NOT_PRESSED" ? 409 : r.code === "INVALID_HOST" ? 400 : 502;
+          throw new HttpError(status, r.code, r.message);
+        }
+        return { bridge: r.bridge };
+      },
+    },
+    {
+      method: "DELETE",
+      pattern: new RegExp(`^/v1/integrations/hue/${seg}$`),
+      handler: async ({ params }) => {
+        if (!(await o.hue.unpair(params[0]!))) throw new HttpError(404, "NOT_FOUND", "Bridge niet gevonden");
+        return { ok: true };
+      },
     },
     { method: "GET", pattern: /^\/v1\/identity$/, handler: async () => registry.identity() },
     { method: "PUT", pattern: /^\/v1\/rooms$/, handler: async ({ body }) => unwrap(await registry.replaceRooms(parse(RoomsReplaceSchema, await body()).rooms)) },

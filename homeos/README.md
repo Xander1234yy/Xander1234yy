@@ -5,7 +5,7 @@
 HomeOS is een zelfstandig smart-homeplatform, zonder Home Assistant. De webapp draait in de browser
 (iPhone, iPad, laptop) en een lichte **Device Connector** draait op je eigen laptop en praat lokaal met je apparaten.
 
-> **Status: fase 2 van 8.** Dashboard, Device Connector, accounts, huishoudens, rollen en een Supabase-database
+> **Status: fase 3 van 8.** Philips Hue werkt via de officiële lokale API. Dashboard, Device Connector, accounts, huishoudens, rollen en een Supabase-database
 > met Row Level Security. Familie (agenda, taken, boodschappen, notities) en Onderhoud werken.
 > Apparaten zijn nog gesimuleerd en overal gemarkeerd als **DEMO**. Echte integraties volgen vanaf fase 3
 > (Philips Hue). Zie [docs/roadmap.md](docs/roadmap.md).
@@ -34,6 +34,18 @@ Voor accounts, huishoudens, familie en onderhoud koppel je Supabase: zie [docs/s
 
 Bij de eerste start maakt de connector een unieke identiteit en een toegangstoken aan in
 `apps/connector/.data/` (bestandsrechten 0600, nooit in git). De webapp leest dat token server-side.
+
+## Connector automatisch starten op je Mac
+
+```bash
+npm run connector:install:macos             # zonder DEMO-apparaten
+npm run connector:install:macos -- --demo   # met DEMO-apparaten
+npm run connector:uninstall:macos
+```
+
+De connector start dan bij het inloggen en herstart na een crash. Logboeken staan in `~/Library/Logs/HomeOS/`.
+Sta "Lokaal netwerk" toe als macOS daarom vraagt; dat is nodig voor de Hue Bridge. Koppel daarna je bridge via
+**Instellingen → Philips Hue**.
 
 ## Scripts
 

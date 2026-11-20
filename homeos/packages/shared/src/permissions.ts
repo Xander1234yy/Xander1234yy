@@ -45,9 +45,10 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
   const m = method.toUpperCase();
   if (m === "GET") {
     if (/^v1\/audit$/.test(path)) return "view_audit";
-    if (/^v1\/(snapshot|devices\/available|energy\/(summary|history)|events)$/.test(path)) return "view";
+    if (/^v1\/(snapshot|devices\/available|energy\/(summary|history)|events|integrations)$/.test(path)) return "view";
     return null;
   }
+  if (/^v1\/integrations\/hue\/(discover|pair|[0-9a-f]{16})$/.test(path)) return "manage_devices";
   if (/^v1\/devices\/[^/]+\/commands$/.test(path)) return "control";
   if (/^v1\/scenes\/[^/]+\/activate$/.test(path)) return "control";
   if (/^v1\/emergency-stop$/.test(path)) return "control";

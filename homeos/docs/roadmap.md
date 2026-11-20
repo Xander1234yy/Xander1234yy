@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | 1 | Architectuur, monorepo, design system, dashboard, DEMO-apparaten, lokale dev-omgeving | ✅ Klaar |
 | 2 | Supabase: schema en migraties (alle 20 tabellen), RLS, Auth, huishoudens, kamers naar de database, familie en onderhoud | ✅ Klaar |
-| 3 | Philips Hue-adapter, pairing, apparaatregistry naar Supabase (devices/device_states) | ⏭ Volgende |
+| 3 | Philips Hue-adapter, pairing, apparaatregistry naar Supabase (devices/device_states), macOS-autostart | ✅ Klaar |
 | 4 | Stekkers, Apple TV (onderzoek), zonnepanelen, deurbel | |
 | 5 | Automation Engine, notificaties, geschiedenis | |
 | 6 | Jarvis AI-provider (provider-interface), spraak, opdrachtverwerking | |
@@ -45,8 +45,20 @@
 - Tests: 86 unit-/integratietests (waarvan 20 RLS-tests), 21 E2E-tests in lokale modus en 6 E2E-tests in cloudmodus
   tegen een echte lokale Supabase.
 
-## Openstaande vragen voor fase 3 en 4
-1. Welk merk en type slimme stekkers?
-2. Welk merk en type omvormer, en is er een slimme meter met P1-poort (bijv. HomeWizard)?
-3. Welk merk deurbel?
-4. Welk besturingssysteem draait op de laptop van de connector (voor autostart: launchd, systemd of Windows-service)?
+## Fase 3: opgeleverd
+
+- Philips Hue-adapter op de officiële lokale API (zie docs/integrations.md), met certificaat-pinning en versleutelde key.
+- Hue-koppelen vanuit Instellingen: zoeken, link-knopflow, handmatig IP, ontkoppelen (wist de key en de lampen).
+- Connector: adapters toevoegen en verwijderen terwijl hij draait; gekoppelde bridges herstellen na een herstart.
+- Registry-spiegel naar Supabase (`devices`, `device_states`, `device_events`, `connector_status`) zolang een beheerder
+  verbonden is.
+- macOS: `npm run connector:install:macos` installeert de connector als LaunchAgent (autostart, herstart na crash,
+  logboeken in ~/Library/Logs/HomeOS). `npm run dev` herkent een draaiende connector.
+- Hue-bridgesimulator voor ontwikkeling (`tests/tools/hue-bridge-simulator.mjs`), duidelijk gemarkeerd als simulator.
+- Tests: 100 unit- en integratietests. Hue is end-to-end getest tegen de simulator, inclusief een certificaatwissel.
+
+## Antwoorden en openstaande vragen
+- Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
+- Omvormer: SolarEdge → Monitoring API; is er een SolarEdge-energiemeter (voor netafname/teruglevering)? Heb je een P1-meter?
+- Deurbel: Tapo → welk model precies (D230, D235, D225)?
+- Laptop: macOS → LaunchAgent (gebouwd).

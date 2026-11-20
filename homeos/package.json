@@ -1,6 +1,6 @@
 {
   "name": "homeos",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "HomeOS \u2014 Your home. One intelligent system.",
   "type": "module",
@@ -28,7 +28,9 @@
     "db:status": "node scripts/db-migrate.mjs --status",
     "test:e2e:cloud": "playwright test -c playwright.cloud.config.ts",
     "supabase:start": "npx supabase@3.2.0 start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
-    "supabase:stop": "npx supabase@3.2.0 stop"
+    "supabase:stop": "npx supabase@3.2.0 stop",
+    "connector:install:macos": "bash scripts/macos/install-connector.sh",
+    "connector:uninstall:macos": "bash scripts/macos/uninstall-connector.sh"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

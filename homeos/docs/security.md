@@ -37,6 +37,17 @@
 | Auditlog per huishouden, alleen toevoegen | `audit_logs` |
 | Productie zonder Supabase geblokkeerd (`/setup`), tenzij expliciet `HOMEOS_ALLOW_LOCAL_MODE=true` | `proxy.ts` |
 
+## Integraties (fase 3)
+
+| Maatregel | Waar |
+| --- | --- |
+| Hue: alleen privé-LAN-adressen (geen SSRF naar internet) | `isPrivateLanHost()` |
+| Hue: certificaat-pinning; bij een ander certificaat wordt de verbinding verbroken vóórdat de key verstuurd wordt | `PinnedAgent` |
+| Hue: Common Name van het certificaat moet overeenkomen met de bridge-ID | `pairBridge()` |
+| Hue-keys versleuteld in de SecretStore, nooit in API-antwoorden, Supabase of logboeken | `hue-service.ts` |
+| Koppelen telt mee in de opdracht-ratelimit; koppelen en ontkoppelen alleen voor beheerders | connector + `permissions.ts` |
+| macOS-LaunchAgent draait als jouw gebruiker (geen root), connector luistert alleen op 127.0.0.1 | `scripts/macos/` |
+
 ## Bewuste beperkingen
 
 - In de **lokale modus** (geen Supabase) zijn er geen accounts. Daarom bindt de webapp aan 127.0.0.1. Met Supabase

@@ -22,6 +22,10 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^v1\/events$/ },
   { method: "GET", pattern: /^v1\/audit$/ },
   { method: "POST", pattern: /^v1\/emergency-stop$/ },
+  { method: "GET", pattern: /^v1\/integrations$/ },
+  { method: "POST", pattern: /^v1\/integrations\/hue\/discover$/ },
+  { method: "POST", pattern: /^v1\/integrations\/hue\/pair$/ },
+  { method: "DELETE", pattern: new RegExp(`^v1/integrations/hue/[0-9a-f]{16}$`) },
 ];
 
 export function isAllowed(method: string, path: string): boolean {

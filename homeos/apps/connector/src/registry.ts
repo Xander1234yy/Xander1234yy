@@ -110,6 +110,53 @@ export class DeviceRegistry extends EventEmitter {
     this.pollTimer.unref?.();
   }
 
+  /** Voegt een adapter toe terwijl de connector draait (bijv. na het koppelen van een Hue Bridge). */
+  async addAdapter(adapter: DeviceAdapter, autoAdd = false): Promise<void> {
+    if (this.o.adapters.some((a) => a.id === adapter.id)) await this.removeAdapter(adapter.id, false);
+    this.o.adapters.push(adapter);
+    await adapter.connect({
+      logger: this.o.logger,
+      now: this.now,
+      emit: (e) => this.onAdapterEvent(adapter, e),
+      secrets: this.o.secrets.scoped(adapter.id),
+    });
+    await this.discoverAdapter(adapter);
+    if (autoAdd) {
+      const roomIds = new Set(this.o.store.state.rooms.map((r) => r.id));
+      for (const r of this.records.values()) {
+        if (r.adapter !== adapter || this.isAdded(r.id)) continue;
+        const roomId = r.info.suggestedRoomId && roomIds.has(r.info.suggestedRoomId) ? r.info.suggestedRoomId : null;
+        this.o.store.state.devices[r.id] = { addedAt: this.now().toISOString(), roomId };
+      }
+      await this.o.store.save();
+    }
+    this.audit("adapter.add", "user", adapter.id, { integration: adapter.integration }, true);
+    await this.syncAll("system");
+    this.scheduleEmit();
+  }
+
+  /** Verwijdert een adapter en (optioneel) al zijn apparaten uit de registry. */
+  async removeAdapter(adapterId: string, forgetDevices = true): Promise<void> {
+    const adapter = this.o.adapters.find((a) => a.id === adapterId);
+    if (!adapter) return;
+    await adapter.disconnect().catch(() => undefined);
+    this.o.adapters.splice(this.o.adapters.indexOf(adapter), 1);
+    for (const [id, r] of this.records) {
+      if (r.adapter !== adapter) continue;
+      this.records.delete(id);
+      if (forgetDevices) delete this.o.store.state.devices[id];
+    }
+    this.scenes = this.scenes.filter((s) => s.adapterId !== adapterId);
+    this.health.delete(adapterId);
+    await this.o.store.save();
+    this.audit("adapter.remove", "user", adapterId, null, true);
+    this.scheduleEmit();
+  }
+
+  adapterHealth(adapterId: string): AdapterHealth | null {
+    return this.health.get(adapterId) ?? null;
+  }
+
   async stop(): Promise<void> {
     if (this.pollTimer) clearInterval(this.pollTimer);
     if (this.emitTimer) clearTimeout(this.emitTimer);

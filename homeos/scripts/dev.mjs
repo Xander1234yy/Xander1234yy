@@ -49,6 +49,16 @@ if (!existsSync(path.join(root, "node_modules"))) {
 }
 
 console.log("\n  HomeOS — Your home. One intelligent system.\n  Webapp:    http://127.0.0.1:3000\n  Connector: http://127.0.0.1:8787 (alleen lokaal)\n");
-run("connector", ["run", "dev", "-w", "@homeos/connector"]);
-// Geef de connector even de tijd om zijn identiteit en token aan te maken.
-setTimeout(() => run("web", ["run", "dev", "-w", "@homeos/web"]), 1500);
+// Draait de connector al (bijv. via de macOS-LaunchAgent)? Dan alleen de webapp starten.
+const port = process.env.HOMEOS_CONNECTOR_PORT ?? "8787";
+const running = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(1000) })
+  .then((r) => r.ok)
+  .catch(() => false);
+if (running) {
+  console.log(`  Connector draait al op poort ${port} (bijv. als achtergronddienst); alleen de webapp wordt gestart.\n`);
+  run("web", ["run", "dev", "-w", "@homeos/web"]);
+} else {
+  run("connector", ["run", "dev", "-w", "@homeos/connector"]);
+  // Geef de connector even de tijd om zijn identiteit en token aan te maken.
+  setTimeout(() => run("web", ["run", "dev", "-w", "@homeos/web"]), 1500);
+}

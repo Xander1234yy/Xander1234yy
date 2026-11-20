@@ -3,6 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { createConnector } from "../src/app";
 import type { ConnectorConfig } from "../src/config";
+import type { HueDeps } from "../src/hue-service";
+
+/** Tests praten nooit met het echte netwerk. */
+const noNetworkHue: HueDeps = {
+  discover: async () => [],
+  pair: async () => ({ ok: false, code: "UNREACHABLE", message: "geen netwerk in tests" }),
+  makeAdapter: () => {
+    throw new Error("geen Hue in deze test");
+  },
+};
 
 export const silent = { info() {}, warn() {}, error() {} };
 
@@ -10,7 +20,7 @@ export async function tempDir(): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), "homeos-test-"));
 }
 
-export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}) {
+export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps) {
   const dataDir = overrides.dataDir ?? (await tempDir());
   const config: ConnectorConfig = {
     host: "127.0.0.1",
@@ -24,7 +34,7 @@ export async function startTestConnector(overrides: Partial<ConnectorConfig> = {
     production: false,
     ...overrides,
   };
-  const c = await createConnector(config, silent);
+  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue);
   const addr = await c.start();
   const base = `http://127.0.0.1:${addr.port}`;
   const token = c.identity.apiToken;

@@ -2,6 +2,8 @@ import WebSocket from "ws";
 import { connectorWsUrl, getConnectorToken } from "@/lib/server/connector-client";
 import { assertConnectorLinked, authorize } from "@/lib/server/authz";
 import { syncRoomsToConnector } from "@/lib/server/rooms-sync";
+import { mirrorEvent, mirrorSnapshot } from "@/lib/server/registry-mirror";
+import { can, type DeviceEvent, type Snapshot } from "@homeos/shared";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,6 +25,8 @@ export async function GET(req: Request) {
   }
   if (auth.ctx.mode === "cloud") await syncRoomsToConnector(auth.ctx.householdId!);
   const token = await getConnectorToken();
+  // Beheerders spiegelen de registry naar Supabase (RLS staat schrijven alleen voor beheerders toe).
+  const mirrorTo = auth.ctx.mode === "cloud" && can(auth.ctx.role, "manage_devices") ? auth.ctx.householdId : null;
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -60,6 +64,8 @@ export async function GET(req: Request) {
           try {
             const msg = JSON.parse(String(raw)) as { type: string; data: unknown };
             if (msg.type === "snapshot" || msg.type === "event") send(msg.type, msg.data);
+            if (mirrorTo && msg.type === "snapshot") void mirrorSnapshot(mirrorTo, msg.data as Snapshot);
+            if (mirrorTo && msg.type === "event") void mirrorEvent(mirrorTo, msg.data as DeviceEvent);
           } catch {
             /* ongeldig bericht negeren */
           }

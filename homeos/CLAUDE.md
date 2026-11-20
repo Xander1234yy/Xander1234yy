@@ -29,5 +29,11 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
    Supabase alleen server-side, nooit een service role key in de webapp.
 9. Next.js 16: lees `apps/web/AGENTS.md` en `node_modules/next/dist/docs/` voordat je Next-API's gebruikt.
 
+## Integraties
+- Hue zonder hardware testen: `sudo node tests/tools/hue-bridge-simulator.mjs --host <privé-IP>` (poort 443, alleen een
+  simulator). Tests gebruiken `packages/integrations/test/fake-bridge.ts`, nooit het netwerk.
+- Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
+  na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
+
 ## Fase
-Fase 1 en 2 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
+Fase 1, 2 en 3 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.

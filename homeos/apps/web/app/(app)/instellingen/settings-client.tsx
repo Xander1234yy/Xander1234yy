@@ -7,6 +7,7 @@ import { PageHeader, SectionCard } from "@/components/section";
 import { api, connectorPath } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
+import { HueCard } from "@/components/settings/hue-card";
 import { formatDateTime } from "@/lib/format";
 
 interface AuditEntry {
@@ -84,6 +85,8 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
           </div>
         </SectionCard>
 
+        <HueCard />
+
         <SectionCard title="Integraties" icon={Plug}>
           <ul className="space-y-2">
             {(c?.adapters ?? []).map((a) => (
@@ -99,8 +102,10 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
             ))}
           </ul>
           <div className="mt-4 space-y-2">
-            <Planned phase={3}>Philips Hue (officiële Bridge API, lokale pairing)</Planned>
-            <Planned phase={4}>Slimme stekkers, Apple TV, zonnepanelen, deurbel</Planned>
+            <Planned phase={4}>Smart Life / Tuya-stekkers (officiële Tuya Cloud API)</Planned>
+            <Planned phase={4}>SolarEdge (officiële Monitoring API)</Planned>
+            <Planned phase={4}>Tapo-deurbel (alleen wat TP-Link officieel ondersteunt)</Planned>
+            <Planned phase={4}>Apple TV (onderzoek naar een toegestane route)</Planned>
           </div>
         </SectionCard>
 
