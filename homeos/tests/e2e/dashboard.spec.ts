@@ -6,7 +6,7 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByTestId("welcome-card")).toBeVisible();
     await expect(page.getByTestId("demo-banner")).toBeVisible();
     await expect(page.getByTestId("connection-pill")).toBeVisible();
-    for (const id of ["energy-card", "devices-overview", "lights-card", "media-card", "doorbell-card", "jarvis-card", "quick-actions"]) {
+    for (const id of ["energy-card", "devices-overview", "lights-card", "media-card", "doorbell-card", "jarvis-card", "quick-actions", "climate-card"]) {
       await expect(page.getByTestId(id)).toBeVisible();
     }
     await expect(page.getByTestId("energy-card")).toContainText("Opwek nu");
@@ -44,6 +44,18 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByRole("button", { name: "Bevestigen" })).toBeVisible();
     await page.getByRole("button", { name: "Annuleren" }).click();
     await expect(page.getByTestId("jarvis-messages")).toContainText("Geannuleerd");
+  });
+
+  test("bedient de DEMO-airco (temperatuur en modus)", async ({ page }) => {
+    await page.goto("/");
+    const card = page.getByTestId("climate-card");
+    await expect(card).toContainText("Airco woonkamer");
+    const before = (await card.getByText(/°C$/).first().textContent()) ?? "";
+    await card.getByRole("button", { name: "Temperatuur hoger" }).click();
+    await expect(card.getByText(/°C$/).first()).not.toHaveText(before);
+    await card.getByRole("button", { name: "Koelen" }).click();
+    await expect(card.getByRole("button", { name: "Koelen" })).toHaveAttribute("aria-pressed", "true");
+    await card.getByRole("button", { name: "Verwarmen" }).click();
   });
 
   test("alle pagina's laden zonder fouten", async ({ page }) => {

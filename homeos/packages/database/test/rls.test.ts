@@ -169,3 +169,10 @@ describe("audit en privacy", () => {
     await expect(t.as(outsider, "insert into public.connector_status (household_id, connector_id) values ($1, $2)", [otherHome, cid])).rejects.toThrow(/unique|duplicate/);
   });
 });
+
+describe("migratie 2: klimaat", () => {
+  it("accepteert airco-apparaten en weigert onbekende typen", async () => {
+    await t.as(owner, "insert into public.devices (household_id, external_id, name, kind, refresh_interval_ms) values ($1, 'daikin-onecta:u1', 'Airco', 'climate', 600000)", [home]);
+    await expect(t.as(owner, "insert into public.devices (household_id, external_id, name, kind) values ($1, 'x', 'X', 'raket')", [home])).rejects.toThrow(/kind_check/);
+  });
+});

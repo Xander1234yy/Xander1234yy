@@ -57,10 +57,27 @@
 - Hue-bridgesimulator voor ontwikkeling (`tests/tools/hue-bridge-simulator.mjs`), duidelijk gemarkeerd als simulator.
 - Tests: 100 unit- en integratietests. Hue is end-to-end getest tegen de simulator, inclusief een certificaatwissel.
 
+## Fase 4a: opgeleverd
+
+- Klimaat in het datamodel (`climate`-capability, modus- en temperatuuropdrachten, migratie 2), airco-bediening in
+  apparaatkaarten en een Klimaat-kaart op het dashboard, plus Jarvis ("zet de airco op 21 graden", "hoe warm is het").
+- SolarEdge-adapter (opwek, historie, budget) en Daikin Onecta-adapter (OAuth, bediening, budget, token-vernieuwing),
+  met instelkaarten in Instellingen.
+- Energiepagina toont eerlijk "niet gemeten" voor verbruik en net zonder meter.
+- Versheid per bron: cloud-bronnen met een ververs-interval van 10 minuten worden niet onterecht als verouderd gemarkeerd,
+  en tonen hun echte meettijd.
+- DEMO-airco in het demohuis.
+- Tests: 120 unit- en integratietests, 24 E2E-tests in lokale modus en 6 in cloudmodus.
+
+## Fase 4b: volgende
+- Smart Life/Tuya-stekkers (Tuya Cloud OpenAPI).
+- IKEA GRILLPLATS via Matter (matter.js-controller, multi-admin).
+- Apple TV-onderzoek; Tapo D235 blijft "niet ondersteund" zolang hij op batterij werkt.
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
-- Omvormer: SolarEdge → Monitoring API; is er een SolarEdge-energiemeter (voor netafname/teruglevering)? Heb je een P1-meter?
+- Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.
 - Deurbel: Tapo → welk model precies (D230, D235, D225)?
 - Laptop: macOS → LaunchAgent (gebouwd).
-- Airco: Daikin Onecta → officiële Onecta Cloud API (OAuth2, 200 verzoeken/dag); hoeveel units?
-- IKEA Home smart → Matter-controller (matter.js) via de DIRIGERA Matter-bridge; welke hub en welke producten?
+- Airco: 2× Daikin in Onecta → officiële Onecta Cloud API (gebouwd).
+- IKEA: DIRIGERA + GRILLPLATS → Matter (fase 4b). Tuya/Daikin via cloud: akkoord.

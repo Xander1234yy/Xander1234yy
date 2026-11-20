@@ -140,3 +140,54 @@ export function MediaControls({ device, size = "md" }: { device: Device; size?: 
     </div>
   );
 }
+
+const MODE_LABEL: Record<string, string> = { cooling: "Koelen", heating: "Verwarmen", auto: "Auto", dry: "Drogen", fanOnly: "Ventileren" };
+export const hvacModeLabel = (m: string | null | undefined) => (m ? (MODE_LABEL[m] ?? m) : "—");
+
+/** Airco: modus en gewenste temperatuur, binnen wat de unit zelf meldt (min/max/stap). */
+export function ClimateControl({ device }: { device: Device }) {
+  const { sendCommand, busy, usable } = useControl(device);
+  const c = device.state.climate;
+  if (!c || !supportsCommand(device, "set_target_temperature")) return null;
+  const step = c.stepC ?? 0.5;
+  const set = (t: number) => {
+    const v = Math.round(t / 0.5) * 0.5;
+    if ((c.minTempC != null && v < c.minTempC) || (c.maxTempC != null && v > c.maxTempC)) return;
+    void sendCommand(device, { type: "set_target_temperature", temperatureC: v });
+  };
+  const on = device.state.on !== false;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <Button size="icon-sm" variant="secondary" disabled={!usable || busy || !on || c.targetTempC == null} onClick={() => set((c.targetTempC ?? 0) - step)} aria-label="Temperatuur lager">
+          −
+        </Button>
+        <div className="text-center">
+          <p className="text-2xl font-semibold tabular">{c.targetTempC != null ? `${c.targetTempC.toLocaleString("nl-NL")} °C` : "—"}</p>
+          <p className="text-[11px] text-muted">{c.targetTempC == null ? "Geen setpoint in deze modus" : "Gewenst"}</p>
+        </div>
+        <Button size="icon-sm" variant="secondary" disabled={!usable || busy || !on || c.targetTempC == null} onClick={() => set((c.targetTempC ?? 0) + step)} aria-label="Temperatuur hoger">
+          +
+        </Button>
+      </div>
+      {c.modes.length > 1 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Modus">
+          {c.modes.map((m) => (
+            <button
+              key={m}
+              disabled={!usable || busy}
+              onClick={() => void sendCommand(device, { type: "set_hvac_mode", mode: m })}
+              aria-pressed={c.mode === m}
+              className={cn(
+                "rounded-full border px-2.5 py-1 text-xs transition disabled:opacity-40",
+                c.mode === m ? "border-accent bg-accent/15 text-fg" : "border-white/[0.08] text-muted hover:text-fg",
+              )}
+            >
+              {hvacModeLabel(m)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

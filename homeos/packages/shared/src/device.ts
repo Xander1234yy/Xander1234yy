@@ -18,15 +18,16 @@ export const CAPABILITIES = [
   "doorbell",
   "motion",
   "battery",
+  "climate",
 ] as const;
 export const CapabilitySchema = z.enum(CAPABILITIES);
 export type Capability = z.infer<typeof CapabilitySchema>;
 
-export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell"] as const;
+export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate"] as const;
 export const IntegrationTypeSchema = z.enum(INTEGRATION_TYPES);
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
 
-export const DEVICE_KINDS = ["light", "plug", "media", "solar_inverter", "energy_meter", "doorbell", "bridge"] as const;
+export const DEVICE_KINDS = ["light", "plug", "media", "solar_inverter", "energy_meter", "doorbell", "bridge", "climate"] as const;
 export const DeviceKindSchema = z.enum(DEVICE_KINDS);
 export type DeviceKind = z.infer<typeof DeviceKindSchema>;
 
@@ -42,6 +43,23 @@ export const MediaStateSchema = z.object({
 });
 export type MediaState = z.infer<typeof MediaStateSchema>;
 
+export const HVAC_MODES = ["cooling", "heating", "auto", "dry", "fanOnly"] as const;
+export const HvacModeSchema = z.enum(HVAC_MODES);
+export type HvacMode = z.infer<typeof HvacModeSchema>;
+
+/** Airco/klimaat. Alleen velden die het apparaat werkelijk meldt; null = niet beschikbaar. */
+export const ClimateStateSchema = z.object({
+  mode: z.string().max(40).nullable(),
+  modes: z.array(HvacModeSchema),
+  targetTempC: z.number().nullable(),
+  minTempC: z.number().nullable(),
+  maxTempC: z.number().nullable(),
+  stepC: z.number().nullable(),
+  roomTempC: z.number().nullable(),
+  outdoorTempC: z.number().nullable(),
+});
+export type ClimateState = z.infer<typeof ClimateStateSchema>;
+
 /** Laatst bekende toestand. Alle velden optioneel: alleen wat het apparaat werkelijk rapporteert. */
 export const DeviceStateSchema = z.object({
   on: z.boolean().optional(),
@@ -55,6 +73,7 @@ export const DeviceStateSchema = z.object({
   batteryPct: z.number().min(0).max(100).optional(),
   lastRingAt: isoDate.optional(),
   lastMotionAt: isoDate.optional(),
+  climate: ClimateStateSchema.optional(),
 });
 export type DeviceState = z.infer<typeof DeviceStateSchema>;
 
@@ -77,6 +96,8 @@ export const DeviceSchema = z.object({
   error: z.string().nullable(),
   /** true = gesimuleerd DEMO-apparaat, nooit een echt apparaat. */
   demo: z.boolean(),
+  /** Hoe vaak de bron ververst wordt (cloud-API's met daglimiet zijn trager). Bepaalt wanneer status "verouderd" is. */
+  refreshIntervalMs: z.number().int().positive().nullable().optional(),
 });
 export type Device = z.infer<typeof DeviceSchema>;
 

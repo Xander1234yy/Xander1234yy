@@ -47,6 +47,8 @@ export interface DiscoveredDevice {
   kind: DeviceKind;
   capabilities: Capability[];
   suggestedRoomId: string | null;
+  /** Verversingsinterval van de bron (ms), voor de versheidsweergave. */
+  refreshIntervalMs?: number;
 }
 
 export interface StatusReport {
@@ -55,6 +57,8 @@ export interface StatusReport {
   /** ISO-tijd waarop het apparaat werkelijk reageerde, null als het nooit reageerde. */
   lastSeen: string | null;
   error: string | null;
+  /** Tijdstip waarop de bron deze toestand mat (cloud-API's). Zonder deze waarde geldt "nu". */
+  stateAt?: string | null;
 }
 
 export type CommandResult =

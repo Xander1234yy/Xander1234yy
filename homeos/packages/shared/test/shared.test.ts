@@ -90,3 +90,19 @@ describe("kostenberekening", () => {
     expect(calculateCost({ productionKwh: null, consumptionKwh: null, importKwh: null, exportKwh: 1 })).toBeNull();
   });
 });
+
+describe("klimaatopdrachten", () => {
+  it("valideert modus en temperatuur in stappen van 0,5", () => {
+    expect(DeviceCommandSchema.safeParse({ type: "set_target_temperature", temperatureC: 21.5 }).success).toBe(true);
+    expect(DeviceCommandSchema.safeParse({ type: "set_target_temperature", temperatureC: 21.3 }).success).toBe(false);
+    expect(DeviceCommandSchema.safeParse({ type: "set_target_temperature", temperatureC: 40 }).success).toBe(false);
+    expect(DeviceCommandSchema.safeParse({ type: "set_hvac_mode", mode: "cooling" }).success).toBe(true);
+    expect(DeviceCommandSchema.safeParse({ type: "set_hvac_mode", mode: "turbo" }).success).toBe(false);
+  });
+  it("cloudbronnen met trage verversing zijn langer 'live'", () => {
+    const now = Date.parse("2026-01-01T12:00:00Z");
+    const d = { status: "ONLINE" as const, stateUpdatedAt: "2026-01-01T11:52:00Z", refreshIntervalMs: 600_000 };
+    expect(stateFreshness(d, { connectorOnline: true, now })).toBe("live");
+    expect(stateFreshness({ ...d, refreshIntervalMs: null }, { connectorOnline: true, now })).toBe("stale");
+  });
+});

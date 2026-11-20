@@ -132,3 +132,26 @@ describe("veilige redirects", () => {
     expect(safeNext(null)).toBe("/");
   });
 });
+
+describe("Jarvis airco", () => {
+  const climate = (on: boolean) =>
+    dev({
+      id: "ac",
+      name: "Woonkamer airco",
+      kind: "climate",
+      capabilities: ["onoff", "climate"],
+      state: { on, climate: { mode: "heating", modes: ["heating", "cooling"], targetTempC: 21, minTempC: 10, maxTempC: 30, stepC: 0.5, roomTempC: 19.5, outdoorTempC: 6 } },
+    });
+  const withAc = (on = true) => ({ ...ctx(), snapshot: { ...snapshot(), devices: [...snapshot().devices, climate(on)] } });
+
+  it("beantwoordt temperatuurvragen", () => {
+    expect(handleLocal("hoe warm is het binnen?", withAc()).text).toContain("19.5");
+  });
+  it("stelt een temperatuur voor met bevestiging", () => {
+    const r = handleLocal("zet de airco op 22,5 graden", withAc());
+    expect(r.actions[0]).toMatchObject({ deviceId: "ac", command: { type: "set_target_temperature", temperatureC: 22.5 } });
+  });
+  it("zet de airco uit als voorstel", () => {
+    expect(handleLocal("airco uit", withAc()).actions[0]).toMatchObject({ command: { type: "set_power", on: false } });
+  });
+});

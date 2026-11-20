@@ -10,7 +10,21 @@ const HueBridgeSchema = z.object({
   fingerprint256: z.string().min(10),
   pairedAt: z.string(),
 });
-const Schema = z.object({ version: z.literal(1), hue: z.array(HueBridgeSchema) });
+const SolarEdgeSchema = z.object({
+  siteId: z.string().regex(/^\d{1,12}$/),
+  name: z.string().max(120),
+  timeZone: z.string().max(64),
+  peakPowerKw: z.number().nullable(),
+  addedAt: z.string(),
+});
+const DaikinSchema = z.object({ clientId: z.string().max(200), redirectUri: z.string().max(500), connectedAt: z.string() });
+const Schema = z.object({
+  version: z.literal(1),
+  hue: z.array(HueBridgeSchema),
+  solaredge: z.array(SolarEdgeSchema).default([]),
+  daikin: DaikinSchema.nullable().default(null),
+});
+export type SolarEdgeRecord = z.infer<typeof SolarEdgeSchema>;
 export type HueBridgeRecord = z.infer<typeof HueBridgeSchema>;
 type State = z.infer<typeof Schema>;
 
@@ -22,7 +36,7 @@ export class IntegrationsStore {
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
     const file = dataDir ? path.join(dataDir, "integrations.json") : null;
-    let state: State = { version: 1, hue: [] };
+    let state: State = { version: 1, hue: [], solaredge: [], daikin: null };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {
       const p = Schema.safeParse(JSON.parse(raw));

@@ -20,7 +20,12 @@ export async function tempDir(): Promise<string> {
   return mkdtemp(path.join(os.tmpdir(), "homeos-test-"));
 }
 
-export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps) {
+/** Standaard: geen enkel netwerkverzoek naar buiten in tests. */
+const noNetworkFetch = (async () => {
+  throw new Error("Netwerk is uitgeschakeld in tests");
+}) as typeof fetch;
+
+export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps, fetchImpl: typeof fetch = noNetworkFetch) {
   const dataDir = overrides.dataDir ?? (await tempDir());
   const config: ConnectorConfig = {
     host: "127.0.0.1",
@@ -34,7 +39,7 @@ export async function startTestConnector(overrides: Partial<ConnectorConfig> = {
     production: false,
     ...overrides,
   };
-  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue);
+  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue, fetchImpl);
   const addr = await c.start();
   const base = `http://127.0.0.1:${addr.port}`;
   const token = c.identity.apiToken;

@@ -143,6 +143,47 @@ export function handleLocal(message: string, ctx: JarvisContext): JarvisReply {
     );
   }
 
+  // ---------- klimaat ----------
+  const units = s.devices.filter((d) => d.kind === "climate");
+  if (units.length && has(msg, "airco", "temperatuur", "graden", "warm", "koud", "koel", "verwarm")) {
+    const target = units.length === 1 ? units[0]! : (matchDevices(s, msg, (d) => d.kind === "climate")[0] ?? null);
+    const deg = /(\d{2}(?:[.,]5)?)\s*(graden|°)/.exec(message.toLowerCase());
+    const wantsChange = has(msg, "zet", "maak", "doe", "stel") || deg !== null || /(^|\s)(aan|uit)($|\s)/.test(msg);
+    if (!wantsChange) {
+      const lines = units.map((u) => {
+        const c = u.state.climate;
+        return `${u.name}: binnen ${c?.roomTempC ?? "?"} °C${c?.outdoorTempC != null ? `, buiten ${c.outdoorTempC} °C` : ""}, ${u.state.on === false ? "uit" : `${c?.mode ?? "?"} naar ${c?.targetTempC ?? "?"} °C`}`;
+      });
+      return reply("climate_status", `${lines.join(". ")}${demo}.${offlineNote}`);
+    }
+    if (!ctx.connectorOnline) return reply("command_blocked", "De connector is offline. Ik kan de airco nu niet bedienen.");
+    if (!target) return reply("ambiguous", `Welke airco bedoel je? ${units.map((u) => u.name).join(" of ")}.`);
+    const policy = { source: "jarvis" as const, emergencyStop: s.connector.emergencyStop };
+    let command: DeviceCommand | null = null;
+    let label = "";
+    if (deg) {
+      const t = Number(deg[1]!.replace(",", "."));
+      command = { type: "set_target_temperature", temperatureC: t };
+      label = `${target.name} op ${t.toLocaleString("nl-NL")} °C`;
+    } else if (/(^|\s)uit($|\s)/.test(msg)) {
+      command = { type: "set_power", on: false };
+      label = `${target.name} uit`;
+    } else if (/(^|\s)aan($|\s)/.test(msg)) {
+      command = { type: "set_power", on: true };
+      label = `${target.name} aan`;
+    } else if (has(msg, "koel")) {
+      command = { type: "set_hvac_mode", mode: "cooling" };
+      label = `${target.name} op koelen`;
+    } else if (has(msg, "verwarm")) {
+      command = { type: "set_hvac_mode", mode: "heating" };
+      label = `${target.name} op verwarmen`;
+    }
+    if (!command) return reply("unclear_command", `Wat wil je met ${target.name}? Bijvoorbeeld "zet de airco op 21 graden" of "airco uit".`);
+    const check = checkCommand(target, command, policy);
+    if (!check.ok) return reply("command_denied", `Dat kan ik niet doen: ${check.reason}`);
+    return reply("command", `${label}. Bevestig je dit?`, [{ kind: "command", deviceId: target.id, deviceName: target.name, command, label }]);
+  }
+
   // ---------- status ----------
   if (has(msg, "offline", "bereikbaar", "storing", "problem", "kapot")) {
     const bad = s.devices.filter((d) => d.status !== "ONLINE");

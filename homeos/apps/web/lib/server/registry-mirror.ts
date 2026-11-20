@@ -33,6 +33,7 @@ export async function mirrorSnapshot(householdId: string, snapshot: Snapshot, fo
       last_seen: d.lastSeen,
       last_error: d.error,
       demo: d.demo,
+      refresh_interval_ms: d.refreshIntervalMs ?? null,
     }));
     if (rows.length) {
       const { data: saved, error } = await supabase.from("devices").upsert(rows, { onConflict: "household_id,external_id" }).select("id, external_id");

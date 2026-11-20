@@ -26,7 +26,10 @@ export function EnergyCard({ energy, live }: { energy: EnergySummary | null; liv
         <div className={live ? "" : "opacity-60"}>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Opwek nu" value={formatW(energy.currentProductionW)} accent="var(--color-solar)" sub={`Vandaag ${formatKwh(energy.today.productionKwh)}`} />
-            <Stat label="Verbruik nu" value={formatW(energy.currentConsumptionW)} sub={`Vandaag ${formatKwh(energy.today.consumptionKwh)}`} />
+            <Stat label="Verbruik nu" value={formatW(energy.currentConsumptionW)} sub={energy.currentConsumptionW == null ? "Geen meter gekoppeld" : `Vandaag ${formatKwh(energy.today.consumptionKwh)}`} />
+            {energy.gridImportW == null && energy.gridExportW == null ? (
+              <Stat label="Net" value="—" sub="Geen meter gekoppeld" />
+            ) : (
             <Stat
               label={exporting ? "Teruglevering" : "Netafname"}
               value={
@@ -37,6 +40,7 @@ export function EnergyCard({ energy, live }: { energy: EnergySummary | null; liv
               }
               sub={`Vandaag ${formatKwh(exporting ? energy.today.exportKwh : energy.today.importKwh)}`}
             />
+            )}
             <Stat label="Deze maand" value={formatKwh(energy.month.productionKwh, 0)} sub="opgewekt" />
           </div>
           {history && (

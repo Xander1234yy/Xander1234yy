@@ -11,9 +11,16 @@ import { createConnectorServer } from "./server";
 import { StateStore } from "./state-store";
 import { IntegrationsStore } from "./integrations-store";
 import { createHueService, realHueDeps, type HueDeps } from "./hue-service";
+import { createCloudIntegrations } from "./cloud-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
-export async function createConnector(config: ConnectorConfig, logger: Logger, extraAdapters: DeviceAdapter[] = [], hueDeps: HueDeps = realHueDeps) {
+export async function createConnector(
+  config: ConnectorConfig,
+  logger: Logger,
+  extraAdapters: DeviceAdapter[] = [],
+  hueDeps: HueDeps = realHueDeps,
+  fetchImpl: typeof fetch = fetch,
+) {
   await ensureDir(config.dataDir);
   await ensureDir(path.join(config.dataDir, "logs"));
   const identity = await loadOrCreateIdentity(config.dataDir);
@@ -37,6 +44,8 @@ export async function createConnector(config: ConnectorConfig, logger: Logger, e
 
   const hue = createHueService({ registry, secrets, store: integrations, deps: hueDeps });
   adapters.push(...hue.adapters());
+  const cloud = createCloudIntegrations({ registry, secrets, store: integrations, fetchImpl });
+  adapters.push(...cloud.adapters());
 
   const allowedHosts = ["localhost", "127.0.0.1", "::1", config.host.toLowerCase()];
   const api = createConnectorServer({
@@ -48,6 +57,7 @@ export async function createConnector(config: ConnectorConfig, logger: Logger, e
     commandLimitPerMin: config.commandLimitPerMin,
     allowedHosts,
     hue,
+    cloud,
   });
 
   return {

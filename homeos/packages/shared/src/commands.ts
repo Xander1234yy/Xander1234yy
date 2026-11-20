@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HexColorSchema, type Capability, type Device } from "./device";
+import { HexColorSchema, HvacModeSchema, type Capability, type Device } from "./device";
 
 export const DeviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set_power"), on: z.boolean() }),
@@ -8,6 +8,11 @@ export const DeviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set_color_temperature"), colorTempK: z.number().int().min(2000).max(6500) }),
   z.object({ type: z.literal("media"), action: z.enum(["play", "pause", "next", "previous"]) }),
   z.object({ type: z.literal("media_power"), on: z.boolean() }),
+  z.object({ type: z.literal("set_hvac_mode"), mode: HvacModeSchema }),
+  z.object({
+    type: z.literal("set_target_temperature"),
+    temperatureC: z.number().min(10).max(32).refine((v) => Number.isInteger(v * 2), "Stappen van 0,5 °C"),
+  }),
 ]);
 export type DeviceCommand = z.infer<typeof DeviceCommandSchema>;
 
@@ -29,6 +34,8 @@ export const COMMAND_CAPABILITY: Record<DeviceCommand["type"], Capability> = {
   set_color_temperature: "color_temperature",
   media: "media_playback",
   media_power: "media_power",
+  set_hvac_mode: "climate",
+  set_target_temperature: "climate",
 };
 
 /**

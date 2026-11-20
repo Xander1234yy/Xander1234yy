@@ -19,6 +19,7 @@ import { tokensEqual } from "./identity";
 import { RateLimiter } from "./rate-limit";
 import type { DeviceRegistry, OpResult } from "./registry";
 import type { HueService } from "./hue-service";
+import { SetupError, type CloudIntegrations } from "./cloud-service";
 
 export interface ServerOptions {
   registry: DeviceRegistry;
@@ -30,6 +31,7 @@ export interface ServerOptions {
   /** Toegestane Host-headers (bescherming tegen DNS-rebinding). */
   allowedHosts: string[];
   hue: HueService;
+  cloud: CloudIntegrations;
 }
 
 const MAX_BODY = 64 * 1024;
@@ -73,6 +75,15 @@ function unwrap<T>(r: OpResult<T>): unknown {
   return "value" in r ? (r as { value: unknown }).value : { ok: true };
 }
 
+async function setup<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (err instanceof SetupError) throw new HttpError(err.status, err.code, err.message);
+    throw err;
+  }
+}
+
 const limitSchema = z.coerce.number().int().min(1).max(500).default(50);
 
 export function createConnectorServer(o: ServerOptions) {
@@ -113,7 +124,40 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list() }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list() }) },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/solaredge$/,
+      command: true,
+      handler: async ({ body }) => {
+        const { siteId, apiKey } = parse(z.object({ siteId: z.string().trim().max(12), apiKey: z.string().trim().max(64) }), await body());
+        return setup(() => o.cloud.addSolarEdge(siteId, apiKey));
+      },
+    },
+    {
+      method: "DELETE",
+      pattern: /^\/v1\/integrations\/solaredge\/(\d{1,12})$/,
+      handler: async ({ params }) => setup(() => o.cloud.removeSolarEdge(params[0]!)),
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/daikin\/start$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ clientId: z.string().trim().max(200), clientSecret: z.string().trim().max(500), redirectUri: z.string().trim().max(500) }), await body());
+        return setup(async () => o.cloud.startDaikin(b.clientId, b.clientSecret, b.redirectUri));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/daikin\/complete$/,
+      command: true,
+      handler: async ({ body }) => {
+        const { callbackUrl } = parse(z.object({ callbackUrl: z.string().trim().max(4000) }), await body());
+        return setup(() => o.cloud.completeDaikin(callbackUrl));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/daikin$/, handler: async () => setup(() => o.cloud.removeDaikin()) },
     { method: "POST", pattern: /^\/v1\/integrations\/hue\/discover$/, handler: async () => o.hue.discover() },
     {
       method: "POST",

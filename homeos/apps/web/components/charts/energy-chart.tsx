@@ -25,7 +25,9 @@ function labelFor(t: string, bucket: EnergyHistory["bucket"]) {
  * Lichtgewicht SVG-grafiek: vlakken voor dag-historie (15 min), staven voor week/maand/jaar.
  * Waarden in kWh per bucket; voor 15-minuten wordt dit omgerekend naar gemiddeld vermogen (kW).
  */
-export function EnergyChart({ history, series = DEFAULT_SERIES, height = 220 }: { history: EnergyHistory; series?: Series[]; height?: number }) {
+export function EnergyChart({ history, series: requested = DEFAULT_SERIES, height = 220 }: { history: EnergyHistory; series?: Series[]; height?: number }) {
+  // Reeksen zonder enige meetwaarde (bijv. verbruik zonder slimme meter) worden niet getekend.
+  const series = useMemo(() => requested.filter((s) => history.points.some((p) => p[s.key] != null)), [requested, history.points]);
   const id = useId().replace(/:/g, "");
   const [hover, setHover] = useState<number | null>(null);
   const W = 800;

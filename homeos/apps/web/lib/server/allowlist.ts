@@ -26,6 +26,10 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^v1\/integrations\/hue\/discover$/ },
   { method: "POST", pattern: /^v1\/integrations\/hue\/pair$/ },
   { method: "DELETE", pattern: new RegExp(`^v1/integrations/hue/[0-9a-f]{16}$`) },
+  { method: "POST", pattern: /^v1\/integrations\/solaredge$/ },
+  { method: "DELETE", pattern: /^v1\/integrations\/solaredge\/\d{1,12}$/ },
+  { method: "POST", pattern: /^v1\/integrations\/daikin\/(start|complete)$/ },
+  { method: "DELETE", pattern: /^v1\/integrations\/daikin$/ },
 ];
 
 export function isAllowed(method: string, path: string): boolean {

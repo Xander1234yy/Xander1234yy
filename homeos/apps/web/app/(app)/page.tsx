@@ -9,6 +9,7 @@ import { MediaCard } from "@/components/dashboard/media-card";
 import { DoorbellCard } from "@/components/dashboard/doorbell-card";
 import { AutomationsCard, JarvisCard } from "@/components/dashboard/misc-cards";
 import { AgendaCard } from "@/components/dashboard/agenda-card";
+import { ClimateCard } from "@/components/dashboard/climate-card";
 import { useEnergySummary } from "@/lib/use-energy";
 
 export default function DashboardPage() {
@@ -39,10 +40,13 @@ export default function DashboardPage() {
       <div className="lg:col-span-3">
         <DoorbellCard />
       </div>
-      <div className="lg:col-span-6">
+      <div className="lg:col-span-4">
+        <ClimateCard />
+      </div>
+      <div className="lg:col-span-4">
         <AutomationsCard />
       </div>
-      <div className="lg:col-span-6">
+      <div className="md:col-span-2 lg:col-span-4">
         <AgendaCard />
       </div>
     </div>

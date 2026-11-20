@@ -49,7 +49,15 @@ dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeO
   gedocumenteerd en worden daarom niet gebruikt.
 - Credentials (Access ID/Secret) komen versleuteld in de connector, nooit in Supabase.
 
-### Zonnepanelen — SolarEdge ✅ mogelijk
+### Zonnepanelen — SolarEdge ✅ gebouwd (fase 4a)
+
+Gebouwd in `packages/integrations/src/solaredge/`: koppelen met site-ID + API-key (gevalideerd via `/site/{id}/details`),
+actuele opwek en dag/maand/jaar uit `/site/{id}/overview`, historie uit `/site/{id}/energy` (kwartier/dag/maand,
+tijden omgerekend vanuit de tijdzone van de site), verzoekbudget van 280/dag met vaste ververs-momenten en caching.
+Zonder meter (jouw situatie) blijven verbruik, afname en teruglevering `null` en toont de UI "niet gemeten".
+Getest met nagebootste API-antwoorden; nog niet tegen jouw echte installatie.
+
+#### Achtergrond
 - Officiële **SolarEdge Monitoring API** (v1) met een site-API-key (Monitoring-portal → Admin → Site Access; soms moet de
   installateur die activeren). Limiet: **300 verzoeken per dag per site**, dus HomeOS ververst de actuele opwek ongeveer
   elke 6 minuten en de dag-, maand- en jaartotalen minder vaak.
@@ -78,9 +86,31 @@ dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeO
 - Beperking volgens IKEA: via de Matter-bridge worden **op dit moment alleen lichtbronnen (incl. drivers)** gedeeld.
   IKEA-stekkers, sensoren, schakelaars en rolgordijnen zijn via de officiële route dus (nog) niet beschikbaar.
 - De oude **TRÅDFRI-gateway** heeft geen officiële API en geen Matter: niet ondersteund (alternatief: DIRIGERA).
-- **Nodig van jou:** heb je een DIRIGERA-hub of een TRÅDFRI-gateway, en welke IKEA-producten heb je?
+- **Jouw situatie: DIRIGERA + GRILLPLATS.** De nieuwe GRILLPLATS is zelf een Matter-over-Thread-stekker (met
+  energiemeting) en gebruikt de DIRIGERA als Thread-border-router. Een Matter-apparaat kan met meerdere systemen
+  tegelijk gekoppeld worden (multi-admin), dus HomeOS kan de stekker als Matter-controller rechtstreeks koppelen met
+  een koppelcode uit de IKEA-app, los van de Matter-bridge-beperking. Dit wordt gebouwd in fase 4b, samen met Tuya.
 
-### Airco — Daikin Onecta ✅ mogelijk (via de cloud)
+### Airco — Daikin Onecta ✅ gebouwd (fase 4a)
+
+Gebouwd in `packages/integrations/src/daikin/` op basis van de officiële endpoints (geverifieerd in de broncode van de
+open-source client `daikin-controller-cloud`): OIDC `https://idp.onecta.daikineurope.com/v1/oidc/{authorize,token}`,
+scope `openid onecta:basic.integration`, API `https://api.onecta.daikineurope.com/v1/gateway-devices` en
+`PATCH …/management-points/{embeddedId}/characteristics/{naam}` met `{ value, path }`.
+
+- Koppelen in Instellingen: client-ID/secret uit het Daikin Developer Portal, inloggen bij Daikin, daarna de
+  terugkeer-URL plakken (of automatisch via `/integraties/daikin` als HomeOS op https draait). De state wordt
+  gecontroleerd; secret en tokens staan versleuteld in de connector; tokens worden automatisch vernieuwd.
+- **Daikin accepteert geen `localhost`/`127.0.0.1` als redirect-URI en vereist https.** Standaard stelt HomeOS
+  `https://homeos.invalid/daikin-callback` voor: dat domein bestaat nooit, dus de code blijft in je browser.
+  Weigert het portal dit adres, gebruik dan een https-adres dat van jou is.
+- Bediening: aan/uit, modus, gewenste temperatuur (binnen min/max/stap van de unit); kamer- en buitentemperatuur.
+- 200 verzoeken/dag: één verzoek per 10 minuten voor alle units, 40 gereserveerd voor opdrachten,
+  `x-ratelimit-remaining-day` en `retry-after` worden gevolgd. Na een opdracht wordt na 90 s ter controle opnieuw gelezen
+  (de Daikin-cloud kan direct na een wijziging nog de oude waarde geven).
+- Getest met nagebootste API-antwoorden; nog niet tegen jouw echte account.
+
+#### Achtergrond
 - Officiële **Daikin Onecta Cloud API** via het Daikin Developer Portal (gratis voor privé-ontwikkelaars). Koppelen met
   OAuth2: je logt één keer in met je Daikin-account en HomeOS krijgt een token. Dat token wordt versleuteld in de
   connector bewaard en nooit in Supabase.

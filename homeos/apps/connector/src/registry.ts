@@ -195,7 +195,7 @@ export class DeviceRegistry extends EventEmitter {
     if (report.lastSeen) r.lastSeen = report.lastSeen;
     if (report.status === "ONLINE") {
       r.state = report.state;
-      r.stateUpdatedAt = this.now().toISOString();
+      r.stateUpdatedAt = report.stateAt ?? this.now().toISOString();
     }
     if (prevStatus !== r.status && prevStatus !== "CONNECTING" && this.isAdded(r.id)) {
       this.recordEvent(r.id, "status_change", `${this.displayName(r)}: ${prevStatus} → ${r.status}`, r.adapter.demo);
@@ -283,6 +283,7 @@ export class DeviceRegistry extends EventEmitter {
       state: r.state,
       error: r.error,
       demo: r.adapter.demo,
+      refreshIntervalMs: r.info.refreshIntervalMs ?? null,
     };
   }
 
@@ -476,8 +477,9 @@ export class DeviceRegistry extends EventEmitter {
 
   // ---------- energie ----------
 
+  /** Echte energiebronnen gaan voor DEMO-bronnen. */
   private energyAdapter(): DeviceAdapter | undefined {
-    return this.o.adapters.find((a) => a.energy);
+    return this.o.adapters.find((a) => a.energy && !a.demo) ?? this.o.adapters.find((a) => a.energy);
   }
 
   async energySummary(): Promise<EnergySummary | null> {

@@ -1,4 +1,4 @@
-import { BellRing, Cable, Gauge, Lightbulb, Plug, Router, Sun, Tv, type LucideIcon } from "lucide-react";
+import { AirVent, BellRing, Cable, Gauge, Lightbulb, Plug, Router, Sun, Tv, type LucideIcon } from "lucide-react";
 import type { Device } from "@homeos/shared";
 
 const ICONS: Record<Device["kind"], LucideIcon> = {
@@ -9,6 +9,7 @@ const ICONS: Record<Device["kind"], LucideIcon> = {
   energy_meter: Gauge,
   doorbell: BellRing,
   bridge: Router,
+  climate: AirVent,
 };
 
 export function DeviceIcon({ kind, className }: { kind: Device["kind"]; className?: string }) {
@@ -24,4 +25,5 @@ export const KIND_LABEL: Record<Device["kind"], string> = {
   energy_meter: "Energiemeter",
   doorbell: "Deurbel",
   bridge: "Bridge",
+  climate: "Airco",
 };

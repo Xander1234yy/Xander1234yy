@@ -8,7 +8,7 @@ import { enc } from "@/lib/api";
 import { useHome, useLive as useLiveConnector } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { formatDateTime, formatKwh, formatTime, formatW } from "@/lib/format";
-import { BrightnessSlider, ColorControl, ColorTempControl, MediaControls, PowerSwitch } from "./controls";
+import { BrightnessSlider, ClimateControl, ColorControl, ColorTempControl, MediaControls, PowerSwitch, hvacModeLabel } from "./controls";
 import { DeviceIcon, KIND_LABEL } from "./device-icon";
 import { FreshnessNote } from "./freshness";
 import { DemoBadge, StatusBadge } from "./status-badge";
@@ -26,6 +26,11 @@ export function DeviceReadings({ device }: { device: Device }) {
   if (device.capabilities.includes("battery")) items.push(["Batterij", s.batteryPct != null ? `${s.batteryPct}%` : "—"]);
   if (device.capabilities.includes("doorbell")) items.push(["Laatst gebeld", formatDateTime(s.lastRingAt)]);
   if (device.capabilities.includes("motion")) items.push(["Beweging", formatDateTime(s.lastMotionAt)]);
+  if (s.climate) {
+    items.push(["Binnen", s.climate.roomTempC != null ? `${s.climate.roomTempC.toLocaleString("nl-NL")} °C` : "—"]);
+    if (s.climate.outdoorTempC != null) items.push(["Buiten", `${s.climate.outdoorTempC.toLocaleString("nl-NL")} °C`]);
+    items.push(["Modus", s.on === false ? "Uit" : hvacModeLabel(s.climate.mode)]);
+  }
   if (device.state.media) items.push(["Speelt", s.media?.title ?? (s.media?.power === "standby" ? "Stand-by" : "Niets")]);
   if (!items.length) return null;
   return (
@@ -84,6 +89,7 @@ export function DeviceCard({ device }: { device: Device }) {
           <ColorTempControl device={device} />
           <ColorControl device={device} />
           <MediaControls device={device} />
+          <ClimateControl device={device} />
           <DeviceReadings device={device} />
         </div>
 

@@ -68,6 +68,12 @@ export default function EnergyPage() {
           <Card className="p-5">
             <Stat label="Zonne-opwek nu" value={formatW(summary.currentProductionW)} accent="var(--color-solar)" sub={`Vandaag ${formatKwh(summary.today.productionKwh)}`} />
           </Card>
+          {summary.gridImportW == null && summary.currentConsumptionW == null ? (
+            <Card className="p-5 sm:col-span-2 lg:col-span-3">
+              <Stat label="Verbruik en net" value="Niet gemeten" sub="Er is geen slimme meter of SolarEdge-energiemeter gekoppeld. Alleen opwek is beschikbaar." />
+            </Card>
+          ) : (
+          <>
           <Card className="p-5">
             <Stat label="Verbruik nu" value={formatW(summary.currentConsumptionW)} sub={`Vandaag ${formatKwh(summary.today.consumptionKwh)}`} />
           </Card>
@@ -77,6 +83,8 @@ export default function EnergyPage() {
           <Card className="p-5">
             <Stat label="Teruglevering nu" value={formatW(summary.gridExportW)} accent="var(--color-success)" sub={`Vandaag ${formatKwh(summary.today.exportKwh)}`} />
           </Card>
+          </>
+          )}
         </div>
       )}
 
@@ -132,7 +140,9 @@ export default function EnergyPage() {
                 <div className="flex justify-between text-xs"><dt className="text-muted">Bespaard door eigen verbruik</dt><dd className="tabular text-success">{formatEuro(cost.selfConsumptionSaving)}</dd></div>
               </dl>
             ) : (
-              <p className="text-sm text-muted">Onvoldoende gegevens voor een kostenberekening.</p>
+              <p className="text-sm text-muted">
+                Voor een kostenberekening zijn netafname en teruglevering nodig. Die meet je met een slimme meter (P1) of een SolarEdge-energiemeter; zonder meter schat HomeOS niets.
+              </p>
             )}
             <div className="mt-4 grid grid-cols-2 gap-2">
               <label className="text-[11px] text-muted">

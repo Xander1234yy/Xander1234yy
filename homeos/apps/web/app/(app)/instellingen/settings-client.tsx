@@ -8,6 +8,7 @@ import { api, connectorPath } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { HueCard } from "@/components/settings/hue-card";
+import { DaikinCard, SolarEdgeCard } from "@/components/settings/cloud-cards";
 import { formatDateTime } from "@/lib/format";
 
 interface AuditEntry {
@@ -86,6 +87,8 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
         </SectionCard>
 
         <HueCard />
+        <SolarEdgeCard />
+        <DaikinCard />
 
         <SectionCard title="Integraties" icon={Plug}>
           <ul className="space-y-2">
@@ -103,9 +106,7 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
           </ul>
           <div className="mt-4 space-y-2">
             <Planned phase={4}>Smart Life / Tuya-stekkers (officiële Tuya Cloud API)</Planned>
-            <Planned phase={4}>SolarEdge (officiële Monitoring API)</Planned>
             <Planned phase={4}>IKEA Home smart (Matter via de DIRIGERA-hub)</Planned>
-            <Planned phase={4}>Daikin Onecta-airco (officiële Onecta Cloud API)</Planned>
             <Planned phase={4}>Tapo-deurbel (alleen wat TP-Link officieel ondersteunt)</Planned>
             <Planned phase={4}>Apple TV (onderzoek naar een toegestane route)</Planned>
           </div>
