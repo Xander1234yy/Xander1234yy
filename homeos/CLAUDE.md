@@ -36,4 +36,4 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 
 ## Fase
-Fase 1, 2 en 3 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
+Fase 1, 2, 3 en 4a zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.

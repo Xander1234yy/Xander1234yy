@@ -108,7 +108,8 @@ scope `openid onecta:basic.integration`, API `https://api.onecta.daikineurope.co
 - 200 verzoeken/dag: één verzoek per 10 minuten voor alle units, 40 gereserveerd voor opdrachten,
   `x-ratelimit-remaining-day` en `retry-after` worden gevolgd. Na een opdracht wordt na 90 s ter controle opnieuw gelezen
   (de Daikin-cloud kan direct na een wijziging nog de oude waarde geven).
-- Getest met nagebootste API-antwoorden; nog niet tegen jouw echte account.
+- Getest met nagebootste API-antwoorden én in de praktijk gekoppeld met een echt Onecta-account (20 november 2026),
+  inclusief de `homeos.invalid`-redirect in het Daikin Developer Portal.
 
 #### Achtergrond
 - Officiële **Daikin Onecta Cloud API** via het Daikin Developer Portal (gratis voor privé-ontwikkelaars). Koppelen met
