@@ -62,7 +62,11 @@ dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeO
   videobeeld, en volgens TP-Link alleen bij de **D235/D225** als ze bedraad zijn en "always-on" aan staat. De **D230**
   (batterij, via hub H200) ondersteunt dit officieel niet.
 - Daarom: geen belmeldingen in HomeOS (nog niet), wel eventueel een live beeld (privé, nooit openbaar) als je model het
-  officieel ondersteunt. **Nodig van jou: het exacte model.**
+  officieel ondersteunt.
+- **Jouw situatie: Tapo D235 op batterij.** In deze opstelling is er geen officiële koppeling: RTSP/ONVIF werkt bij de D235
+  alleen bedraad (met jumperkabel en "always-on"). HomeOS toont de deurbel daarom als "niet ondersteund in deze opstelling",
+  met uitleg. Wordt hij later bedraad, dan kan HomeOS het live beeld tonen; belmeldingen blijven ook dan officieel
+  onbeschikbaar. De DEMO-deurbel blijft beschikbaar om de interface te testen.
 
 ### IKEA Home smart ✅ via Matter (met beperkingen)
 - IKEA heeft **geen officiële publieke API** voor de DIRIGERA-hub. Bestaande integraties gebruiken een
