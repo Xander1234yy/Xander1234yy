@@ -46,6 +46,23 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByTestId("jarvis-messages")).toContainText("Geannuleerd");
   });
 
+  test("Jarvis onthoudt waar het over ging en bewaart het gesprek in de browser", async ({ page }) => {
+    await page.goto("/jarvis");
+    const input = page.getByLabel("Bericht aan Jarvis");
+    await input.fill("zet de spots op veertig procent");
+    await input.press("Enter");
+    await expect(page.getByTestId("jarvis-messages")).toContainText("Spots op 40%");
+    await page.getByRole("button", { name: "Annuleren" }).click();
+    await input.fill("zet ze uit");
+    await input.press("Enter");
+    await expect(page.getByTestId("jarvis-messages")).toContainText(/Spots uit|staat al uit/);
+    await page.reload();
+    await expect(page.getByTestId("jarvis-messages")).toContainText("zet ze uit");
+    await expect(page.getByRole("button", { name: "Bevestigen" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Nieuw gesprek" }).click();
+    await expect(page.getByTestId("jarvis-messages")).not.toContainText("zet ze uit");
+  });
+
   test("bedient de DEMO-airco (temperatuur en modus)", async ({ page }) => {
     await page.goto("/");
     const card = page.getByTestId("climate-card");

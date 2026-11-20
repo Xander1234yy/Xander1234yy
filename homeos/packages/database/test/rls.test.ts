@@ -154,6 +154,10 @@ describe("audit en privacy", () => {
     await t.as(member, "insert into public.ai_messages (conversation_id, household_id, role, content) values ($1, $2, 'user', 'hoi')", [c[0]!.id, home]);
     expect(await t.as(owner, "select id from public.ai_messages")).toEqual([]);
     expect((await t.as(member, "select id from public.ai_messages")).length).toBe(1);
+    // Een ander lid kan niets in dit gesprek schrijven, het gesprek niet wissen en geen gesprek op naam van een ander aanmaken.
+    await expect(t.as(owner, "insert into public.ai_messages (conversation_id, household_id, role, content) values ($1, $2, 'assistant', 'nep')", [c[0]!.id, home])).rejects.toThrow(/row-level security/);
+    expect(await t.as(owner, "delete from public.ai_conversations where id = $1 returning id", [c[0]!.id])).toEqual([]);
+    await expect(t.as(owner, "insert into public.ai_conversations (household_id, user_id, title) values ($1, $2, 'x')", [home, member])).rejects.toThrow(/row-level security/);
   });
 
   it("persoonlijke meldingen zijn alleen zichtbaar voor de ontvanger", async () => {

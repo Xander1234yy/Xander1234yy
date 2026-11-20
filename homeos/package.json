@@ -1,6 +1,6 @@
 {
   "name": "homeos",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "HomeOS \u2014 Your home. One intelligent system.",
   "type": "module",

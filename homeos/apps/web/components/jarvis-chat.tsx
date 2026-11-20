@@ -1,20 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Bot, Check, Mic, MicOff, Send, Volume2, VolumeX, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Bot, Check, Mic, MicOff, RotateCcw, Send, Volume2, VolumeX, X } from "lucide-react";
 import { Button, Input, cn } from "@homeos/ui";
 import { api, connectorPath } from "@/lib/api";
-import { addShoppingItem } from "@/lib/actions/family";
+import { addShoppingItem, addTask } from "@/lib/actions/family";
 import { useHome } from "@/lib/home-context";
-import type { JarvisAction, JarvisReply } from "@/lib/jarvis/local-intents";
+import type { JarvisAction, JarvisMemory, JarvisReply } from "@homeos/jarvis";
+import { HISTORY_EVENT, clearLocalHistory, loadLocalHistory, saveLocalHistory, speakText, useJarvisSettings } from "@/lib/jarvis/settings";
 
 interface Msg {
   id: number;
   role: "user" | "jarvis";
   text: string;
   actions?: JarvisAction[];
-  state?: "proposed" | "confirmed" | "cancelled" | "failed";
+  /** "expired": voorstel uit een eerder gesprek; uit veiligheid niet meer te bevestigen. */
+  state?: "proposed" | "confirmed" | "cancelled" | "failed" | "expired";
 }
+
+interface HistoryResponse {
+  mode: "cloud" | "local";
+  conversationId: string | null;
+  messages: { role: "user" | "jarvis"; text: string; actions: JarvisAction[] }[];
+}
+
+const expire = (m: Msg): Msg => (m.state === "proposed" ? { ...m, state: "expired" } : m);
 
 type Recognition = {
   lang: string;
@@ -27,7 +37,7 @@ type Recognition = {
 };
 
 let msgId = 1;
-const SUGGESTIONS = ["Welke lampen staan nog aan?", "Wat is de huidige opbrengst van onze zonnepanelen?", "Stel een avondautomatisering voor", "Zijn er apparaten offline?"];
+const SUGGESTIONS = ["Welke lampen staan nog aan?", "Wat is de huidige opbrengst van onze zonnepanelen?", "Weekoverzicht energie", "Zijn er apparaten offline?"];
 
 export function JarvisChat({ compact = false }: { compact?: boolean }) {
   const { snapshot, sendCommand, activateScene } = useHome();
@@ -35,11 +45,44 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
-  const [speak, setSpeak] = useState(false);
+  const { settings, update } = useJarvisSettings();
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [mode, setMode] = useState<"cloud" | "local" | null>(null);
   const recRef = useRef<Recognition | null>(null);
   const busyRef = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const memoryRef = useRef<JarvisMemory | null>(null);
+  const conversationRef = useRef<string | null>(null);
+
+  // Geschiedenis laden: cloudmodus uit Supabase (eigen gesprekken, RLS), lokale modus uit deze browser.
+  const loadHistory = useCallback(() => {
+    api<HistoryResponse>("/api/jarvis")
+      .then((h) => {
+        setMode(h.mode);
+        const restored: Msg[] =
+          h.mode === "cloud"
+            ? h.messages.map((m) => ({ id: msgId++, role: m.role, text: m.text, ...(m.actions.length ? { actions: m.actions, state: "expired" as const } : {}) }))
+            : loadLocalHistory<Msg>().map((m) => expire({ ...m, id: msgId++ }));
+        conversationRef.current = h.conversationId;
+        setMessages(restored);
+      })
+      .catch(() => setMode("local"));
+  }, []);
+  useEffect(() => {
+    loadHistory();
+    window.addEventListener(HISTORY_EVENT, loadHistory);
+    return () => window.removeEventListener(HISTORY_EVENT, loadHistory);
+  }, [loadHistory]);
+  useEffect(() => {
+    if (mode === "local" && settings.keepHistory) saveLocalHistory(messages.map(expire));
+  }, [messages, mode, settings.keepHistory]);
+
+  const newConversation = () => {
+    setMessages([]);
+    memoryRef.current = null;
+    conversationRef.current = null;
+    if (mode === "local") clearLocalHistory();
+  };
 
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
@@ -50,11 +93,7 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
   }, [messages]);
 
   const say = (text: string) => {
-    if (!speak || typeof speechSynthesis === "undefined") return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "nl-NL";
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+    if (settings.speak) speakText(text, settings);
   };
 
   const ask = async (text: string) => {
@@ -65,7 +104,12 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
     setMessages((m) => [...m, { id: msgId++, role: "user", text: t }]);
     setBusy(true);
     try {
-      const r = await api<JarvisReply>("/api/jarvis", { method: "POST", body: JSON.stringify({ message: t }) });
+      const r = await api<JarvisReply & { conversationId: string | null }>("/api/jarvis", {
+        method: "POST",
+        body: JSON.stringify({ message: t, memory: memoryRef.current, conversationId: conversationRef.current }),
+      });
+      if (r.memory) memoryRef.current = r.memory;
+      conversationRef.current = r.conversationId;
       setMessages((m) => [...m, { id: msgId++, role: "jarvis", text: r.text, actions: r.actions, ...(r.actions.length ? { state: "proposed" as const } : {}) }]);
       say(r.text);
     } catch (e) {
@@ -81,6 +125,16 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
     for (const a of msg.actions ?? []) {
       if (a.kind === "scene") ok = (await activateScene(a.sceneId, "jarvis")) && ok;
       else if (a.kind === "shopping_add") ok = (await addShoppingItem({ name: a.name })).ok && ok;
+      else if (a.kind === "task_add") ok = (await addTask({ title: a.title })).ok && ok;
+      else if (a.kind === "automation_run" || a.kind === "automation_toggle") {
+        try {
+          const path = `v1/automations/${encodeURIComponent(a.automationId)}`;
+          if (a.kind === "automation_run") await api(connectorPath(`${path}/run`), { method: "POST" });
+          else await api(connectorPath(path), { method: "PATCH", body: JSON.stringify({ enabled: a.enabled }) });
+        } catch {
+          ok = false;
+        }
+      }
       else if (a.kind === "create_automation") {
         try {
           const t = await api<Record<string, unknown>>(connectorPath("v1/automations/templates"));
@@ -161,7 +215,7 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
                     </div>
                   ) : (
                     <p className={cn("text-xs", m.state === "confirmed" ? "text-success" : m.state === "failed" ? "text-danger" : "text-muted")}>
-                      {m.state === "confirmed" ? "Uitgevoerd" : m.state === "failed" ? "Niet (volledig) uitgevoerd" : "Geannuleerd"}
+                      {m.state === "confirmed" ? "Uitgevoerd" : m.state === "failed" ? "Niet (volledig) uitgevoerd" : m.state === "expired" ? "Verlopen voorstel (vraag het opnieuw)" : "Geannuleerd"}
                     </p>
                   )}
                 </div>
@@ -186,8 +240,13 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
           </Button>
         )}
         {!compact && (
-          <Button type="button" size="icon" variant="secondary" onClick={() => setSpeak((s) => !s)} aria-label={speak ? "Voorlezen uit" : "Antwoorden voorlezen"} aria-pressed={speak}>
-            {speak ? <Volume2 /> : <VolumeX />}
+          <Button type="button" size="icon" variant="secondary" onClick={() => update({ speak: !settings.speak })} aria-label={settings.speak ? "Voorlezen uit" : "Antwoorden voorlezen"} aria-pressed={settings.speak}>
+            {settings.speak ? <Volume2 /> : <VolumeX />}
+          </Button>
+        )}
+        {!compact && messages.length > 0 && (
+          <Button type="button" size="icon" variant="secondary" onClick={newConversation} aria-label="Nieuw gesprek">
+            <RotateCcw />
           </Button>
         )}
         <Button type="submit" size="icon" variant="primary" disabled={!input.trim() || busy} aria-label="Versturen">

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bot, History, ShieldCheck } from "lucide-react";
 import { Badge } from "@homeos/ui";
 import { JarvisChat } from "@/components/jarvis-chat";
+import { JarvisSettingsCard } from "@/components/jarvis-settings";
 import { PageHeader, SectionCard } from "@/components/section";
 import { api, connectorPath } from "@/lib/api";
 import { useHome } from "@/lib/home-context";
@@ -22,6 +23,12 @@ interface AuditEntry {
 export default function JarvisPage() {
   const { connector, snapshot } = useHome();
   const [history, setHistory] = useState<AuditEntry[]>([]);
+  const [mode, setMode] = useState<"cloud" | "local" | null>(null);
+  useEffect(() => {
+    api<{ mode: "cloud" | "local" }>("/api/jarvis")
+      .then((r) => setMode(r.mode))
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     if (connector !== "online") return;
     const load = () =>
@@ -36,7 +43,7 @@ export default function JarvisPage() {
 
   return (
     <div>
-      <PageHeader title="Jarvis" description="Je huisassistent. Stelt voor, jij bevestigt, de connector controleert." actions={<Badge tone="accent">Lokale modus</Badge>} />
+      <PageHeader title="Jarvis" description="Je huisassistent. Stelt voor, jij bevestigt, de connector controleert." actions={<Badge tone="accent">Lokale Jarvis · gratis en offline</Badge>} />
       <div className="grid gap-5 lg:grid-cols-12">
         <SectionCard title="Gesprek" icon={Bot} className="lg:col-span-8">
           <JarvisChat />
@@ -51,9 +58,14 @@ export default function JarvisPage() {
               <li>Pas dan wordt de opdracht uitgevoerd en vastgelegd.</li>
             </ol>
             <p className="mt-3 text-xs text-muted">
-              Nu actief: lokale fallback zonder AI-provider. Een configureerbare AI-provider (fase 6) komt hier bovenop; Jarvis krijgt nooit directe toegang tot apparaten.
+              Jarvis krijgt nooit directe toegang tot apparaten. Voorstellen uit een eerder gesprek verlopen en kunnen niet meer bevestigd worden.
+            </p>
+            <p className="mt-2 text-xs text-muted">
+              Probeer: &quot;zet de lampen in de woonkamer op 30%&quot;, &quot;maak de plafondlamp blauw&quot;, &quot;welke lampen staan aan?&quot; en daarna &quot;zet ze uit&quot;,
+              &quot;airco warmer&quot;, &quot;weekoverzicht energie&quot;, &quot;wat staat er morgen op de agenda?&quot;.
             </p>
           </SectionCard>
+          <JarvisSettingsCard mode={mode} />
           <SectionCard title="Opdrachtgeschiedenis" icon={History}>
             {history.length === 0 ? (
               <p className="text-sm text-muted">Nog geen Jarvis-opdrachten uitgevoerd.</p>

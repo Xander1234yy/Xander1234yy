@@ -34,6 +34,11 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   `apps/connector/src/automation-service.ts`. Nooit inhaalacties, drempels alleen op overgangen, apparaatopdrachten
   altijd via `registry.executeCommand(..., "automation")`.
 
+## Jarvis
+- `packages/jarvis`: `JarvisProvider`-interface en `LocalJarvis` (puur, getest in `packages/jarvis/test`). Alleen
+  voorstellen teruggeven; uitvoeren gebeurt in `components/jarvis-chat.tsx` na bevestiging via de normale API's.
+  Bewust geen betaalde AI-provider (keuze van de gebruiker).
+
 ## Integraties
 - Hue zonder hardware testen: `sudo node tests/tools/hue-bridge-simulator.mjs --host <privé-IP>` (poort 443, alleen een
   simulator). Tests gebruiken `packages/integrations/test/fake-bridge.ts`, nooit het netwerk.
@@ -43,4 +48,4 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 
 ## Fase
-Fase 1 t/m 5 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
+Fase 1 t/m 6 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.

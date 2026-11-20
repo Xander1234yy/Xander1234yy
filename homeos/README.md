@@ -76,6 +76,7 @@ homeos/
     integrations/   Adapterinterface + DEMO-adapters (later Hue, stekkers, Apple TV, zon, deurbel)
     ui/             Design system (shadcn/ui-stijl op Radix + Tailwind)
     automation/     Automation Engine (triggers, voorwaarden, acties; draait in de connector)
+    jarvis/         Jarvis: provider-interface en lokale taalverwerking (geen AI-dienst nodig)
     database/       Rijtypen, invoerschema's en RLS-tests
   supabase/         Migraties, seed (DEMO) en config voor de Supabase CLI
   docs/             Architectuur, beveiliging, integraties, roadmap

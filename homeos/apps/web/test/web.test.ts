@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Device, Snapshot } from "@homeos/shared";
 import { isAllowed, isSameOrigin } from "../lib/server/allowlist";
-import { handleLocal } from "../lib/jarvis/local-intents";
+import { respondLocal as handleLocal } from "@homeos/jarvis";
 
 describe("connector-allowlist", () => {
   it("staat alleen bekende endpoints toe", () => {
@@ -145,7 +145,7 @@ describe("Jarvis airco", () => {
   const withAc = (on = true) => ({ ...ctx(), snapshot: { ...snapshot(), devices: [...snapshot().devices, climate(on)] } });
 
   it("beantwoordt temperatuurvragen", () => {
-    expect(handleLocal("hoe warm is het binnen?", withAc()).text).toContain("19.5");
+    expect(handleLocal("hoe warm is het binnen?", withAc()).text).toContain("19,5");
   });
   it("stelt een temperatuur voor met bevestiging", () => {
     const r = handleLocal("zet de airco op 22,5 graden", withAc());

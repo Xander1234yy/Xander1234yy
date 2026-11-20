@@ -7,8 +7,8 @@
 | 3 | Philips Hue-adapter, pairing, apparaatregistry naar Supabase (devices/device_states), macOS-autostart | ✅ Klaar |
 | 4 | Stekkers, Apple TV (onderzoek), zonnepanelen, deurbel | |
 | 5 | Automation Engine, notificaties, geschiedenis | ✅ Klaar |
-| 6 | Jarvis AI-provider (provider-interface), spraak, opdrachtverwerking | ⏭ Volgende |
-| 7 | PWA (service worker, offline cache, iOS-iconen), cloudkoppeling van de connector, Vercel-deployment | |
+| 6 | Jarvis: lokaal en gratis, provider-interface, spraak, opdrachtverwerking, geschiedenis | ✅ Klaar |
+| 7 | PWA (service worker, offline cache, iOS-iconen), cloudkoppeling van de connector, Vercel-deployment | ⏭ Volgende |
 | 8 | Beveiligingsaudit, volledige tests, documentatie, optimalisatie | |
 
 ## Fase 1: opgeleverd
@@ -93,6 +93,26 @@
   (best-effort; niet apart end-to-end getest).
 - Pushmeldingen op iPhone/iPad volgen in fase 7 (vereist de installeerbare app met service worker).
 - Tests: 149 unit- en integratietests, 27 E2E-tests (lokaal), 6 (cloud).
+
+## Fase 6: opgeleverd
+
+- Keuze: Jarvis werkt **volledig lokaal en gratis**, zonder betaalde AI-dienst en zonder internet. Een Claude Pro-
+  abonnement geeft geen API-toegang, dus een AI-provider zou apart betaald moeten worden.
+- Nieuw pakket `@homeos/jarvis` met een provider-interface (`JarvisProvider`). Alleen de lokale provider bestaat; een
+  AI-provider kan later worden toegevoegd en volgt dezelfde regels (alleen voorstellen, de gebruiker bevestigt).
+- Slimmer begrip: kamers ("lampen in de woonkamer uit"), kleuren ("plafondlamp blauw"), warm/koel wit, feller en donkerder,
+  percentages, getallen in woorden ("eenentwintig graden"), tikfouten in apparaatnamen, airco warmer/kouder.
+- Meerdere opdrachten in één zin ("spots uit en staande lamp aan") en vervolgvragen ("welke lampen staan aan?" → "zet ze
+  uit"). Het geheugen is alleen de vorige beurt en wordt door de browser meegestuurd; de server houdt geen toestand bij.
+- Nieuwe vragen: weekoverzicht energie, automatiseringen opsommen, uitvoeren (rol lid+) en pauzeren (beheerder+),
+  agenda per dag (vandaag, morgen, overmorgen), taken toevoegen, tijd en datum, begroeting met een korte stand van zaken.
+- Gespreksgeschiedenis: in cloudmodus in Supabase (`ai_conversations`/`ai_messages`, alleen zichtbaar voor jezelf via
+  RLS), in lokale modus in de browser (uit te zetten). Voorstellen uit een eerder gesprek verlopen en zijn niet meer te
+  bevestigen. Nieuw gesprek en geschiedenis wissen.
+- Jarvis-instellingen: voorlezen, keuze van Nederlandse stem, spreeksnelheid; AI-configuratie toont eerlijk dat alleen
+  de lokale Jarvis actief is.
+- E2E-omgeving start iedere run met een lege connector-datamap.
+- Tests: 173 unit- en integratietests, 30 E2E-tests (lokaal), 6 (cloud).
 
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).

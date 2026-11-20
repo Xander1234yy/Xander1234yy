@@ -84,7 +84,17 @@ test.describe.serial("accounts, huishoudens en rollen", () => {
     await input.press("Enter");
     await page.getByRole("button", { name: "Bevestigen" }).click();
     await expect(page.getByTestId("jarvis-messages")).toContainText("Uitgevoerd");
+    await input.fill("voeg taak ramen wassen toe");
+    await input.press("Enter");
+    await page.getByRole("button", { name: "Bevestigen" }).click();
+    await expect(page.getByTestId("jarvis-messages").getByText("Uitgevoerd")).toHaveCount(2);
+    // Gesprek staat in Supabase: na herladen terug, en oude voorstellen zijn niet meer te bevestigen.
+    await page.reload();
+    await expect(page.getByTestId("jarvis-messages")).toContainText("Appels (1 kg)");
+    await expect(page.getByRole("button", { name: "Bevestigen" })).toHaveCount(0);
     await page.goto("/familie");
+    await page.getByRole("tab", { name: /Taken/ }).click();
+    await expect(page.getByText("ramen wassen")).toBeVisible();
     await page.getByRole("tab", { name: /Boodschappen/ }).click();
     await expect(page.getByText("peren")).toBeVisible();
 

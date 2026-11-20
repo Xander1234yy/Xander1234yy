@@ -34,7 +34,7 @@
 | B. Cloud API | `apps/web/app/api` (nu proxy, stream, Jarvis), later Supabase | Deels; fase 2 |
 | C. Device Connector | `apps/connector` | Fase 1 ✔ (registry, API, WS, beveiliging, DEMO) |
 | D. Automation Engine | `packages/automation` → draait in connector | Fase 5 |
-| E. Intelligence (Jarvis) | `apps/web/lib/jarvis` (lokale fallback) | Lokale fallback ✔; AI-provider fase 6 |
+| E. Intelligence (Jarvis) | `packages/jarvis` (provider-interface, lokale Jarvis), `apps/web/app/api/jarvis` | Lokaal ✔ (fase 6); geen betaalde AI-provider |
 
 ## Gegevensstroom bij een opdracht
 
