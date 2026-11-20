@@ -62,3 +62,4 @@
 - Omvormer: SolarEdge → Monitoring API; is er een SolarEdge-energiemeter (voor netafname/teruglevering)? Heb je een P1-meter?
 - Deurbel: Tapo → welk model precies (D230, D235, D225)?
 - Laptop: macOS → LaunchAgent (gebouwd).
+- IKEA Home smart → Matter-controller (matter.js) via de DIRIGERA Matter-bridge; welke hub en welke producten?

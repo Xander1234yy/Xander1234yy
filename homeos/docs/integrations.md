@@ -64,10 +64,25 @@ dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeO
 - Daarom: geen belmeldingen in HomeOS (nog niet), wel eventueel een live beeld (privé, nooit openbaar) als je model het
   officieel ondersteunt. **Nodig van jou: het exacte model.**
 
+### IKEA Home smart ✅ via Matter (met beperkingen)
+- IKEA heeft **geen officiële publieke API** voor de DIRIGERA-hub. Bestaande integraties gebruiken een
+  reverse-engineered API; die gebruikt HomeOS niet.
+- De officiële route is **Matter**: de DIRIGERA-hub is Matter-gecertificeerd en kan als *Matter-bridge* IKEA-apparaten
+  delen met andere systemen. HomeOS wordt daarvoor zelf een Matter-controller op basis van het open-source
+  **matter.js**-project (project-chip). Koppelen gebeurt met de Matter-koppelcode uit de IKEA Home smart-app
+  (multi-admin), via je lokale netwerk, zonder cloud.
+- Beperking volgens IKEA: via de Matter-bridge worden **op dit moment alleen lichtbronnen (incl. drivers)** gedeeld.
+  IKEA-stekkers, sensoren, schakelaars en rolgordijnen zijn via de officiële route dus (nog) niet beschikbaar.
+- De oude **TRÅDFRI-gateway** heeft geen officiële API en geen Matter: niet ondersteund (alternatief: DIRIGERA).
+- **Nodig van jou:** heb je een DIRIGERA-hub of een TRÅDFRI-gateway, en welke IKEA-producten heb je?
+
 ### Apple TV
 - Geen officiële API voor lokale bediening door derden; dit blijft onderzoek. Er wordt geen onbewezen protocol gebruikt.
 
 Bronnen: [Tuya-koppeling (Home Assistant-community)](https://community.home-assistant.io/t/tuya-dev-account-renewal-steps/685268),
 [SolarEdge API-limiet (Home Assistant-docs)](https://www.home-assistant.io/integrations/solaredge),
-[TP-Link FAQ RTSP/ONVIF](https://tp-link.com/support/faq/2680), [Tapo D235-belgebeurtenissen (TP-Link-community)](https://community.tp-link.com/en/home/forum/topic/736506).
+[TP-Link FAQ RTSP/ONVIF](https://tp-link.com/support/faq/2680), [Tapo D235-belgebeurtenissen (TP-Link-community)](https://community.tp-link.com/en/home/forum/topic/736506),
+[IKEA: wat is de Matter-bridge](https://www.ikea.com/gb/en/customer-service/knowledge/articles/cdbc4637-5d63-4893-b382-20987cafecc4.html),
+[IKEA-nieuwsbericht DIRIGERA Matter-bridge](https://www.ikea.com/global/en/newsroom/innovation/ikea-dirigera-matter-bridge-240911),
+[matter.js](https://github.com/project-chip/matter.js).
 De officiële documentatie van Tuya en SolarEdge wordt aan het begin van fase 4 opnieuw gecontroleerd.
