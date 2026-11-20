@@ -32,8 +32,10 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
 ## Integraties
 - Hue zonder hardware testen: `sudo node tests/tools/hue-bridge-simulator.mjs --host <privé-IP>` (poort 443, alleen een
   simulator). Tests gebruiken `packages/integrations/test/fake-bridge.ts`, nooit het netwerk.
+- Matter: `apps/connector/src/matter-backend.ts` (matter.js, dynamisch geladen). Tests via
+  `packages/integrations/test/fake-matter.ts`; de cloudomgeving heeft geen IPv6, dus echte Matter-tests alleen lokaal.
 - Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 
 ## Fase
-Fase 1, 2, 3 en 4a zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
+Fase 1 t/m 4 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.

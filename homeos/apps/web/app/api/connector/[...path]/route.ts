@@ -45,7 +45,9 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] 
   }
 
   try {
-    const res = await connectorFetch(`/${joined}${req.nextUrl.search}`, { method, ...(body ? { body } : {}) });
+    // Matter-koppelen (apparaat zoeken + PASE/CASE) kan enkele minuten duren.
+    const slow = /^v1\/integrations\/matter\/commission$/.test(joined);
+    const res = await connectorFetch(`/${joined}${req.nextUrl.search}`, { method, ...(body ? { body } : {}), ...(slow ? { signal: AbortSignal.timeout(180_000) } : {}) });
     const text = await res.text();
     if (mutating) {
       let source: "user" | "jarvis" = "user";

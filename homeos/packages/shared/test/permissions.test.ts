@@ -26,6 +26,9 @@ describe("rollen en rechten", () => {
     expect(permissionForConnectorRoute("POST", "v1/integrations/solaredge")).toBe("manage_devices");
     expect(permissionForConnectorRoute("POST", "v1/integrations/daikin/complete")).toBe("manage_devices");
     expect(permissionForConnectorRoute("DELETE", "v1/integrations/daikin")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("POST", "v1/integrations/tuya")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("POST", "v1/integrations/matter/commission")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("DELETE", "v1/integrations/matter/nodes/1000")).toBe("manage_devices");
   });
 
   it("maakt veilige kamer-slugs", () => {

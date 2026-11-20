@@ -87,3 +87,67 @@ describe("Daikin Onecta in de connector", () => {
     expect((await (await t.call("/v1/snapshot")).json()).devices).toEqual([]);
   });
 });
+
+describe("Tuya in de connector", () => {
+  it("valideert, slaat de secret versleuteld op en voegt stekkers toe", async () => {
+    const { tuyaSign, tuyaStringToSign } = await import("@homeos/integrations");
+    const tuyaFetch = (async (input: string | URL, init: RequestInit = {}) => {
+      const url = new URL(String(input));
+      const h = init.headers as Record<string, string>;
+      const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
+      const ok = tuyaSign(h.client_id!, "GOEDSECRET123456", h.t!, tuyaStringToSign(init.method ?? "GET", url.pathname, Object.fromEntries(url.searchParams), init.body ? JSON.parse(String(init.body)) : undefined), h.access_token ?? "") === h.sign;
+      if (!ok) return json({ success: false, code: 1004, msg: "sign invalid" });
+      if (url.pathname === "/v1.0/token") return json({ success: true, result: { access_token: "AT", refresh_token: "RT", expire_time: 7200 } });
+      if (url.pathname.endsWith("/devices")) return json({ success: true, result: [{ id: "p1", name: "Koelkast", category: "cz", online: true, status: [{ code: "switch_1", value: true }] }] });
+      if (url.pathname.endsWith("/specifications")) return json({ success: true, result: { status: [] } });
+      return json({ success: false, code: 1108 });
+    }) as typeof fetch;
+    t = await startTestConnector({ demo: false }, undefined, tuyaFetch);
+    const body = (secret: string) => JSON.stringify({ region: "eu", accessId: "abcdefghij1234567890", accessSecret: secret, uid: "eu1234567" });
+    const bad = await t.call("/v1/integrations/tuya", { method: "POST", body: body("FOUTSECRET123456") });
+    expect(bad.status).toBe(400);
+    expect((await bad.json()).error.message).toMatch(/handtekening/);
+    const ok = await t.call("/v1/integrations/tuya", { method: "POST", body: body("GOEDSECRET123456") });
+    expect(await ok.json()).toEqual({ devicesFound: 1 });
+    const snap = await (await t.call("/v1/snapshot")).json();
+    expect(snap.devices[0]).toMatchObject({ name: "Koelkast", brand: "Smart Life / Tuya", kind: "plug", capabilities: ["onoff"], status: "ONLINE" });
+    for (const f of ["integrations.json", "secrets.enc"]) expect(await readFile(path.join(t.dataDir, f), "utf8")).not.toContain("GOEDSECRET");
+    expect((await t.call("/v1/integrations/tuya", { method: "DELETE" })).status).toBe(200);
+  });
+});
+
+describe("Matter in de connector", () => {
+  it("koppelt via een code, voegt de stekker toe en ontkoppelt alleen de HomeOS-fabric", async () => {
+    const { fakeMatter } = await import("../../../packages/integrations/test/fake-matter");
+    const fm = fakeMatter();
+    const { createConnector } = await import("../src/app");
+    const { tempDir, silent } = await import("./helpers");
+    const dataDir = await tempDir();
+    const c = await createConnector(
+      { host: "127.0.0.1", port: 0, dataDir, demo: false, masterSecret: null, pollIntervalMs: 60_000, rateLimitPerMin: 1000, commandLimitPerMin: 1000, production: false },
+      silent,
+      [],
+      undefined,
+      undefined,
+      () => fm.backend,
+    );
+    const addr = await c.start();
+    const call = (p: string, init: RequestInit = {}) => fetch(`http://127.0.0.1:${addr.port}${p}`, { ...init, headers: { authorization: `Bearer ${c.identity.apiToken}`, "content-type": "application/json" } });
+    try {
+      expect((await call("/v1/integrations/matter/commission", { method: "POST", body: JSON.stringify({ pairingCode: "nee nee nee" }) })).status).toBe(400);
+      const ok = await call("/v1/integrations/matter/commission", { method: "POST", body: JSON.stringify({ pairingCode: "3497-011-2332" }) });
+      expect(await ok.json()).toMatchObject({ devicesAdded: 1 });
+      const snap = await (await call("/v1/snapshot")).json();
+      const plug = snap.devices.find((d: { brand: string }) => d.brand === "IKEA of Sweden");
+      expect(plug).toMatchObject({ kind: "plug", status: "ONLINE", state: { on: false, powerW: 12.3 } });
+      const cmd = await call(`/v1/devices/${encodeURIComponent(plug.id)}/commands`, { method: "POST", body: JSON.stringify({ command: { type: "set_power", on: true } }) });
+      expect((await cmd.json()).device.state.on).toBe(true);
+      const list = await (await call("/v1/integrations")).json();
+      expect(list.matter.nodes[0]).toMatchObject({ productName: "GRILLPLATS (SIM)", online: true });
+      expect((await call(`/v1/integrations/matter/nodes/${list.matter.nodes[0].nodeId}`, { method: "DELETE" })).status).toBe(200);
+      expect(fm.calls.some((x) => x.startsWith("remove:"))).toBe(true);
+    } finally {
+      await c.stop();
+    }
+  });
+});

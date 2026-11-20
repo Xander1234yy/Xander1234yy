@@ -49,7 +49,7 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
     return null;
   }
   if (/^v1\/integrations\/hue\/(discover|pair|[0-9a-f]{16})$/.test(path)) return "manage_devices";
-  if (/^v1\/integrations\/(solaredge(\/\d{1,12})?|daikin(\/(start|complete))?)$/.test(path)) return "manage_devices";
+  if (/^v1\/integrations\/(solaredge(\/\d{1,12})?|daikin(\/(start|complete))?|tuya|matter\/(commission|nodes\/\d{1,20}))$/.test(path)) return "manage_devices";
   if (/^v1\/devices\/[^/]+\/commands$/.test(path)) return "control";
   if (/^v1\/scenes\/[^/]+\/activate$/.test(path)) return "control";
   if (/^v1\/emergency-stop$/.test(path)) return "control";

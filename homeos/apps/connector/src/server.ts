@@ -20,6 +20,7 @@ import { RateLimiter } from "./rate-limit";
 import type { DeviceRegistry, OpResult } from "./registry";
 import type { HueService } from "./hue-service";
 import { SetupError, type CloudIntegrations } from "./cloud-service";
+import type { MatterService } from "./matter-service";
 
 export interface ServerOptions {
   registry: DeviceRegistry;
@@ -32,6 +33,7 @@ export interface ServerOptions {
   allowedHosts: string[];
   hue: HueService;
   cloud: CloudIntegrations;
+  matter: MatterService;
 }
 
 const MAX_BODY = 64 * 1024;
@@ -124,7 +126,21 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list() }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list() }) },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/matter\/commission$/,
+      command: true,
+      handler: async ({ body }) => {
+        const { pairingCode } = parse(z.object({ pairingCode: z.string().trim().min(11).max(64) }), await body());
+        return setup(() => o.matter.commission(pairingCode));
+      },
+    },
+    {
+      method: "DELETE",
+      pattern: /^\/v1\/integrations\/matter\/nodes\/(\d{1,20})$/,
+      handler: async ({ params }) => setup(() => o.matter.removeNode(params[0]!)),
+    },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/solaredge$/,
@@ -158,6 +174,19 @@ export function createConnectorServer(o: ServerOptions) {
       },
     },
     { method: "DELETE", pattern: /^\/v1\/integrations\/daikin$/, handler: async () => setup(() => o.cloud.removeDaikin()) },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/tuya$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(
+          z.object({ region: z.enum(["eu", "eu-west", "us", "us-east", "cn", "in"]), accessId: z.string().trim().max(64), accessSecret: z.string().trim().max(64), uid: z.string().trim().max(64) }),
+          await body(),
+        );
+        return setup(() => o.cloud.addTuya(b.region, b.accessId, b.accessSecret, b.uid));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/tuya$/, handler: async () => setup(() => o.cloud.removeTuya()) },
     { method: "POST", pattern: /^\/v1\/integrations\/hue\/discover$/, handler: async () => o.hue.discover() },
     {
       method: "POST",

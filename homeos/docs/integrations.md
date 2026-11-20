@@ -40,7 +40,23 @@ dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeO
 
 ## Fase 4: jouw apparaten en wat officieel kan
 
-### Slimme stekkers — Smart Life / Tuya ✅ mogelijk (via de cloud)
+### Slimme stekkers — Smart Life / Tuya ✅ gebouwd (fase 4b)
+
+Gebouwd in `packages/integrations/src/tuya/` op de officiële Tuya Cloud OpenAPI. Ondertekening (HMAC-SHA256),
+token (`/v1.0/token?grant_type=1`), apparatenlijst van het gekoppelde app-account (`/v1.0/users/{uid}/devices`),
+specificaties (`/v1.0/devices/{id}/specifications`) en opdrachten (`/v1.0/devices/{id}/commands`) zijn gecontroleerd in
+Tuya's eigen SDK's (`@tuya/tuya-connector-nodejs`, `tuya-iot-py-sdk`); de handtekening is getest tegen een referentie
+berekend volgens de Python-SDK.
+
+- Koppelen in Instellingen: datacenter, Access ID + Access Secret (Tuya-console → Cloud-project) en de UID van het
+  gekoppelde Smart Life-account (Devices → Link App Account).
+- Ondersteund: stekkers en schakelaars (categorieën `cz`, `pc`, `kg`): aan/uit en, als de stekker het meldt, actueel
+  vermogen (schaal uit de specificatie). Andere Tuya-apparaten worden overgeslagen en in de status genoemd.
+- Verversen elke 2 minuten (één verzoek voor alle apparaten); na een opdracht wordt de status direct teruggelezen.
+- Een verlopen IoT Core-abonnement of quotum wordt als duidelijke melding getoond.
+- Getest met een nagebootste Tuya-cloud die handtekeningen echt controleert; nog niet tegen jouw account.
+
+#### Achtergrond
 - Officiële route: de **Tuya Cloud OpenAPI** via een (gratis) project op het Tuya IoT Development Platform. Je Smart Life-account
   koppel je door een QR-code te scannen in de Smart Life-app. Daarna kan HomeOS status, aan/uit en (als de stekker dat
   ondersteunt) het actuele vermogen uitlezen.
@@ -86,6 +102,14 @@ Getest met nagebootste API-antwoorden; nog niet tegen jouw echte installatie.
 - Beperking volgens IKEA: via de Matter-bridge worden **op dit moment alleen lichtbronnen (incl. drivers)** gedeeld.
   IKEA-stekkers, sensoren, schakelaars en rolgordijnen zijn via de officiële route dus (nog) niet beschikbaar.
 - De oude **TRÅDFRI-gateway** heeft geen officiële API en geen Matter: niet ondersteund (alternatief: DIRIGERA).
+- **Gebouwd (fase 4b, experimenteel):** HomeOS is een Matter-controller op basis van **matter.js 0.18.0**
+  (`apps/connector/src/matter-backend.ts`, alleen geladen als je Matter gebruikt). Koppelen met de deelcode uit de
+  IKEA-app ("Bediening in andere systemen"); stekkers (aan/uit, vermogen via ElectricalPowerMeasurement) en lampen
+  (aan/uit, helderheid), ook achter een Matter-bridge. Fabric-sleutels staan in `<datamap>/matter` (rechten 0700).
+  Ontkoppelen verwijdert alleen de HomeOS-fabric; de IKEA-koppeling blijft.
+- **Getest:** de adapterlogica met een nagebootste Matter-laag, en dat de connector niet crasht als de Matter-stack niet
+  kan starten. **Niet getest:** echt koppelen; de ontwikkelomgeving heeft geen IPv6 (verplicht voor Matter). Dat test
+  jij als eerste op je Mac. Gebruikers melden dat IKEA-deelcodes niet altijd in één keer werken.
 - **Jouw situatie: DIRIGERA + GRILLPLATS.** De nieuwe GRILLPLATS is zelf een Matter-over-Thread-stekker (met
   energiemeting) en gebruikt de DIRIGERA als Thread-border-router. Een Matter-apparaat kan met meerdere systemen
   tegelijk gekoppeld worden (multi-admin), dus HomeOS kan de stekker als Matter-controller rechtstreeks koppelen met
@@ -124,8 +148,13 @@ scope `openid onecta:basic.integration`, API `https://api.onecta.daikineurope.co
 - Opdrachten lopen via de Daikin-cloud (niet lokaal). De unit moet in de Onecta-app staan (wifi-adapter verbonden).
 - Te controleren bij de bouw: welke redirect-URL's het portal toestaat voor een lokaal draaiende app.
 
-### Apple TV
-- Geen officiële API voor lokale bediening door derden; dit blijft onderzoek. Er wordt geen onbewezen protocol gebruikt.
+### Apple TV ❌ niet ondersteund (onderzocht in fase 4b)
+- Apple biedt geen officiële, gedocumenteerde API voor lokale bediening van een Apple TV door derden. Bestaande
+  projecten (zoals pyatv) gebruiken reverse-engineered protocollen (MRP/Companion/AirPlay-varianten); die vallen onder
+  "onbewezen protocollen" en gebruikt HomeOS bewust niet. HomeKit en Matter bieden geen bediening van de Apple TV zelf
+  (de Apple TV is daar een hub, geen bedienbaar apparaat).
+- HomeOS toont de Apple TV daarom niet als koppelbaar apparaat; de Entertainment-pagina blijft werken met de
+  DEMO-mediaspeler. Komt er een officiële route, dan is de mediaspeler-capability er al klaar voor.
 
 Bronnen: [Tuya-koppeling (Home Assistant-community)](https://community.home-assistant.io/t/tuya-dev-account-renewal-steps/685268),
 [SolarEdge API-limiet (Home Assistant-docs)](https://www.home-assistant.io/integrations/solaredge),

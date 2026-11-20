@@ -12,6 +12,7 @@ import { StateStore } from "./state-store";
 import { IntegrationsStore } from "./integrations-store";
 import { createHueService, realHueDeps, type HueDeps } from "./hue-service";
 import { createCloudIntegrations } from "./cloud-service";
+import { createMatterService, lazyMatterJsBackend, type MatterBackendFactory } from "./matter-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
 export async function createConnector(
@@ -20,6 +21,7 @@ export async function createConnector(
   extraAdapters: DeviceAdapter[] = [],
   hueDeps: HueDeps = realHueDeps,
   fetchImpl: typeof fetch = fetch,
+  matterFactory: MatterBackendFactory = lazyMatterJsBackend,
 ) {
   await ensureDir(config.dataDir);
   await ensureDir(path.join(config.dataDir, "logs"));
@@ -46,6 +48,8 @@ export async function createConnector(
   adapters.push(...hue.adapters());
   const cloud = createCloudIntegrations({ registry, secrets, store: integrations, fetchImpl });
   adapters.push(...cloud.adapters());
+  const matter = createMatterService({ registry, store: integrations, dataDir: config.dataDir, logger, factory: matterFactory });
+  adapters.push(...matter.adapters());
 
   const allowedHosts = ["localhost", "127.0.0.1", "::1", config.host.toLowerCase()];
   const api = createConnectorServer({
@@ -58,6 +62,7 @@ export async function createConnector(
     allowedHosts,
     hue,
     cloud,
+    matter,
   });
 
   return {

@@ -6,6 +6,9 @@ import {
   parseCallbackUrl,
   SolarEdgeAdapter,
   tokenRequest,
+  TuyaAdapter,
+  validateTuya,
+  type TuyaRegion,
   validateRedirectUri,
   validateSolarEdge,
 } from "@homeos/integrations";
@@ -43,6 +46,7 @@ export function createCloudIntegrations(o: { registry: DeviceRegistry; secrets: 
       return [
         ...o.store.state.solaredge.map((s) => new SolarEdgeAdapter(s, f)),
         ...(o.store.state.daikin ? [new DaikinAdapter(o.store.state.daikin, f)] : []),
+        ...(o.store.state.tuya ? [new TuyaAdapter(o.store.state.tuya, f)] : []),
       ];
     },
 
@@ -52,7 +56,32 @@ export function createCloudIntegrations(o: { registry: DeviceRegistry; secrets: 
         daikin: o.store.state.daikin
           ? { clientId: o.store.state.daikin.clientId, redirectUri: o.store.state.daikin.redirectUri, connectedAt: o.store.state.daikin.connectedAt, health: o.registry.adapterHealth("daikin-onecta") }
           : null,
+        tuya: o.store.state.tuya ? { region: o.store.state.tuya.region, uid: o.store.state.tuya.uid, addedAt: o.store.state.tuya.addedAt, health: o.registry.adapterHealth("tuya") } : null,
       };
+    },
+
+    // ───────────── Smart Life / Tuya ─────────────
+    async addTuya(region: TuyaRegion, accessId: string, accessSecret: string, uid: string) {
+      try {
+        const cfg = { region, accessId: accessId.trim(), uid: uid.trim() };
+        const count = await validateTuya(cfg, accessSecret.trim(), f);
+        await o.secrets.scoped("tuya").set("accessSecret", accessSecret.trim());
+        o.store.state.tuya = { ...cfg, addedAt: new Date().toISOString() };
+        await o.store.save();
+        await o.registry.addAdapter(new TuyaAdapter(cfg, f), true);
+        return { devicesFound: count };
+      } catch (err) {
+        return toSetup(err);
+      }
+    },
+
+    async removeTuya() {
+      if (!o.store.state.tuya) throw new SetupError(404, "NOT_FOUND", "Tuya is niet gekoppeld");
+      await o.registry.removeAdapter("tuya", true);
+      await o.secrets.scoped("tuya").delete("accessSecret");
+      o.store.state.tuya = null;
+      await o.store.save();
+      return { ok: true };
     },
 
     // ───────────── SolarEdge ─────────────

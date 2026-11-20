@@ -6,7 +6,7 @@
 | 2 | Supabase: schema en migraties (alle 20 tabellen), RLS, Auth, huishoudens, kamers naar de database, familie en onderhoud | ✅ Klaar |
 | 3 | Philips Hue-adapter, pairing, apparaatregistry naar Supabase (devices/device_states), macOS-autostart | ✅ Klaar |
 | 4 | Stekkers, Apple TV (onderzoek), zonnepanelen, deurbel | |
-| 5 | Automation Engine, notificaties, geschiedenis | |
+| 5 | Automation Engine, notificaties, geschiedenis | ⏭ Volgende |
 | 6 | Jarvis AI-provider (provider-interface), spraak, opdrachtverwerking | |
 | 7 | PWA (service worker, offline cache, iOS-iconen), cloudkoppeling van de connector, Vercel-deployment | |
 | 8 | Beveiligingsaudit, volledige tests, documentatie, optimalisatie | |
@@ -69,10 +69,12 @@
 - DEMO-airco in het demohuis.
 - Tests: 120 unit- en integratietests, 24 E2E-tests in lokale modus en 6 in cloudmodus.
 
-## Fase 4b: volgende
-- Smart Life/Tuya-stekkers (Tuya Cloud OpenAPI).
-- IKEA GRILLPLATS via Matter (matter.js-controller, multi-admin).
-- Apple TV-onderzoek; Tapo D235 blijft "niet ondersteund" zolang hij op batterij werkt.
+## Fase 4b: opgeleverd
+- Smart Life/Tuya-adapter (officiële Cloud OpenAPI, handtekening geverifieerd tegen Tuya's SDK's), instelkaart.
+- Matter-controller (matter.js) voor de IKEA GRILLPLATS en andere Matter-apparaten, experimenteel; de connector blijft
+  stabiel als Matter niet kan starten.
+- Apple TV onderzocht: geen officiële route → niet ondersteund. Tapo D235 op batterij: geen officiële route.
+- Tests: 132 unit- en integratietests, 24 E2E-tests (lokaal), 6 (cloud).
 
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).

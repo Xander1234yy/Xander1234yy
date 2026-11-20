@@ -20,6 +20,9 @@ logger.info(`HomeOS Device Connector ${CONNECTOR_VERSION} draait op http://${add
 });
 if (config.demo) logger.info("DEMO-modus: alle apparaten zijn gesimuleerd en als DEMO gemarkeerd.");
 
+// Externe bibliotheken (bijv. matter.js) mogen de connector niet laten crashen: loggen en doorgaan.
+process.on("unhandledRejection", (reason) => logger.error("Onafgehandelde fout", { error: String(reason) }));
+
 let stopping = false;
 const shutdown = async (signal: string) => {
   if (stopping) return;

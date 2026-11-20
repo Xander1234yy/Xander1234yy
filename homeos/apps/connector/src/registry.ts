@@ -135,6 +135,24 @@ export class DeviceRegistry extends EventEmitter {
     this.scheduleEmit();
   }
 
+  /** Zoekt opnieuw bij één adapter en voegt nieuw gevonden apparaten direct toe (na expliciet koppelen door de gebruiker). */
+  async discoverAndAdd(adapterId: string): Promise<number> {
+    const adapter = this.o.adapters.find((a) => a.id === adapterId);
+    if (!adapter) return 0;
+    await this.discoverAdapter(adapter);
+    const roomIds = new Set(this.o.store.state.rooms.map((r) => r.id));
+    let added = 0;
+    for (const r of this.records.values()) {
+      if (r.adapter !== adapter || this.isAdded(r.id)) continue;
+      this.o.store.state.devices[r.id] = { addedAt: this.now().toISOString(), roomId: r.info.suggestedRoomId && roomIds.has(r.info.suggestedRoomId) ? r.info.suggestedRoomId : null };
+      added++;
+    }
+    await this.o.store.save();
+    await this.syncAll("system");
+    this.scheduleEmit();
+    return added;
+  }
+
   /** Verwijdert een adapter en (optioneel) al zijn apparaten uit de registry. */
   async removeAdapter(adapterId: string, forgetDevices = true): Promise<void> {
     const adapter = this.o.adapters.find((a) => a.id === adapterId);
