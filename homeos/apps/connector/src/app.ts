@@ -16,6 +16,7 @@ import { createAutomationService } from "./automation-service";
 import { createWebOsService, realWebOsDeps, type WebOsDeps } from "./webos-service";
 import { createCameraService, type CameraDeps } from "./camera-service";
 import { createZonneplanService } from "./zonneplan-service";
+import { createHueCloudService } from "./huecloud-service";
 import { createPushService, type PushSender } from "./push-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
@@ -81,6 +82,8 @@ export async function createConnector(
   if (!serverless) adapters.push(...cameras.adapters());
   const zonneplan = createZonneplanService({ registry, secrets, store: integrations, fetchImpl });
   adapters.push(...zonneplan.adapters());
+  const huecloud = createHueCloudService({ registry, secrets, store: integrations, fetchImpl });
+  adapters.push(...huecloud.adapters());
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger, serverless });
   const push = createPushService({ secrets, logger, ...(pushSender ? { sender: pushSender } : {}) });
@@ -103,6 +106,7 @@ export async function createConnector(
     webos,
     cameras,
     zonneplan,
+    huecloud,
     push,
     automations,
   });

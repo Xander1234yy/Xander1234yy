@@ -1,6 +1,6 @@
 {
   "name": "homeos",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "HomeOS \u2014 Your home. One intelligent system.",
   "type": "module",
@@ -26,6 +26,7 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:status": "node scripts/db-migrate.mjs --status",
+    "cloud:setup": "node scripts/cloud-setup.mjs",
     "test:e2e:cloud": "playwright test -c playwright.cloud.config.ts",
     "supabase:start": "npx supabase@3.2.0 start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "supabase:stop": "npx supabase@3.2.0 stop",

@@ -14,6 +14,8 @@
 | Auditlog van iedere opdracht en beheeractie (JSONL, lokaal) | `registry.ts`, `journal.ts` |
 | Noodstop blokkeert alle opdrachten van automatiseringen en Jarvis | `checkCommand()` |
 | Jarvis en automatiseringen mogen deurbel, energiemeters en bridges niet bedienen | `SAFETY_CRITICAL_KINDS` |
+| Cloudmodus: connector-opslag alleen voor de beperkte rol homeos_worker (geen service role key, RLS dicht voor gebruikers); tokens versleuteld met een sleutel die alleen in Vercel staat | migratie 6, `lib/cloud/*` |
+| Cloudmodus: geplande taak alleen met eigen geheim (timing-safe vergelijking); koppelpogingen met state-controle | `/api/cloud/tick`, `huecloud-service.ts` |
 | PWA: service worker cachet alleen statische bestanden; nooit API's, gegevenspagina's of camerabeelden | `public/sw.js` |
 | Pushmeldingen: alleen bekende pushdiensten, VAPID-sleutels en abonnementen versleuteld, alleen leden+ | `push-service.ts` |
 | Toegang van buiten (Tailscale): alleen eigen tailnet, geen open poorten; lokale modus vereist een toegangscode (HMAC-cookie, httpOnly, SameSite=Strict, 5 pogingen/min) | `local-access.ts`, `proxy.ts` |

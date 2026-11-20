@@ -24,6 +24,7 @@ import type { MatterService } from "./matter-service";
 import type { WebOsService } from "./webos-service";
 import type { CameraService } from "./camera-service";
 import type { ZonneplanService } from "./zonneplan-service";
+import type { HueCloudService } from "./huecloud-service";
 import type { PushService } from "./push-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
@@ -45,6 +46,7 @@ export interface ServerOptions {
   webos: WebOsService;
   cameras: CameraService;
   zonneplan: ZonneplanService;
+  huecloud: HueCloudService;
   push: PushService;
   automations: AutomationService;
 }
@@ -144,7 +146,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), mode: o.cloudMode ? "cloud" : "local" }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), mode: o.cloudMode ? "cloud" : "local" }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -228,6 +230,26 @@ export function createConnectorServer(o: ServerOptions) {
         return { ok: true };
       },
     },
+    // ───── Philips Hue via de Hue-cloud ─────
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/huecloud\/start$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ clientId: z.string().trim().max(100), clientSecret: z.string().trim().max(200) }), await body());
+        return setup(() => o.huecloud.start(b.clientId, b.clientSecret));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/huecloud\/complete$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ code: z.string().trim().min(1).max(500), state: z.string().trim().min(1).max(200) }), await body());
+        return setup(() => o.huecloud.complete(b.code, b.state));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/huecloud$/, handler: async () => setup(() => o.huecloud.remove()) },
     // ───── pushmeldingen ─────
     { method: "GET", pattern: /^\/v1\/push$/, handler: async () => o.push.info() },
     {

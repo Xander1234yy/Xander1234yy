@@ -13,7 +13,17 @@ const PENDING_MS = 15 * 60_000;
  */
 export function createZonneplanService(o: { registry: DeviceRegistry; secrets: SecretStore; store: IntegrationsStore; fetchImpl?: typeof fetch }) {
   const api = new ZonneplanApi(o.fetchImpl ?? fetch);
-  let pending: { authSession: string; verifier: string; until: number } | null = null;
+  // Koppelpoging versleuteld bewaren (werkt ook in de cloudmodus: iedere aanvraag een nieuwe connector).
+  type Pending = { authSession: string; verifier: string; until: number };
+  const pendingScope = o.secrets.scoped("pending");
+  const getPending = async (): Promise<Pending | null> => {
+    const raw = await pendingScope.get("zonneplan");
+    try {
+      return raw ? (JSON.parse(raw) as Pending) : null;
+    } catch {
+      return null;
+    }
+  };
   const make = (rec: { connectionUuid: string; label: string }) => new ZonneplanAdapter(rec, api);
   const wrap = async <T>(fn: () => Promise<T>): Promise<T> => {
     try {
@@ -33,22 +43,23 @@ export function createZonneplanService(o: { registry: DeviceRegistry; secrets: S
 
     list() {
       const z = o.store.state.zonneplan;
-      return z ? { connected: true, label: z.label, addedAt: z.addedAt, unofficial: true, health: o.registry.adapterHealth(adapterIdFor(z.connectionUuid)) } : { connected: false, unofficial: true, pending: !!pending && pending.until > Date.now() };
+      return z ? { connected: true, label: z.label, addedAt: z.addedAt, unofficial: true, health: o.registry.adapterHealth(adapterIdFor(z.connectionUuid)) } : { connected: false, unofficial: true };
     },
 
     async start(email: string) {
       return wrap(async () => {
         const r = await api.requestCode(email);
-        pending = { ...r, until: Date.now() + PENDING_MS };
+        await pendingScope.set("zonneplan", JSON.stringify({ ...r, until: Date.now() + PENDING_MS }));
         return { ok: true, message: "Zonneplan heeft een code naar je e-mail gestuurd." };
       });
     },
 
     async complete(code: string) {
       return wrap(async () => {
+        const pending = await getPending();
         if (!pending || pending.until < Date.now()) throw new SetupError(409, "NO_PENDING", "Vraag eerst een nieuwe code aan.");
         const tokens = await api.submitCode(pending.authSession, code, pending.verifier);
-        pending = null;
+        await pendingScope.delete("zonneplan");
         const conns = await api.connections(tokens.accessToken);
         const c = conns.find((x) => x.p1);
         if (!c?.p1) throw new SetupError(404, "NO_P1", "Ingelogd, maar er is geen Zonneplan Connect gevonden bij je account.");

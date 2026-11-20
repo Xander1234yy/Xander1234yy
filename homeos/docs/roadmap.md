@@ -155,6 +155,18 @@
 - Keuze: geen Vercel-deployment met cloudrelais (zie docs/remote-access.md); kan later.
 - Tests: 219 unit- en integratietests, 44 E2E (lokaal, o.a. service worker, offline, toegangscode), 6 (cloud).
 
+## Fase 7b: cloudmodus (zonder laptop)
+
+- Op verzoek van de gebruiker (MacBook blijft uit): HomeOS volledig op Vercel + Supabase. De connector draait per
+  aanvraag in de webapp; opslag in Supabase (`cloud_documents`/`cloud_logs`, migratie 6) via een eigen beperkte rol
+  `homeos_worker` (geen service role key). Adapters bewaren gegevens en budgetten tussen aanvragen en verversen alleen
+  als nodig. Geplande taak elke minuut via pg_cron (`/api/cloud/tick`, eigen geheim). Koppelpogingen (Daikin, Zonneplan,
+  Hue) versleuteld bewaard in plaats van in het geheugen.
+- Philips Hue via de officiële Hue Remote API (OAuth, app-key via de cloud, CLIP v2), ook bruikbaar zonder laptop.
+- Lokale integraties (Hue-bridge, LG-tv, Tapo-camera, Matter) zijn in de cloudmodus uitgeschakeld en verborgen.
+- `npm run cloud:setup` richt de database in en schrijft de Vercel-waarden naar een privébestand. Zie docs/cloud.md.
+- Tests: unit/integratie inclusief serverless-modus en Hue-cloud, E2E van de cloudmodus zonder connector-proces.
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
 - Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.

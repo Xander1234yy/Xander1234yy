@@ -29,6 +29,8 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^v1\/integrations\/webos\/(discover|pair)$/ },
   { method: "GET", pattern: /^v1\/cameras$/ },
   { method: "GET", pattern: /^v1\/push$/ },
+  { method: "POST", pattern: /^v1\/integrations\/huecloud\/start$/ },
+  { method: "DELETE", pattern: /^v1\/integrations\/huecloud$/ },
   { method: "POST", pattern: /^v1\/push\/(subscriptions|unsubscribe|test)$/ },
   { method: "POST", pattern: /^v1\/integrations\/zonneplan\/(start|complete)$/ },
   { method: "DELETE", pattern: /^v1\/integrations\/zonneplan$/ },

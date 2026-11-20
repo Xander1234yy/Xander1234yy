@@ -33,7 +33,18 @@ export class SetupError extends Error {
 export function createCloudIntegrations(o: { registry: DeviceRegistry; secrets: SecretStore; store: IntegrationsStore; fetchImpl?: typeof fetch }) {
   const f = o.fetchImpl ?? fetch;
   const se = (siteId: string) => `solaredge-${siteId}`;
-  let pendingDaikin: { state: string; clientId: string; clientSecret: string; redirectUri: string; expires: number } | null = null;
+  // Koppelpoging versleuteld bewaren (niet alleen in het geheugen): werkt ook in de cloudmodus, waar iedere aanvraag
+  // een nieuwe connector start.
+  type PendingDaikin = { state: string; clientId: string; clientSecret: string; redirectUri: string; expires: number };
+  const pendingScope = o.secrets.scoped("pending");
+  const getPendingDaikin = async (): Promise<PendingDaikin | null> => {
+    const raw = await pendingScope.get("daikin");
+    try {
+      return raw ? (JSON.parse(raw) as PendingDaikin) : null;
+    } catch {
+      return null;
+    }
+  };
 
   const toSetup = (err: unknown): never => {
     if (err instanceof SetupError) throw err;
@@ -109,17 +120,18 @@ export function createCloudIntegrations(o: { registry: DeviceRegistry; secrets: 
     },
 
     // ───────────── Daikin Onecta ─────────────
-    startDaikin(clientId: string, clientSecret: string, redirectUri: string) {
+    async startDaikin(clientId: string, clientSecret: string, redirectUri: string) {
       const problem = validateRedirectUri(redirectUri);
       if (problem) throw new SetupError(400, "INVALID_REDIRECT", problem);
       if (!clientId.trim() || !clientSecret.trim()) throw new SetupError(400, "INVALID", "Vul client-ID en client secret in");
       const state = randomBytes(24).toString("base64url");
-      pendingDaikin = { state, clientId: clientId.trim(), clientSecret: clientSecret.trim(), redirectUri, expires: Date.now() + 15 * 60_000 };
-      return { authorizeUrl: authorizeUrl({ clientId: pendingDaikin.clientId, redirectUri, state }), expiresInMinutes: 15 };
+      const pending: PendingDaikin = { state, clientId: clientId.trim(), clientSecret: clientSecret.trim(), redirectUri, expires: Date.now() + 15 * 60_000 };
+      await pendingScope.set("daikin", JSON.stringify(pending));
+      return { authorizeUrl: authorizeUrl({ clientId: pending.clientId, redirectUri, state }), expiresInMinutes: 15 };
     },
 
     async completeDaikin(callbackUrl: string) {
-      const p = pendingDaikin;
+      const p = await getPendingDaikin();
       if (!p || p.expires < Date.now()) throw new SetupError(409, "NO_PENDING", "Start het koppelen opnieuw (de vorige poging is verlopen)");
       const parsed = parseCallbackUrl(callbackUrl);
       if ("error" in parsed) throw new SetupError(400, "INVALID_CALLBACK", parsed.error);
@@ -134,7 +146,7 @@ export function createCloudIntegrations(o: { registry: DeviceRegistry; secrets: 
           client_id: p.clientId,
           client_secret: p.clientSecret,
         });
-        pendingDaikin = null;
+        await pendingScope.delete("daikin");
         const scope = o.secrets.scoped("daikin-onecta");
         await scope.set("clientSecret", p.clientSecret);
         await scope.set("tokens", JSON.stringify(tokens));

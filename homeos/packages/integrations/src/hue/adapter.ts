@@ -42,11 +42,37 @@ export class HueAdapter implements DeviceAdapter {
 
   constructor(
     readonly config: HueBridgeConfig,
-    private readonly httpFactory: (appKey: string) => HueHttp = (appKey) =>
+    private readonly httpFactory: (appKey: string, ctx: AdapterContext) => HueHttp = (appKey) =>
       createHueHttp({ host: config.host, fingerprint256: config.fingerprint256, appKey }),
+    opts: { id?: string; displayName?: string } = {},
   ) {
-    this.id = `hue-${config.bridgeId.slice(-6)}`;
-    this.displayName = `Philips Hue (${config.name})`;
+    this.id = opts.id ?? `hue-${config.bridgeId.slice(-6)}`;
+    this.displayName = opts.displayName ?? `Philips Hue (${config.name})`;
+  }
+
+  /** Cloudmodus: hoe lang opgehaalde gegevens geldig blijven (geen eventstream mogelijk). */
+  private static readonly SERVERLESS_FRESH_MS = 30_000;
+  private refreshedAt = 0;
+
+  private async restore() {
+    const c = (await this.ctx?.cache?.load()) as {
+      lights?: HueLight[]; devices?: HueDevice[]; rooms?: HueRoom[]; connectivity?: [string, HueZigbeeConnectivity["status"]][]; scenes?: HueScene[]; lastOk?: string | null; refreshedAt?: number;
+    } | null;
+    if (!c) return;
+    this.lights = new Map((c.lights ?? []).map((l) => [l.id, l]));
+    this.devices = new Map((c.devices ?? []).map((d) => [d.id, d]));
+    this.rooms = new Map((c.rooms ?? []).map((r) => [r.id, r]));
+    this.connectivity = new Map(c.connectivity ?? []);
+    this.scenes = c.scenes ?? [];
+    this.lastOk = c.lastOk ?? null;
+    this.refreshedAt = c.refreshedAt ?? 0;
+  }
+
+  private async persist() {
+    if (!this.ctx?.serverless) return;
+    await this.ctx.cache?.save({
+      lights: [...this.lights.values()], devices: [...this.devices.values()], rooms: [...this.rooms.values()], connectivity: [...this.connectivity], scenes: this.scenes, lastOk: this.lastOk, refreshedAt: this.refreshedAt,
+    });
   }
 
   async connect(ctx: AdapterContext): Promise<void> {
@@ -56,7 +82,12 @@ export class HueAdapter implements DeviceAdapter {
       this.lastError = "Geen application key: koppel de bridge opnieuw";
       return;
     }
-    this.http = this.httpFactory(key);
+    this.http = this.httpFactory(key, ctx);
+    if (ctx.serverless) {
+      await this.restore();
+      if (Date.now() - this.refreshedAt >= HueAdapter.SERVERLESS_FRESH_MS) await this.refresh();
+      return;
+    }
     await this.refresh();
     this.timer = setInterval(() => void this.refresh(), REFRESH_MS);
     this.timer.unref?.();
@@ -99,6 +130,8 @@ export class HueAdapter implements DeviceAdapter {
       const changed = lights.length !== known.size || lights.some((l) => !known.has(l.id));
       if (changed) this.ctx?.emit({ type: "devices_changed" });
       for (const l of lights) this.ctx?.emit({ type: "device_state", externalId: l.id, report: this.report(l.id) });
+      this.refreshedAt = Date.now();
+      await this.persist();
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
       this.ctx?.logger.warn("Hue-bridge niet bereikbaar", { bridge: this.config.bridgeId, error: this.lastError });
@@ -255,6 +288,7 @@ export class HueAdapter implements DeviceAdapter {
       const updated = fresh.body?.data?.[0];
       if (updated) this.lights.set(externalId, updated);
       this.lastOk = this.now();
+      await this.persist();
       return { ok: true, report: this.report(externalId) };
     } catch (err) {
       return { ok: false, code: "ADAPTER_ERROR", message: err instanceof Error ? err.message : "Bridge niet bereikbaar" };

@@ -86,7 +86,8 @@ homeos/
 
 ## Documentatie
 
-- [Toegang vanaf je telefoon (app, pushmeldingen, Tailscale)](docs/remote-access.md)
+- [HomeOS in de cloud, zonder laptop (Vercel + Supabase)](docs/cloud.md)
+- [Toegang vanaf je telefoon met de laptop als server (Tailscale)](docs/remote-access.md)
 - [Architectuur](docs/architecture.md)
 - [Supabase, accounts en rechten](docs/supabase.md)
 - [Beveiliging](docs/security.md)

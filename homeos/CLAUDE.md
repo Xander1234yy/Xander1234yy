@@ -36,6 +36,12 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   `apps/connector/src/automation-service.ts`. Nooit inhaalacties, drempels alleen op overgangen, apparaatopdrachten
   altijd via `registry.executeCommand(..., "automation")`.
 
+## Cloudmodus (zonder laptop)
+- `HOMEOS_CLOUD_RUNTIME=true`: de webapp start de connector per aanvraag (`apps/web/lib/cloud/runtime.ts`) met
+  `serverless: true` en opslag `db://<huishouden>` (`fs-utils.ts` → Postgres via `homeos_worker`). Adapters mogen in
+  serverless-modus geen timers starten: gegevens en budget via `ctx.cache`, koppelpogingen via `secrets` (nooit in het
+  geheugen). Test met `apps/connector/test/serverless.test.ts` en `playwright.cloudruntime.config.ts`.
+
 ## PWA en toegang op afstand
 - Service worker `apps/web/public/sw.js`: cache nooit API-antwoorden, gegevenspagina's of beelden. Push via
   `apps/connector/src/push-service.ts` (web-push). Lokale modus van buiten de laptop vereist `HOMEOS_ACCESS_CODE`
