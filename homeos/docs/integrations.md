@@ -34,9 +34,9 @@ DEMO-adapters worden alleen geladen als `HOMEOS_DEMO=true` (standaard in ontwikk
 | Scènes | Kamerscènes activeren via `recall: { action: "active" }` |
 | Kamers | Hue-kamers worden gekoppeld aan HomeOS-kamers met dezelfde naam |
 
-Getest met unit-tests (nep-transport), een echte HTTPS-server voor de pinning, en end-to-end tegen
-`tests/tools/hue-bridge-simulator.mjs` (een **simulator**, geen echt apparaat). Met een echte bridge is nog niet getest:
-dat doe jij als eerste. Bij problemen staat het logboek in `~/Library/Logs/HomeOS/connector.log`.
+Getest met unit-tests (nep-transport), een echte HTTPS-server voor de pinning, end-to-end tegen
+`tests/tools/hue-bridge-simulator.mjs` (een **simulator**), én in de praktijk gekoppeld met een echte Hue Bridge
+(9 lampen, 20 november 2026). Bij problemen staat het logboek in `~/Library/Logs/HomeOS/connector.log`.
 
 ## Fase 4: jouw apparaten en wat officieel kan
 
@@ -54,7 +54,8 @@ berekend volgens de Python-SDK.
   vermogen (schaal uit de specificatie). Andere Tuya-apparaten worden overgeslagen en in de status genoemd.
 - Verversen elke 2 minuten (één verzoek voor alle apparaten); na een opdracht wordt de status direct teruggelezen.
 - Een verlopen IoT Core-abonnement of quotum wordt als duidelijke melding getoond.
-- Getest met een nagebootste Tuya-cloud die handtekeningen echt controleert; nog niet tegen jouw account.
+- Getest met een nagebootste Tuya-cloud die handtekeningen echt controleert, én in de praktijk gekoppeld met een echt
+  Smart Life-account via een Tuya Cloud-project (Central Europe), 20 november 2026.
 
 #### Achtergrond
 - Officiële route: de **Tuya Cloud OpenAPI** via een (gratis) project op het Tuya IoT Development Platform. Je Smart Life-account
