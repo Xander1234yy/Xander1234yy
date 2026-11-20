@@ -1,0 +1,8 @@
+{
+  "name": "@homeos/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@homeos/shared": "0.1.0" }
+}

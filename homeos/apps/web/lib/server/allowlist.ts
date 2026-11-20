@@ -1,0 +1,46 @@
+/**
+ * Alleen deze connector-endpoints mogen via de webapp aangeroepen worden.
+ * Alles wat niet expliciet in deze lijst staat wordt geweigerd.
+ */
+const seg = "[^/]+";
+export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
+  { method: "GET", pattern: /^v1\/snapshot$/ },
+  { method: "GET", pattern: /^v1\/devices\/available$/ },
+  { method: "POST", pattern: /^v1\/discover$/ },
+  { method: "POST", pattern: new RegExp(`^v1/devices/${seg}/add$`) },
+  { method: "PATCH", pattern: new RegExp(`^v1/devices/${seg}$`) },
+  { method: "DELETE", pattern: new RegExp(`^v1/devices/${seg}$`) },
+  { method: "POST", pattern: new RegExp(`^v1/devices/${seg}/commands$`) },
+  { method: "POST", pattern: new RegExp(`^v1/devices/${seg}/sync$`) },
+  { method: "POST", pattern: /^v1\/sync$/ },
+  { method: "POST", pattern: new RegExp(`^v1/scenes/${seg}/activate$`) },
+  { method: "POST", pattern: /^v1\/rooms$/ },
+  { method: "PATCH", pattern: new RegExp(`^v1/rooms/${seg}$`) },
+  { method: "DELETE", pattern: new RegExp(`^v1/rooms/${seg}$`) },
+  { method: "GET", pattern: /^v1\/energy\/summary$/ },
+  { method: "GET", pattern: /^v1\/energy\/history$/ },
+  { method: "GET", pattern: /^v1\/events$/ },
+  { method: "GET", pattern: /^v1\/audit$/ },
+  { method: "POST", pattern: /^v1\/emergency-stop$/ },
+];
+
+export function isAllowed(method: string, path: string): boolean {
+  if (path.includes("..") || path.includes("//")) return false;
+  return CONNECTOR_ALLOWLIST.some((r) => r.method === method && r.pattern.test(path));
+}
+
+/** Bescherming tegen CSRF: wijzigende verzoeken moeten van dezelfde origin komen. */
+export function isSameOrigin(headers: Headers): boolean {
+  const origin = headers.get("origin");
+  const host = headers.get("x-forwarded-host") ?? headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+export function jsonError(status: number, code: string, message: string): Response {
+  return Response.json({ error: { code, message } }, { status, headers: { "cache-control": "no-store" } });
+}

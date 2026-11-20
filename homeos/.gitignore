@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env.local
+.env.*.local
+# Lokale connectorgegevens: identiteit, tokens, versleutelde secrets, logboeken
+apps/connector/.data/
+.homeos-data/

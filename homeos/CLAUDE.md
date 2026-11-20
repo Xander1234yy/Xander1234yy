@@ -1,0 +1,29 @@
+# CLAUDE.md — werkafspraken voor HomeOS
+
+## Wat dit is
+Monorepo (npm workspaces) voor HomeOS: Next.js-webapp (`apps/web`), losse Device Connector (`apps/connector`),
+gedeelde pakketten in `packages/*`. Interne pakketten worden als TypeScript-bron gebruikt (geen buildstap):
+Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
+
+## Commando's
+- `npm run dev`: connector en web. `npm test`: Vitest. `npm run test:e2e`: Playwright. `npm run check`: alles.
+- In de Claude Code-cloudomgeving: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome npm run test:e2e`.
+
+## Harde regels
+1. **Geen nep-integraties.** Gesimuleerde apparaten bestaan alleen als DEMO-adapter (`demo: true`) en worden in de UI
+   altijd zo gemarkeerd. Echte adapters alleen op basis van officiële documentatie. Ontbreekt die, maak dan een duidelijk
+   gemarkeerde stub die `not_configured` of een fout teruggeeft. Meld nooit een verbinding als geslaagd als dat niet zo is.
+2. **Secrets.** Geen tokens in frontendcode, `NEXT_PUBLIC_*` of localStorage. Integratietokens alleen via
+   `SecretStore` (AES-256-GCM) in de connector. Het connector-token alleen server-side.
+3. **Opdrachten.** Alles gaat via `DeviceRegistry.executeCommand` → `checkCommand()` (capability, status, noodstop,
+   veiligheidskritische apparaten) → auditlog. Jarvis en automatiseringen doen alleen voorstellen of gebruiken de bron
+   `jarvis`/`automation`. Opdrachten worden nooit in een wachtrij gezet voor later.
+4. **Versheid.** Toon oude status nooit als live. Gebruik `stateFreshness`/`effectiveStatus` en `useLive()`.
+5. **Validatie.** Alle API-input via zod-schema's uit `@homeos/shared`. Nieuwe connector-endpoints ook toevoegen aan
+   `apps/web/lib/server/allowlist.ts`, anders zijn ze niet bereikbaar.
+6. **Tests** voeren nooit echte apparaatopdrachten uit. Ze gebruiken alleen DEMO-adapters en tijdelijke datamappen.
+7. UI-tekst is in het Nederlands. Design: donker navy/zwart met blauwe accenten (tokens in `apps/web/app/globals.css`).
+8. Next.js 16: lees `apps/web/AGENTS.md` en `node_modules/next/dist/docs/` voordat je Next-API's gebruikt.
+
+## Fase
+Fase 1 is af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
