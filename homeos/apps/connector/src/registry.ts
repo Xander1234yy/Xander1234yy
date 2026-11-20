@@ -495,17 +495,24 @@ export class DeviceRegistry extends EventEmitter {
 
   // ---------- energie ----------
 
-  /** Echte energiebronnen gaan voor DEMO-bronnen. */
-  private energyAdapter(): DeviceAdapter | undefined {
-    return this.o.adapters.find((a) => a.energy && !a.demo) ?? this.o.adapters.find((a) => a.energy);
+  /** Echte energiebronnen gaan voor DEMO-bronnen; meerdere echte bronnen (bijv. twee SolarEdge-installaties) worden opgeteld. */
+  private energyAdapters(): DeviceAdapter[] {
+    const real = this.o.adapters.filter((a) => a.energy && !a.demo);
+    return real.length ? real : this.o.adapters.filter((a) => a.energy).slice(0, 1);
   }
 
   async energySummary(): Promise<EnergySummary | null> {
-    return (await this.energyAdapter()?.energy?.getSummary()) ?? null;
+    const results = await Promise.allSettled(this.energyAdapters().map((a) => a.energy!.getSummary()));
+    const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    if (!ok.length) return null;
+    return ok.length === 1 ? ok[0]! : combineSummaries(ok);
   }
 
   async energyHistory(range: EnergyRange): Promise<EnergyHistory | null> {
-    return (await this.energyAdapter()?.energy?.getHistory(range)) ?? null;
+    const results = await Promise.allSettled(this.energyAdapters().map((a) => a.energy!.getHistory(range)));
+    const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    if (!ok.length) return null;
+    return ok.length === 1 ? ok[0]! : combineHistories(ok);
   }
 
   // ---------- intern ----------
@@ -532,4 +539,48 @@ function slug(s: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
+}
+
+/** Telt waarden op; ontbreekt een waarde bij één bron, dan is het totaal onbekend (null), nooit een deelsom. */
+function sumAll(values: (number | null)[]): number | null {
+  if (values.some((v) => v === null)) return null;
+  return Math.round((values as number[]).reduce((a, b) => a + b, 0) * 1000) / 1000;
+}
+
+function combineSummaries(list: EnergySummary[]): EnergySummary {
+  const period = (k: "today" | "month" | "year") => ({
+    productionKwh: sumAll(list.map((s) => s[k].productionKwh)),
+    consumptionKwh: sumAll(list.map((s) => s[k].consumptionKwh)),
+    importKwh: sumAll(list.map((s) => s[k].importKwh)),
+    exportKwh: sumAll(list.map((s) => s[k].exportKwh)),
+  });
+  return {
+    sourceId: `combined:${list.map((s) => s.sourceId).join("+")}`,
+    demo: list.some((s) => s.demo),
+    // De oudste meting bepaalt hoe actueel het totaal is.
+    updatedAt: list.map((s) => s.updatedAt).sort()[0]!,
+    currentProductionW: sumAll(list.map((s) => s.currentProductionW)),
+    currentConsumptionW: sumAll(list.map((s) => s.currentConsumptionW)),
+    gridImportW: sumAll(list.map((s) => s.gridImportW)),
+    gridExportW: sumAll(list.map((s) => s.gridExportW)),
+    today: period("today"),
+    month: period("month"),
+    year: period("year"),
+  };
+}
+
+function combineHistories(list: EnergyHistory[]): EnergyHistory {
+  const byT = new Map<string, EnergyHistory["points"]>();
+  for (const h of list) for (const p of h.points) byT.set(p.t, [...(byT.get(p.t) ?? []), p]);
+  const points = [...byT.entries()]
+    .filter(([, ps]) => ps.length === list.length) // alleen tijdstippen waarvoor alle bronnen gegevens hebben
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([t, ps]) => ({
+      t,
+      productionKwh: sumAll(ps.map((p) => p.productionKwh)),
+      consumptionKwh: sumAll(ps.map((p) => p.consumptionKwh)),
+      importKwh: sumAll(ps.map((p) => p.importKwh)),
+      exportKwh: sumAll(ps.map((p) => p.exportKwh)),
+    }));
+  return { sourceId: `combined:${list.map((h) => h.sourceId).join("+")}`, demo: list.some((h) => h.demo), range: list[0]!.range, bucket: list[0]!.bucket, points };
 }

@@ -151,3 +151,26 @@ describe("Matter in de connector", () => {
     }
   });
 });
+
+describe("meerdere SolarEdge-installaties", () => {
+  it("telt opwek van twee installaties op en laat onbekende waarden onbekend", async () => {
+    const twoSites = (async (input: string | URL) => {
+      const url = new URL(String(input));
+      const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
+      const site = url.pathname.split("/")[2];
+      const kw = site === "1" ? 1000 : 2000;
+      if (url.pathname.endsWith("/details")) return json({ details: { id: Number(site), name: `Site ${site}`, status: "Active", peakPower: 3, location: { timeZone: "Europe/Amsterdam" } } });
+      if (url.pathname.endsWith("/overview")) return json({ overview: { lastUpdateTime: "2026-11-20 12:00:00", lifeTimeData: { energy: 1 }, lastYearData: { energy: kw * 100 }, lastMonthData: { energy: kw * 10 }, lastDayData: { energy: kw }, currentPower: { power: kw / 2 } } });
+      if (url.pathname.endsWith("/energy")) return json({ energy: { timeUnit: "DAY", unit: "Wh", values: [{ date: "2026-11-19 00:00:00", value: kw }, { date: "2026-11-20 00:00:00", value: kw * 2 }] } });
+      return json({});
+    }) as typeof fetch;
+    t = await startTestConnector({ demo: true }, undefined, twoSites);
+    for (const id of ["1", "2"]) {
+      expect((await t.call("/v1/integrations/solaredge", { method: "POST", body: JSON.stringify({ siteId: id, apiKey: "SLEUTEL123456789" }) })).status).toBe(200);
+    }
+    const s = await (await t.call("/v1/energy/summary")).json();
+    expect(s).toMatchObject({ demo: false, currentProductionW: 1500, currentConsumptionW: null, today: { productionKwh: 3, importKwh: null } });
+    const h = await (await t.call("/v1/energy/history?range=week")).json();
+    expect(h.points.map((p: { productionKwh: number }) => p.productionKwh)).toEqual([3, 6]);
+  });
+});
