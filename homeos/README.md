@@ -5,9 +5,10 @@
 HomeOS is een zelfstandig smart-homeplatform, zonder Home Assistant. De webapp draait in de browser
 (iPhone, iPad, laptop) en een lichte **Device Connector** draait op je eigen laptop en praat lokaal met je apparaten.
 
-> **Status: fase 1 van 8.** Architectuur, design system, dashboard en een volledig werkende
-> demo-omgeving. Alle apparaten zijn nu nog gesimuleerd en overal gemarkeerd als **DEMO**.
-> Echte integraties volgen vanaf fase 3 (Philips Hue). Zie [docs/roadmap.md](docs/roadmap.md).
+> **Status: fase 2 van 8.** Dashboard, Device Connector, accounts, huishoudens, rollen en een Supabase-database
+> met Row Level Security. Familie (agenda, taken, boodschappen, notities) en Onderhoud werken.
+> Apparaten zijn nog gesimuleerd en overal gemarkeerd als **DEMO**. Echte integraties volgen vanaf fase 3
+> (Philips Hue). Zie [docs/roadmap.md](docs/roadmap.md).
 
 ## Snel starten
 
@@ -28,6 +29,9 @@ Open daarna **http://127.0.0.1:3000**.
 | Device Connector | `127.0.0.1:8787` (alleen lokaal) | Apparaten, statuscache, opdrachten, auditlog |
 | Webapp (Next.js) | `127.0.0.1:3000` | Dashboard en alle pagina's, plus een veilige server-side proxy naar de connector |
 
+Zonder verdere configuratie draait HomeOS in de **lokale modus** (geen accounts, alleen op deze laptop).
+Voor accounts, huishoudens, familie en onderhoud koppel je Supabase: zie [docs/supabase.md](docs/supabase.md).
+
 Bij de eerste start maakt de connector een unieke identiteit en een toegangstoken aan in
 `apps/connector/.data/` (bestandsrechten 0600, nooit in git). De webapp leest dat token server-side.
 
@@ -43,7 +47,9 @@ Bij de eerste start maakt de connector een unieke identiteit en een toegangstoke
 | `npm run test:e2e` | Browsertests op desktop, iPhone en iPad (Playwright, alleen DEMO-apparaten) |
 | `npm run typecheck` / `npm run lint` | TypeScript strict en ESLint |
 | `npm run check` | Typecheck, lint en tests samen |
-| `npm run db:migrate` | Databasemigraties (vanaf fase 2) |
+| `npm run test:e2e:cloud` | Browsertests van accounts en rollen tegen een echte Supabase |
+| `npm run db:migrate` / `npm run db:status` | Migraties toepassen op Supabase (`SUPABASE_DB_URL`) |
+| `npm run supabase:start` / `supabase:stop` | Lokale Supabase (vereist Docker) |
 
 ## Structuur
 
@@ -57,8 +63,8 @@ homeos/
     integrations/   Adapterinterface + DEMO-adapters (later Hue, stekkers, Apple TV, zon, deurbel)
     ui/             Design system (shadcn/ui-stijl op Radix + Tailwind)
     automation/     Automation Engine (fase 5)
-    database/       Supabase-laag (fase 2)
-  supabase/         Migraties en seed (fase 2)
+    database/       Rijtypen, invoerschema's en RLS-tests
+  supabase/         Migraties, seed (DEMO) en config voor de Supabase CLI
   docs/             Architectuur, beveiliging, integraties, roadmap
   tests/e2e/        Playwright
   scripts/          dev-launcher en hulpscripts
@@ -67,6 +73,7 @@ homeos/
 ## Documentatie
 
 - [Architectuur](docs/architecture.md)
+- [Supabase, accounts en rechten](docs/supabase.md)
 - [Beveiliging](docs/security.md)
 - [Integraties en apparaatonderzoek](docs/integrations.md)
 - [Roadmap en implementatieplan](docs/roadmap.md)

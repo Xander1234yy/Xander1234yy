@@ -332,6 +332,24 @@ export class DeviceRegistry extends EventEmitter {
     return this.o.store.state.rooms.some((r) => r.id === id);
   }
 
+  /** Vervangt alle kamers (bron van waarheid: Supabase). Apparaten in verdwenen kamers krijgen geen kamer. */
+  async replaceRooms(rooms: Room[], source: CommandSource | "system" = "user"): Promise<OpResult> {
+    const s = this.o.store.state;
+    const same = JSON.stringify([...s.rooms].sort((a, b) => a.id.localeCompare(b.id))) === JSON.stringify([...rooms].sort((a, b) => a.id.localeCompare(b.id)));
+    if (same) return { ok: true };
+    s.rooms = rooms.map((r) => ({ ...r }));
+    const ids = new Set(rooms.map((r) => r.id));
+    for (const d of Object.values(s.devices)) if (d.roomId && !ids.has(d.roomId)) d.roomId = null;
+    await this.o.store.save();
+    this.audit("rooms.replace", source, null, { count: rooms.length }, true);
+    this.scheduleEmit();
+    return { ok: true };
+  }
+
+  identity() {
+    return { connectorId: this.o.connectorId, version: this.o.version, demoMode: this.o.demoMode };
+  }
+
   async createRoom(input: { name: string; icon?: string }): Promise<OpResult<Room>> {
     const base = slug(input.name) || "kamer";
     let id = base;

@@ -1,8 +1,8 @@
 {
   "name": "homeos",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "HomeOS — Your home. One intelligent system.",
+  "description": "HomeOS \u2014 Your home. One intelligent system.",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -24,7 +24,11 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "db:migrate": "node scripts/db-migrate.mjs"
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:status": "node scripts/db-migrate.mjs --status",
+    "test:e2e:cloud": "playwright test -c playwright.cloud.config.ts",
+    "supabase:start": "npx supabase@3.2.0 start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
+    "supabase:stop": "npx supabase@3.2.0 stop"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -33,6 +37,7 @@
     "@types/node": "22.20.5",
     "eslint": "10.15.0",
     "eslint-plugin-react-hooks": "7.1.1",
+    "pg": "^8.23.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.73.0",
     "vitest": "5.1.1"

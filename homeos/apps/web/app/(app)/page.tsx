@@ -7,7 +7,8 @@ import { EnergyCard } from "@/components/dashboard/energy-card";
 import { LightsCard } from "@/components/dashboard/lights-card";
 import { MediaCard } from "@/components/dashboard/media-card";
 import { DoorbellCard } from "@/components/dashboard/doorbell-card";
-import { AgendaCard, AutomationsCard, JarvisCard } from "@/components/dashboard/misc-cards";
+import { AutomationsCard, JarvisCard } from "@/components/dashboard/misc-cards";
+import { AgendaCard } from "@/components/dashboard/agenda-card";
 import { useEnergySummary } from "@/lib/use-energy";
 
 export default function DashboardPage() {

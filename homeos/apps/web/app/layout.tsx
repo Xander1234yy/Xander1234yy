@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { AppShell } from "@/components/shell/app-shell";
 import { ToastProvider } from "@/components/toast";
-import { HomeProvider } from "@/lib/home-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,11 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="nl" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="font-sans">
-        <ToastProvider>
-          <HomeProvider>
-            <AppShell>{children}</AppShell>
-          </HomeProvider>
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

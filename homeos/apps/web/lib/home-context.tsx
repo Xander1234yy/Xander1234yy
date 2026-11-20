@@ -85,6 +85,7 @@ export function HomeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let disposed = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let reopenTimer: ReturnType<typeof setTimeout> | null = null;
 
     const poll = async () => {
       try {
@@ -120,6 +121,12 @@ export function HomeProvider({ children }: { children: ReactNode }) {
         } else {
           setConnector("offline");
           setConnectorReason(d.reason ?? null);
+          // Niet (juist) gekoppeld: sluit de stream en probeer het over 5 s opnieuw,
+          // zodat een koppeling in Instellingen meteen effect heeft.
+          if (d.reason?.startsWith("connector_")) {
+            es.close();
+            if (!disposed) reopenTimer = setTimeout(open, 5_000);
+          }
         }
       });
       es.onerror = () => {
@@ -160,6 +167,7 @@ export function HomeProvider({ children }: { children: ReactNode }) {
       disposed = true;
       esRef.current?.close();
       if (pollTimer) clearTimeout(pollTimer);
+      if (reopenTimer) clearTimeout(reopenTimer);
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };

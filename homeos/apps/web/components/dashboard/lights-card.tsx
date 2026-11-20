@@ -5,11 +5,13 @@ import { cn } from "@homeos/ui";
 import { SectionCard, EmptyState } from "@/components/section";
 import { BrightnessSlider, PowerSwitch } from "@/components/devices/controls";
 import { StatusBadge, DemoBadge } from "@/components/devices/status-badge";
-import { useHome, useLive } from "@/lib/home-context";
+import { useHome, useLive as useConnectorLive } from "@/lib/home-context";
+import { useCan } from "@/components/session-context";
 
 export function LightsCard() {
   const { snapshot, activateScene, pending } = useHome();
-  const live = useLive();
+  const mayControl = useCan("control");
+  const live = useConnectorLive();
   const lights = (snapshot?.devices ?? []).filter((d) => d.kind === "light");
   const on = lights.filter((d) => d.state.on && d.status === "ONLINE").length;
   const room = (id: string | null) => snapshot?.rooms.find((r) => r.id === id)?.name ?? "Geen kamer";
@@ -27,7 +29,7 @@ export function LightsCard() {
               {snapshot!.scenes.map((s) => (
                 <button
                   key={s.id}
-                  disabled={!live || pending.has(s.id)}
+                  disabled={!live || !mayControl || pending.has(s.id)}
                   onClick={() => void activateScene(s.id)}
                   className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-muted transition hover:border-accent/50 hover:text-fg disabled:opacity-40"
                 >

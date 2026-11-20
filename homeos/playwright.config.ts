@@ -36,6 +36,9 @@ export default defineConfig({
       url: "http://127.0.0.1:3100/api/health",
       env: {
         HOMEOS_CONNECTOR_URL: "http://127.0.0.1:8788",
+        HOMEOS_ALLOW_LOCAL_MODE: "true",
+        SUPABASE_URL: "",
+        SUPABASE_PUBLISHABLE_KEY: "",
         HOMEOS_CONNECTOR_TOKEN_FILE: path.join(dataDir, "api-token"),
         NEXT_TELEMETRY_DISABLED: "1",
       },

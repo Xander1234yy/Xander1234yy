@@ -12,3 +12,6 @@ next-env.d.ts
 # Lokale connectorgegevens: identiteit, tokens, versleutelde secrets, logboeken
 apps/connector/.data/
 .homeos-data/
+# Supabase CLI
+supabase/.branches/
+supabase/.temp/

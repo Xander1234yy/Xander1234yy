@@ -9,6 +9,7 @@ import { DeviceCard } from "@/components/devices/device-card";
 import { DeviceIcon, KIND_LABEL } from "@/components/devices/device-icon";
 import { api, connectorPath, enc } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
+import { useCan } from "@/components/session-context";
 import { Cpu } from "lucide-react";
 
 type Filter = "all" | "online" | "problem";
@@ -25,6 +26,8 @@ interface Available {
 export default function DevicesPage() {
   const { snapshot, syncAll, pending, mutate } = useHome();
   const live = useLive();
+  const mayManage = useCan("manage_devices");
+  const mayControl = useCan("control");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [available, setAvailable] = useState<Available[] | null>(null);
@@ -60,10 +63,10 @@ export default function DevicesPage() {
         description="Alle gekoppelde apparaten, hun status en bediening."
         actions={
           <>
-            <Button variant="secondary" onClick={() => void scan()} disabled={!live || scanning}>
+            <Button variant="secondary" onClick={() => void scan()} disabled={!live || !mayManage || scanning}>
               <Plus /> {scanning ? "Zoeken…" : "Apparaten zoeken"}
             </Button>
-            <Button variant="secondary" onClick={() => void syncAll()} disabled={!live || pending.has("sync")}>
+            <Button variant="secondary" onClick={() => void syncAll()} disabled={!live || !mayControl || pending.has("sync")}>
               <RefreshCw className={pending.has("sync") ? "animate-spin" : ""} /> Synchroniseren
             </Button>
           </>

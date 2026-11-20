@@ -8,6 +8,7 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
 ## Commando's
 - `npm run dev`: connector en web. `npm test`: Vitest. `npm run test:e2e`: Playwright. `npm run check`: alles.
 - In de Claude Code-cloudomgeving: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome npm run test:e2e`.
+- Cloudmodus testen: `npm run supabase:start` (Docker), dan `SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_PUBLISHABLE_KEY=<key> npm run test:e2e:cloud`.
 
 ## Harde regels
 1. **Geen nep-integraties.** Gesimuleerde apparaten bestaan alleen als DEMO-adapter (`demo: true`) en worden in de UI
@@ -23,7 +24,10 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
    `apps/web/lib/server/allowlist.ts`, anders zijn ze niet bereikbaar.
 6. **Tests** voeren nooit echte apparaatopdrachten uit. Ze gebruiken alleen DEMO-adapters en tijdelijke datamappen.
 7. UI-tekst is in het Nederlands. Design: donker navy/zwart met blauwe accenten (tokens in `apps/web/app/globals.css`).
-8. Next.js 16: lees `apps/web/AGENTS.md` en `node_modules/next/dist/docs/` voordat je Next-API's gebruikt.
+8. **Database.** Iedere nieuwe tabel krijgt RLS en policies in een *nieuwe* migratie (bestaande migraties nooit
+   wijzigen), plus tests in `packages/database/test/rls.test.ts`. Rechten in `permissions.ts` moeten de RLS volgen.
+   Supabase alleen server-side, nooit een service role key in de webapp.
+9. Next.js 16: lees `apps/web/AGENTS.md` en `node_modules/next/dist/docs/` voordat je Next-API's gebruikt.
 
 ## Fase
-Fase 1 is af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
+Fase 1 en 2 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.

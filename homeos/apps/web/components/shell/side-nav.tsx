@@ -36,7 +36,7 @@ export function SideNav() {
           );
         })}
       </nav>
-      <p className="px-6 py-5 text-[11px] text-muted/70">HomeOS 0.1 · Fase 1</p>
+      <p className="px-6 py-5 text-[11px] text-muted/70">HomeOS 0.2 · Fase 2</p>
     </aside>
   );
 }

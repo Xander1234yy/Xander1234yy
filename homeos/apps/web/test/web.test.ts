@@ -100,3 +100,35 @@ describe("Jarvis lokale fallback", () => {
     expect(handleLocal("wat is de opbrengst van de zonnepanelen?", ctx()).text).toContain("geen energiebron");
   });
 });
+
+describe("Jarvis familie-intenties", () => {
+  const family = { shopping: [{ name: "Melk", quantity: "2" }], openTasks: 3, upcoming: [{ title: "Tandarts", starts_at: "2026-11-21T09:00:00Z", all_day: false }], canWrite: true };
+
+  it("zonder account: duidelijke melding, geen verzonnen gegevens", () => {
+    expect(handleLocal("wat moeten we nog kopen?", ctx()).text).toContain("HomeOS-account");
+  });
+  it("leest de boodschappenlijst", () => {
+    expect(handleLocal("Wat moeten we nog kopen?", { ...ctx(), family }).text).toContain("Melk (2)");
+  });
+  it("stelt een boodschap voor (geen directe wijziging)", () => {
+    const r = handleLocal("zet appels op de boodschappenlijst", { ...ctx(), family });
+    expect(r.actions).toEqual([expect.objectContaining({ kind: "shopping_add", name: "appels" })]);
+  });
+  it("gasten kunnen geen boodschappen toevoegen", () => {
+    expect(handleLocal("zet appels op de boodschappenlijst", { ...ctx(), family: { ...family, canWrite: false } }).actions).toEqual([]);
+  });
+  it("toont de agenda", () => {
+    expect(handleLocal("wat staat er in de agenda?", { ...ctx(), family }).text).toContain("Tandarts");
+  });
+});
+
+describe("veilige redirects", () => {
+  it("staat alleen interne paden toe", async () => {
+    const { safeNext } = await import("../lib/safe-redirect");
+    expect(safeNext("/familie")).toBe("/familie");
+    expect(safeNext("//evil.example")).toBe("/");
+    expect(safeNext("https://evil.example")).toBe("/");
+    expect(safeNext("/\\evil")).toBe("/");
+    expect(safeNext(null)).toBe("/");
+  });
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, CalendarDays, Workflow } from "lucide-react";
+import { Bot, Workflow } from "lucide-react";
 import { Badge } from "@homeos/ui";
 import { SectionCard } from "@/components/section";
 import { JarvisChat } from "@/components/jarvis-chat";
@@ -24,14 +24,6 @@ export function AutomationsCard() {
         <span className="text-muted">Noodstop</span>
         <span className={stop ? "font-medium text-warning" : "text-success"}>{stop ? "Actief — alles gepauzeerd" : "Niet actief"}</span>
       </div>
-    </SectionCard>
-  );
-}
-
-export function AgendaCard() {
-  return (
-    <SectionCard title="Agenda" icon={CalendarDays} href="/familie" action={<Badge tone="accent">Fase 2</Badge>} testId="agenda-card">
-      <p className="text-sm text-muted">Gezinsagenda, taken en boodschappenlijst worden opgeslagen in Supabase met beveiliging per huishouden. Dit wordt gekoppeld in fase 2.</p>
     </SectionCard>
   );
 }

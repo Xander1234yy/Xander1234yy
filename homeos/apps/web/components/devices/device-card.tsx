@@ -5,7 +5,8 @@ import { ChevronDown, RefreshCw, Trash2 } from "lucide-react";
 import { Button, Card, Input, cn } from "@homeos/ui";
 import type { Device } from "@homeos/shared";
 import { enc } from "@/lib/api";
-import { useHome, useLive } from "@/lib/home-context";
+import { useHome, useLive as useLiveConnector } from "@/lib/home-context";
+import { useCan } from "@/components/session-context";
 import { formatDateTime, formatKwh, formatTime, formatW } from "@/lib/format";
 import { BrightnessSlider, ColorControl, ColorTempControl, MediaControls, PowerSwitch } from "./controls";
 import { DeviceIcon, KIND_LABEL } from "./device-icon";
@@ -41,11 +42,14 @@ export function DeviceReadings({ device }: { device: Device }) {
 
 export function DeviceCard({ device }: { device: Device }) {
   const { snapshot, mutate, pending } = useHome();
-  const live = useLive();
+  const connected = useLiveConnector();
+  const mayManage = useCan("manage_devices");
+  const live = connected && mayManage;
+  const mayControl = useCan("control");
   const [manage, setManage] = useState(false);
   const [name, setName] = useState(device.name);
   const room = snapshot?.rooms.find((r) => r.id === device.roomId);
-  const on = device.state.on && device.status === "ONLINE" && live;
+  const on = device.state.on && device.status === "ONLINE" && connected;
 
   return (
     <Card className={cn("transition-colors", on && device.kind === "light" && "border-accent/20")} data-testid="device-card" data-device-id={device.id}>
@@ -128,7 +132,7 @@ export function DeviceCard({ device }: { device: Device }) {
               <dd className="truncate font-mono text-fg">{device.id}</dd>
             </dl>
             <div className="flex gap-2">
-              <Button size="sm" variant="secondary" disabled={!live || pending.has(device.id)} onClick={() => void mutate(`v1/devices/${enc(device.id)}/sync`, "POST", undefined, "Gesynchroniseerd")}>
+              <Button size="sm" variant="secondary" disabled={!connected || !mayControl || pending.has(device.id)} onClick={() => void mutate(`v1/devices/${enc(device.id)}/sync`, "POST", undefined, "Gesynchroniseerd")}>
                 <RefreshCw /> Synchroniseren
               </Button>
               <Button

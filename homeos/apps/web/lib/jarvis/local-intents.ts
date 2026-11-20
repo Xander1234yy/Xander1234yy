@@ -12,15 +12,25 @@ import {
  * en de connector controleert de bevoegdheid opnieuw (bron "jarvis").
  */
 
+export interface FamilyContext {
+  shopping: { name: string; quantity: string }[];
+  openTasks: number;
+  upcoming: { title: string; starts_at: string; all_day: boolean }[];
+  canWrite: boolean;
+}
+
 export interface JarvisContext {
   snapshot: Snapshot | null;
   energy: EnergySummary | null;
   connectorOnline: boolean;
+  /** Alleen aanwezig met een HomeOS-account (Supabase). */
+  family?: FamilyContext;
 }
 
 export type JarvisAction =
   | { kind: "command"; deviceId: string; deviceName: string; command: DeviceCommand; label: string }
-  | { kind: "scene"; sceneId: string; sceneName: string; label: string };
+  | { kind: "scene"; sceneId: string; sceneName: string; label: string }
+  | { kind: "shopping_add"; name: string; label: string };
 
 export interface JarvisReply {
   intent: string;
@@ -98,7 +108,7 @@ export function handleLocal(message: string, ctx: JarvisContext): JarvisReply {
   }
 
   if (has(msg, "boodschap", "kopen", "agenda", "afspraak", "taken", "taak")) {
-    return reply("family", "De agenda, taken en boodschappenlijst worden gekoppeld zodra de Supabase-database actief is (fase 2). Daarna kan ik ze voor je opzoeken en bijwerken.");
+    return familyIntent(message, msg, ctx.family);
   }
 
   if (has(msg, "automatiser", "routine") && has(msg, "stel", "voorstel", "maak", "bedenk")) {
@@ -206,4 +216,31 @@ export function handleLocal(message: string, ctx: JarvisContext): JarvisReply {
     "fallback",
     "Dat begrijp ik nog niet zonder AI-provider. Probeer bijvoorbeeld: \"Welke lampen staan nog aan?\", \"Wat is de huidige opbrengst van onze zonnepanelen?\" of \"Zet de spots in de keuken aan\".",
   );
+}
+
+function familyIntent(original: string, msg: string, f: FamilyContext | undefined): JarvisReply {
+  if (!f) {
+    return reply("family", "De agenda, taken en boodschappenlijst zijn beschikbaar met een HomeOS-account (Supabase). In de lokale modus kan ik ze niet raadplegen.");
+  }
+  // "zet melk op de boodschappenlijst", "voeg 2 pakken melk toe aan de boodschappen"
+  const add = /(?:zet|voeg|doe)\s+(.+?)\s+(?:op|aan|bij|toe aan)\s+(?:de\s+)?boodschap/i.exec(original);
+  if (add?.[1]) {
+    const name = add[1].replace(/\s+toe$/i, "").trim().slice(0, 120);
+    if (!f.canWrite) return reply("shopping_denied", "Je rol mag de boodschappenlijst niet wijzigen.");
+    return reply("shopping_add", `Zal ik "${name}" op de boodschappenlijst zetten?`, [{ kind: "shopping_add", name, label: `${name} toevoegen aan boodschappen` }]);
+  }
+  if (has(msg, "boodschap", "kopen")) {
+    if (!f.shopping.length) return reply("shopping_list", "De boodschappenlijst is leeg.");
+    return reply("shopping_list", `Nog te kopen (${f.shopping.length}): ${f.shopping.map((i) => (i.quantity ? `${i.name} (${i.quantity})` : i.name)).join(", ")}.`);
+  }
+  if (has(msg, "agenda", "afspraak")) {
+    if (!f.upcoming.length) return reply("agenda", "Er staan de komende zeven dagen geen afspraken in de agenda.");
+    const fmt = (e: FamilyContext["upcoming"][number]) => {
+      const d = new Date(e.starts_at);
+      const day = d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "short" });
+      return `${e.title} (${day}${e.all_day ? "" : ` ${d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`})`;
+    };
+    return reply("agenda", `Komende afspraken: ${f.upcoming.map(fmt).join("; ")}.`);
+  }
+  return reply("tasks", f.openTasks ? `Er ${f.openTasks === 1 ? "staat 1 taak" : `staan ${f.openTasks} taken`} open. Bekijk ze op de pagina Familie.` : "Er staan geen open taken.");
 }

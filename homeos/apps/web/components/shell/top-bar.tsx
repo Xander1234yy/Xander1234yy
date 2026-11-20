@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, BellRing, UserRound } from "lucide-react";
+import { Bell, BellRing } from "lucide-react";
 import { useHome } from "@/lib/home-context";
 import { formatDateTime, longDate } from "@/lib/format";
 import { ConnectionPill } from "./connection-pill";
 import { Logo } from "./logo";
+import { ProfileMenu } from "./profile-menu";
+import { useSession } from "@/components/session-context";
 
 function useToday() {
   const [d, setD] = useState<string | null>(null);
@@ -20,6 +22,7 @@ function useToday() {
 
 export function TopBar() {
   const today = useToday();
+  const session = useSession();
   const { events, snapshot } = useHome();
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState<string | null>(null);
@@ -42,6 +45,7 @@ export function TopBar() {
         </Link>
         <p className="hidden text-sm capitalize text-muted lg:block" suppressHydrationWarning>
           {today}
+          {session.household && <span className="normal-case"> · {session.household.name}</span>}
         </p>
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <ConnectionPill />
@@ -84,14 +88,7 @@ export function TopBar() {
               </div>
             )}
           </div>
-          <Link
-            href="/instellingen"
-            className="flex size-10 items-center justify-center rounded-full border border-white/[0.07] bg-gradient-to-br from-navy-700 to-navy-850 text-muted hover:text-fg"
-            aria-label="Profiel en instellingen"
-            title="Lokaal profiel (accounts volgen in fase 2)"
-          >
-            <UserRound className="size-4" />
-          </Link>
+          <ProfileMenu />
         </div>
       </div>
     </header>

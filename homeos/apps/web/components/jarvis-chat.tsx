@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bot, Check, Mic, MicOff, Send, Volume2, VolumeX, X } from "lucide-react";
 import { Button, Input, cn } from "@homeos/ui";
 import { api } from "@/lib/api";
+import { addShoppingItem } from "@/lib/actions/family";
 import { useHome } from "@/lib/home-context";
 import type { JarvisAction, JarvisReply } from "@/lib/jarvis/local-intents";
 
@@ -79,6 +80,7 @@ export function JarvisChat({ compact = false }: { compact?: boolean }) {
     let ok = true;
     for (const a of msg.actions ?? []) {
       if (a.kind === "scene") ok = (await activateScene(a.sceneId, "jarvis")) && ok;
+      else if (a.kind === "shopping_add") ok = (await addShoppingItem({ name: a.name })).ok && ok;
       else {
         const device = snapshot?.devices.find((d) => d.id === a.deviceId);
         ok = (device ? await sendCommand(device, a.command, "jarvis") : false) && ok;

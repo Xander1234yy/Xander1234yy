@@ -59,3 +59,17 @@ export const SceneActivateSchema = z.object({ source: z.enum(["user", "automatio
 export const EmergencyStopSchema = z.object({ active: z.boolean() });
 
 export type ApiError = { error: { code: string; message: string } };
+
+/** Volledige kamerlijst (bron: Supabase) die naar de connector wordt gesynchroniseerd. */
+export const RoomsReplaceSchema = z.object({
+  rooms: z
+    .array(
+      z.object({
+        id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+        name: z.string().trim().min(1).max(60),
+        icon: z.string().max(40),
+        order: z.number().int(),
+      }),
+    )
+    .max(100),
+});

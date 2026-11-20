@@ -9,6 +9,7 @@ import {
   EmergencyStopSchema,
   EnergyRangeSchema,
   RoomInputSchema,
+  RoomsReplaceSchema,
   SceneActivateSchema,
   type CommandErrorCode,
   type ConnectorMessage,
@@ -110,6 +111,8 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
+    { method: "GET", pattern: /^\/v1\/identity$/, handler: async () => registry.identity() },
+    { method: "PUT", pattern: /^\/v1\/rooms$/, handler: async ({ body }) => unwrap(await registry.replaceRooms(parse(RoomsReplaceSchema, await body()).rooms)) },
     { method: "POST", pattern: /^\/v1\/rooms$/, handler: async ({ body }) => unwrap(await registry.createRoom(parse(RoomInputSchema, await body()))) },
     {
       method: "PATCH",

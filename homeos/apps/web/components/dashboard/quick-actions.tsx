@@ -3,11 +3,13 @@
 import { LightbulbOff, OctagonPause, Play, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@homeos/ui";
 import { SectionCard } from "@/components/section";
-import { useHome, useLive } from "@/lib/home-context";
+import { useHome, useLive as useConnectorLive } from "@/lib/home-context";
+import { useCan } from "@/components/session-context";
 
 export function QuickActions() {
   const { snapshot, sendCommand, activateScene, syncAll, setEmergencyStop, pending } = useHome();
-  const live = useLive();
+  const mayControl = useCan("control");
+  const live = useConnectorLive() && mayControl;
   const lightsOn = (snapshot?.devices ?? []).filter((d) => d.kind === "light" && d.state.on && d.status === "ONLINE");
   const stop = snapshot?.connector.emergencyStop ?? false;
 

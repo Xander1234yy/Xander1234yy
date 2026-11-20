@@ -5,13 +5,15 @@ import { Pause, Play, Power, SkipBack, SkipForward } from "lucide-react";
 import { Button, Slider, Switch, cn } from "@homeos/ui";
 import { supportsCommand, type Device } from "@homeos/shared";
 import { useHome, useLive } from "@/lib/home-context";
+import { useCan } from "@/components/session-context";
 
 const SWATCHES = ["#fff4e5", "#ffd8a8", "#ffb36b", "#ff8a3d", "#ff5d73", "#c084fc", "#3a5bff", "#38bdf8", "#34d399"];
 
 function useControl(device: Device) {
   const { sendCommand, pending } = useHome();
   const live = useLive();
-  const usable = live && device.status === "ONLINE";
+  const allowed = useCan("control");
+  const usable = live && allowed && device.status === "ONLINE";
   return { sendCommand, busy: pending.has(device.id), usable };
 }
 

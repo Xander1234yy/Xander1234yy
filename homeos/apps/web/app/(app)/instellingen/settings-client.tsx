@@ -6,6 +6,7 @@ import { Badge, Button, Switch } from "@homeos/ui";
 import { PageHeader, SectionCard } from "@/components/section";
 import { api, connectorPath } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
+import { useCan } from "@/components/session-context";
 import { formatDateTime } from "@/lib/format";
 
 interface AuditEntry {
@@ -29,22 +30,25 @@ function Planned({ phase, children }: { phase: number; children: React.ReactNode
   );
 }
 
-export default function SettingsPage() {
+export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNode }) {
   const { snapshot, connector, lastSync, setEmergencyStop } = useHome();
   const live = useLive();
+  const mayControl = useCan("control");
+  const mayAudit = useCan("view_audit");
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const c = snapshot?.connector;
 
   useEffect(() => {
-    if (connector !== "online") return;
+    if (connector !== "online" || !mayAudit) return;
     api<{ entries: AuditEntry[] }>(connectorPath("v1/audit?limit=30"))
       .then((r) => setAudit(r.entries))
       .catch(() => undefined);
-  }, [connector, snapshot?.generatedAt]);
+  }, [connector, mayAudit, snapshot?.generatedAt]);
 
   return (
     <div>
       <PageHeader title="Instellingen" description="Connector, integraties, beveiliging en voorkeuren." />
+      {cloudSection && <div className="mb-5 grid gap-5 lg:grid-cols-2">{cloudSection}</div>}
       <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard title="Device Connector" icon={Laptop} testId="connector-settings">
           {c ? (
@@ -76,7 +80,7 @@ export default function SettingsPage() {
               <p className="text-sm font-medium">Automatiseringen en Jarvis pauzeren</p>
               <p className="text-xs text-muted">Blokkeert alle opdrachten die niet direct van jou komen. Handmatige bediening blijft werken.</p>
             </div>
-            <Switch checked={!!c?.emergencyStop} disabled={!live} onCheckedChange={(v) => void setEmergencyStop(v)} aria-label="Noodstop" />
+            <Switch checked={!!c?.emergencyStop} disabled={!live || !mayControl} onCheckedChange={(v) => void setEmergencyStop(v)} aria-label="Noodstop" />
           </div>
         </SectionCard>
 
@@ -100,7 +104,7 @@ export default function SettingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Auditlog" description="Laatste acties via de connector" icon={ScrollText}>
+        <SectionCard title="Auditlog" description={mayAudit ? "Laatste acties via de connector" : "Alleen zichtbaar voor beheerders"} icon={ScrollText}>
           {audit.length === 0 ? (
             <p className="text-sm text-muted">Nog geen acties vastgelegd.</p>
           ) : (
@@ -119,16 +123,17 @@ export default function SettingsPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Gebruikers & beveiliging" icon={Users}>
-          <div className="space-y-2">
-            <Planned phase={2}>Accounts via Supabase Auth, huishoudens en rollen</Planned>
-            <Planned phase={2}>Row Level Security op alle gebruikersgegevens</Planned>
-            <Planned phase={8}>Volledige beveiligingscontrole</Planned>
-          </div>
-          <p className="mt-3 flex items-center gap-2 text-xs text-muted">
-            <KeyRound className="size-3.5" /> Tot fase 2 is de webapp alleen bereikbaar op deze laptop (127.0.0.1).
-          </p>
-        </SectionCard>
+        {!cloudSection && (
+          <SectionCard title="Gebruikers & beveiliging" icon={Users}>
+            <p className="text-sm text-muted">
+              HomeOS draait in de <strong className="text-fg">lokale modus</strong>: zonder accounts en alleen bereikbaar op deze laptop (127.0.0.1).
+              Koppel Supabase om accounts, huishoudens, rollen en Row Level Security te activeren (zie docs/supabase.md).
+            </p>
+            <p className="mt-3 flex items-center gap-2 text-xs text-muted">
+              <KeyRound className="size-3.5" /> Volledige beveiligingscontrole volgt in fase 8.
+            </p>
+          </SectionCard>
+        )}
 
         <SectionCard title="Voorkeuren" icon={Palette}>
           <div className="space-y-3">
@@ -140,7 +145,15 @@ export default function SettingsPage() {
             <Planned phase={6}><span className="inline-flex items-center gap-2"><Bot className="size-4" /> AI-provider en Jarvis-instellingen</span></Planned>
             <Planned phase={7}><span className="inline-flex items-center gap-2"><DatabaseBackup className="size-4" /> Back-ups en clouddeployment</span></Planned>
           </div>
-          <Button variant="ghost" size="sm" className="mt-3" onClick={() => { localStorage.clear(); location.reload(); }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              localStorage.clear();
+              location.reload();
+            }}
+          >
             Lokale cache wissen
           </Button>
         </SectionCard>

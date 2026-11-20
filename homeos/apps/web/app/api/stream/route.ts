@@ -1,5 +1,7 @@
 import WebSocket from "ws";
 import { connectorWsUrl, getConnectorToken } from "@/lib/server/connector-client";
+import { assertConnectorLinked, authorize } from "@/lib/server/authz";
+import { syncRoomsToConnector } from "@/lib/server/rooms-sync";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,6 +11,17 @@ export const runtime = "nodejs";
  * naar de browser. De browser praat nooit rechtstreeks met de connector.
  */
 export async function GET(req: Request) {
+  const auth = await authorize("view");
+  if (!auth.ok) return auth.response;
+  const notLinked = await assertConnectorLinked(auth.ctx);
+  if (notLinked) {
+    // Stuur de reden als SSE-gebeurtenis zodat de UI het kan tonen (en geen eindeloze reconnect-lus).
+    const reason = ((await notLinked.json()) as { error: { code: string } }).error.code.toLowerCase();
+    return new Response(`retry: 30000\n\nevent: connector\ndata: ${JSON.stringify({ online: false, reason })}\n\n`, {
+      headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
+  if (auth.ctx.mode === "cloud") await syncRoomsToConnector(auth.ctx.householdId!);
   const token = await getConnectorToken();
   const encoder = new TextEncoder();
 

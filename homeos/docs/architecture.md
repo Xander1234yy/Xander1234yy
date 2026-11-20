@@ -45,6 +45,24 @@
 5. Het resultaat (de werkelijke nieuwe status) komt terug en wordt in het auditlog vastgelegd. Er is geen optimistische UI.
 6. Via WebSocket → SSE krijgen alle open schermen de nieuwe snapshot.
 
+## Accounts en huishoudens (fase 2)
+
+```
+ browser ──cookie (httpOnly)──► proxy.ts ── getUser() ──► Supabase Auth
+                                  │
+                                  ▼
+            Server Components / Server Actions / API-routes
+              • getSession(): gebruiker + actief huishouden + rol
+              • can(rol, permissie)
+              • Supabase-queries met de sessie van de gebruiker  ──► Postgres (RLS)
+              • connector-proxy: rol + gekoppelde connector + audit
+```
+
+- De rol bepaalt wat iemand mag (`packages/shared/src/permissions.ts`) en de database dwingt hetzelfde af via RLS.
+- Kamers zijn leidend in Supabase. De connector krijgt de lijst via `PUT /v1/rooms` (kamer-ID = slug).
+- In de connector-registry staan nog alleen apparaatnamen en kamertoewijzingen. Synchronisatie naar de Supabase-tabel
+  `devices` volgt in fase 3.
+
 ## Cloud versus lokaal
 
 Fase 1 draait volledig lokaal: de webapp en de connector staan op dezelfde laptop. Voor gebruik buiten huis (fase 7)

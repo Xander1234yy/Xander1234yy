@@ -5,6 +5,8 @@ Alle endpoints behalve `/health` vereisen `Authorization: Bearer <token>`. Foute
 | Methode | Pad | Beschrijving |
 | --- | --- | --- |
 | GET | `/health` | Leeft de connector? (geeft geen identiteit prijs) |
+| GET | `/v1/identity` | `{ connectorId, version, demoMode }` (voor de koppeling met een huishouden) |
+| PUT | `/v1/rooms` | Volledige kamerlijst vervangen (bron: Supabase). Niet via de browser-proxy bereikbaar. |
 | GET | `/v1/snapshot` | Connectorinfo, adapters, apparaten, kamers en scènes |
 | GET | `/v1/devices/available` | Gevonden maar nog niet toegevoegde apparaten |
 | POST | `/v1/discover` | Opnieuw zoeken |
