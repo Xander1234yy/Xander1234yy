@@ -4,6 +4,7 @@ import { Tv } from "lucide-react";
 import { Card } from "@homeos/ui";
 import { PageHeader, EmptyState } from "@/components/section";
 import { MediaControls, TvControls } from "@/components/devices/controls";
+import { TvRemote } from "@/components/devices/tv-remote";
 import { DemoBadge, StatusBadge } from "@/components/devices/status-badge";
 import { FreshnessNote } from "@/components/devices/freshness";
 import { useHome } from "@/lib/home-context";
@@ -44,6 +45,14 @@ export default function EntertainmentPage() {
               <div className="mx-auto mt-4 max-w-md">
                 <TvControls device={tv} />
               </div>
+              <div className="mt-5">
+                <TvRemote device={tv} />
+              </div>
+              {tv.capabilities.includes("remote_control") && (
+                <p className="mt-3 text-center text-[11px] text-muted">
+                  Kastje op HDMI (zoals Ziggo)? Zet SIMPLINK (HDMI-CEC) aan op de tv en het kastje; dan gaan de knoppen door naar het kastje.
+                </p>
+              )}
               {tv.status === "OFFLINE" && tv.capabilities.includes("wake_on_lan") && (
                 <p className="mt-4 text-center text-xs text-muted">De tv staat uit. Met de aan/uit-knop zet HomeOS hem aan via het netwerk.</p>
               )}

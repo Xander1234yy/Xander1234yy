@@ -78,6 +78,15 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await select.selectOption({ label: "Spelcomputer (DEMO)" });
     await expect(select).toHaveValue("input:HDMI_2");
 
+    // Afstandsbediening: zender omhoog via de knop en via het toetsenbord.
+    const remote = page.getByTestId("tv-remote").first();
+    await remote.getByRole("button", { name: "Volgende zender" }).click();
+    await expect(page.getByText(/Zender \d+ \(DEMO\)/).first()).toBeVisible();
+    const zender = Number((await page.getByText(/Zender \d+ \(DEMO\)/).first().textContent())!.match(/\d+/)![0]);
+    await remote.focus();
+    await page.keyboard.press("PageUp");
+    await expect(page.getByText(`Zender ${zender + 1} (DEMO)`).first()).toBeVisible();
+
     await page.goto("/jarvis");
     const input = page.getByLabel("Bericht aan Jarvis");
     await input.fill("zet de tv zachter");

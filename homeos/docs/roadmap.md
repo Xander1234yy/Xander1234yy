@@ -132,6 +132,12 @@
 - Deurbel D235 blijft op batterij: geen officiële koppeling, dus niet toegevoegd.
 - Tests: 205 unit- en integratietests (nagebootste ONVIF-camera, echte ffmpeg met testbeeld), 39 E2E (lokaal), 6 (cloud).
 
+## Na fase 6: tv-afstandsbediening
+
+- Virtuele afstandsbediening voor de LG-tv (opdracht `remote_button`, capability `remote_control`), met toetsenbord-
+  bediening; zender bij de ingebouwde tuner; Jarvis: "volgende zender", "zender 7". Ziggo Next Mini via HDMI-CEC.
+- Zonneplan Connect: geen officiële API → niet gekoppeld; alternatief voorgesteld (HomeWizard P1 + splitter).
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
 - Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.

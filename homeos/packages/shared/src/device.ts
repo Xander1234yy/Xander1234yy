@@ -29,6 +29,8 @@ export const CAPABILITIES = [
   "camera_stream",
   /** Draaien/kantelen (camera). */
   "ptz",
+  /** Afstandsbedieningsknoppen (tv; via HDMI-CEC ook een aangesloten kastje). */
+  "remote_control",
 ] as const;
 export const CapabilitySchema = z.enum(CAPABILITIES);
 export type Capability = z.infer<typeof CapabilitySchema>;

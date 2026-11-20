@@ -367,11 +367,13 @@ function tvIntent(msg: string, s: Snapshot, ctx: JarvisContext, demo: string, st
     });
   };
   const named = matchDevices(s, msg, (d) => d.kind === "media");
-  const mentionsTv = hasWord(msg, "tv", "televisie", "tv's") || named.length > 0;
+  const zapping = has(msg, "zender", "kanaal") && tvs.some((d) => d.capabilities.includes("remote_control"));
+  const mentionsTv = hasWord(msg, "tv", "televisie", "tv's") || named.length > 0 || zapping;
   const memTv = (ctx.memory?.deviceIds ?? []).map((id) => tvs.find((d) => d.id === id)).find(Boolean);
   const viaSource = !mentionsTv && has(msg, "open", "start", "zet", "doe") ? tvs.find((d) => sourceMatch(d)) : undefined;
   const pronounTv = !mentionsTv && memTv && PRONOUNS.some((p) => hasWord(msg, p)) ? memTv : undefined;
-  const target = named[0] ?? (mentionsTv ? (tvs.length === 1 ? tvs[0] : (tvs.find((d) => d.roomId === findRoom(s, msg)?.id) ?? tvs[0])) : (viaSource ?? pronounTv));
+  const remoteTvs = zapping && !named.length && !hasWord(msg, "tv", "televisie") ? tvs.filter((d) => d.capabilities.includes("remote_control")) : tvs;
+  const target = named[0] ?? (mentionsTv ? (remoteTvs.length === 1 ? remoteTvs[0] : tvs.length === 1 ? tvs[0] : (tvs.find((d) => d.roomId === findRoom(s, msg)?.id) ?? tvs[0])) : (viaSource ?? pronounTv));
   if (!target) return null;
   const media = target.state.media;
   const memory: JarvisMemory = { deviceIds: [target.id], roomId: target.roomId };
@@ -386,6 +388,15 @@ function tvIntent(msg: string, s: Snapshot, ctx: JarvisContext, demo: string, st
   }
 
   const item = (command: DeviceCommand, l: string) => propose(s, ctx, [{ device: target, command, label: label(l) }], memory);
+  if (has(msg, "zender", "kanaal") && target.capabilities.includes("remote_control")) {
+    const num = /(?:zender|kanaal)\s*(\d{1,4})/.exec(msg);
+    if (num) {
+      const items = [...num[1]!].map((d) => ({ device: target, command: { type: "remote_button", button: d } as DeviceCommand, label: label(`toets ${d}`) }));
+      return propose(s, ctx, items, memory, `${target.name}: zender ${num[1]}`);
+    }
+    if (has(msg, "volgende", "omhoog", "verder")) return item({ type: "remote_button", button: "CHANNELUP" }, "volgende zender");
+    if (has(msg, "vorige", "omlaag", "terug")) return item({ type: "remote_button", button: "CHANNELDOWN" }, "vorige zender");
+  }
   const src = sourceMatch(target);
   if (src && !/(^|\s)uit$/.test(msg)) return item({ type: "select_source", sourceId: src.id }, `${src.label}`);
   const level = /(?:volume|geluid)?\s*(?:op|naar)\s*(\d{1,3})(?!\s*(%|procent|graden))/.exec(msg);

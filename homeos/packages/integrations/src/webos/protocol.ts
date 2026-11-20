@@ -72,6 +72,8 @@ export const EP = {
   pause: "media.controls/pause",
   connectionInfo: "com.webos.service.connectionmanager/getinfo",
   toast: "system.notifications/createToast",
+  inputSocket: "com.webos.service.networkinput/getPointerInputSocket",
+  currentChannel: "tv/getCurrentChannel",
 } as const;
 
 export interface SsapMessage {

@@ -47,8 +47,53 @@ export class WebOsClient {
 
   async open(): Promise<void> {
     const port = this.o.scheme === "wss" ? (this.o.wssPort ?? WSS_PORT) : (this.o.wsPort ?? WS_PORT);
-    const url = `${this.o.scheme}://${this.o.host}:${port}`;
-    await new Promise<void>((resolve, reject) => {
+    this.ws = await this.connectPinned(`${this.o.scheme}://${this.o.host}:${port}`, (ws) => {
+      ws.on("message", (data) => this.onMessage(data.toString()));
+      ws.on("close", () => {
+        for (const p of this.pending.values()) {
+          clearTimeout(p.timer);
+          p.reject(new WebOsError("Verbinding met de tv verbroken", "CLOSED"));
+        }
+        this.pending.clear();
+        this.subs.clear();
+        this.input?.close();
+        this.input = null;
+        if (this.ws === ws) {
+          this.ws = null;
+          this.onClose?.();
+        }
+      });
+    });
+  }
+
+  private input: WebSocket | null = null;
+
+  /**
+   * Verstuurt een afstandsbedieningsknop via de aparte invoer-socket van de tv. Het adres komt van de tv zelf;
+   * alleen hetzelfde apparaat (host) wordt geaccepteerd, met dezelfde certificaatcontrole.
+   */
+  async button(name: string): Promise<void> {
+    if (!/^[A-Z0-9_]{1,20}$/.test(name)) throw new WebOsError("Ongeldige knop", "PROTOCOL");
+    if (!this.input || this.input.readyState !== WebSocket.OPEN) {
+      const p = await this.request("com.webos.service.networkinput/getPointerInputSocket");
+      let url: URL;
+      try {
+        url = new URL(String(p.socketPath ?? ""));
+      } catch {
+        throw new WebOsError("De tv gaf geen geldige invoer-socket", "PROTOCOL");
+      }
+      if (url.protocol !== "wss:" && url.protocol !== "ws:") throw new WebOsError("Ongeldige invoer-socket", "PROTOCOL");
+      url.hostname = this.o.host; // nooit naar een ander apparaat
+      if (url.protocol === "wss:" && this.o.wssPort) url.port = String(this.o.wssPort);
+      if (url.protocol === "ws:" && this.o.wsPort) url.port = String(this.o.wsPort);
+      if (this.o.scheme === "wss" && url.protocol !== "wss:") throw new WebOsError("Invoer-socket is niet versleuteld", "PROTOCOL");
+      this.input = await this.connectPinned(url.toString(), (ws) => ws.on("close", () => this.input === ws && (this.input = null)));
+    }
+    this.input.send(`type:button\nname:${name}\n\n`);
+  }
+
+  private connectPinned(url: string, setup: (ws: WebSocket) => void): Promise<WebSocket> {
+    return new Promise<WebSocket>((resolve, reject) => {
       const ws = new WebSocket(url, { rejectUnauthorized: false, handshakeTimeout: this.o.connectTimeoutMs ?? 5000, maxPayload: 4 * 1024 * 1024 });
       let settled = false;
       const fail = (e: Error) => {
@@ -69,29 +114,18 @@ export class WebOsClient {
       ws.once("open", () => {
         if (settled) return;
         settled = true;
-        this.ws = ws;
-        resolve();
+        resolve(ws);
       });
       ws.once("error", (e) => fail(new WebOsError(`Tv niet bereikbaar (${(e as NodeJS.ErrnoException).code ?? e.message})`, "UNREACHABLE")));
-      ws.on("message", (data) => this.onMessage(data.toString()));
-      ws.on("close", () => {
-        for (const p of this.pending.values()) {
-          clearTimeout(p.timer);
-          p.reject(new WebOsError("Verbinding met de tv verbroken", "CLOSED"));
-        }
-        this.pending.clear();
-        this.subs.clear();
-        if (this.ws === ws) {
-          this.ws = null;
-          this.onClose?.();
-        }
-      });
+      setup(ws);
     });
   }
 
   close() {
     const ws = this.ws;
     this.ws = null;
+    this.input?.close();
+    this.input = null;
     ws?.close();
   }
 

@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { HexColorSchema, HvacModeSchema, type Capability, type Device } from "./device";
 
+/** Toegestane tv-afstandsbedieningsknoppen (webOS-namen). Aan/uit en volume hebben eigen opdrachten. */
+export const REMOTE_BUTTONS = [
+  "UP", "DOWN", "LEFT", "RIGHT", "ENTER", "BACK", "HOME", "EXIT", "MENU", "INFO", "GUIDE", "LIST",
+  "CHANNELUP", "CHANNELDOWN", "PLAY", "PAUSE", "STOP", "REWIND", "FASTFORWARD",
+  "RED", "GREEN", "YELLOW", "BLUE", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+] as const;
+export type RemoteButton = (typeof REMOTE_BUTTONS)[number];
+
 export const DeviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set_power"), on: z.boolean() }),
   z.object({ type: z.literal("set_brightness"), brightness: z.number().int().min(1).max(100) }),
@@ -12,6 +20,7 @@ export const DeviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set_volume"), volume: z.number().int().min(0).max(100) }),
   z.object({ type: z.literal("volume_step"), direction: z.enum(["up", "down"]) }),
   z.object({ type: z.literal("set_mute"), muted: z.boolean() }),
+  z.object({ type: z.literal("remote_button"), button: z.enum(REMOTE_BUTTONS) }),
   z.object({ type: z.literal("ptz_move"), direction: z.enum(["up", "down", "left", "right"]) }),
   z.object({ type: z.literal("select_source"), sourceId: z.string().min(1).max(200).regex(/^[\w.:-]+$/, "Ongeldige bron") }),
   z.object({
@@ -46,6 +55,7 @@ export const COMMAND_CAPABILITY: Record<DeviceCommand["type"], Capability> = {
   set_mute: "volume",
   select_source: "source_select",
   ptz_move: "ptz",
+  remote_button: "remote_control",
 };
 
 /**

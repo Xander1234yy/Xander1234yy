@@ -42,6 +42,18 @@ export class WebOsAdapter implements DeviceAdapter {
   private inputs: unknown = [];
   private launchPoints: unknown = [];
   private sources: TvSource[] = [];
+  private channel: string | null = null;
+
+  /** Zender (alleen bij de ingebouwde tv-tuner; bij een HDMI-kastje weet de tv niet wat er speelt). */
+  private async readChannel() {
+    if (this.foreground !== "com.webos.app.livetv" || !this.client?.connected) return;
+    const p = await this.client.request(EP.currentChannel).catch(() => undefined);
+    if (!p) return;
+    const num = typeof p.channelNumber === "string" ? p.channelNumber.slice(0, 10) : "";
+    const name = typeof p.channelName === "string" ? p.channelName.slice(0, 80) : "";
+    this.channel = `${num} ${name}`.trim() || null;
+    this.emitState();
+  }
 
   constructor(
     readonly config: WebOsTvConfig,
@@ -132,7 +144,9 @@ export class WebOsAdapter implements DeviceAdapter {
     await opt(
       c.subscribe(EP.foregroundApp, (p) => {
         this.foreground = typeof p.appId === "string" ? p.appId : null;
+        this.channel = null;
         this.touch();
+        void this.readChannel();
       }),
     );
     const inputs = await opt(c.request(EP.inputs));
@@ -173,6 +187,8 @@ export class WebOsAdapter implements DeviceAdapter {
       power: on ? "on" : "standby",
       playback: on ? "unknown" : "idle",
       ...(on && current ? { app: current.label, source: current.id } : {}),
+      ...(on && !current && this.foreground === "com.webos.app.livetv" ? { app: "Live tv" } : {}),
+      ...(on && this.channel ? { title: this.channel } : {}),
       ...(this.volume !== undefined ? { volume: this.volume } : {}),
       ...(this.muted !== undefined ? { muted: this.muted } : {}),
       sources: this.sources.map(({ id, label, type }) => ({ id, label, type })),
@@ -187,7 +203,7 @@ export class WebOsAdapter implements DeviceAdapter {
   }
 
   getCapabilities(_externalId: string): Capability[] {
-    const caps: Capability[] = ["media_power", "media_playback", "volume", "source_select"];
+    const caps: Capability[] = ["media_power", "media_playback", "volume", "source_select", "remote_control"];
     if (this.config.mac) caps.push("wake_on_lan");
     return caps;
   }
@@ -209,6 +225,7 @@ export class WebOsAdapter implements DeviceAdapter {
       }
       const f = await c.request(EP.foregroundApp).catch(() => undefined);
       if (f && typeof f.appId === "string") this.foreground = f.appId;
+      await this.readChannel();
     }
     return this.report();
   }
@@ -239,6 +256,14 @@ export class WebOsAdapter implements DeviceAdapter {
           else await c.request(EP.launch, { id: src.appId });
           break;
         }
+        case "remote_button":
+          try {
+            await c.button(command.button);
+          } catch {
+            // Invoer-socket kan na een tijd sluiten: één keer opnieuw.
+            await c.button(command.button);
+          }
+          break;
         case "media":
           if (command.action === "play") await c.request(EP.play);
           else if (command.action === "pause") await c.request(EP.pause);

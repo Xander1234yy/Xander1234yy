@@ -18,7 +18,7 @@ const EnvSchema = z.object({
   HOMEOS_CONNECTOR_SECRET: z.string().min(32).optional(),
   HOMEOS_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).default(15_000),
   HOMEOS_RATE_LIMIT_PER_MIN: z.coerce.number().int().min(10).default(300),
-  HOMEOS_COMMAND_LIMIT_PER_MIN: z.coerce.number().int().min(1).default(60),
+  HOMEOS_COMMAND_LIMIT_PER_MIN: z.coerce.number().int().min(1).default(150),
 });
 
 export interface ConnectorConfig {

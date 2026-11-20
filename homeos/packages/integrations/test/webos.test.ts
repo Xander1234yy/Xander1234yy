@@ -133,6 +133,15 @@ describe("LG-tv adapter", () => {
     expect(fake.received.some((m) => m.uri === "tv/switchInput" && (m.payload as { inputId: string }).inputId === "HDMI_2")).toBe(true);
     expect((await a.executeCommand("tv", { type: "select_source", sourceId: "app:onbekend" })).ok).toBe(false);
     expect((await a.executeCommand("tv", { type: "media", action: "next" })).ok).toBe(false);
+
+    // Afstandsbediening via de invoer-socket (op hetzelfde apparaat, ook als de tv een ander adres noemt).
+    for (const b of ["DOWN", "ENTER", "BACK"] as const) expect((await a.executeCommand("tv", { type: "remote_button", button: b })).ok).toBe(true);
+    expect(fake.buttons).toEqual(["DOWN", "ENTER", "BACK"]);
+    const ch = await a.executeCommand("tv", { type: "remote_button", button: "CHANNELUP" });
+    expect(ch.ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 50));
+    expect((await a.getStatus("tv")).state.media).toMatchObject({ app: "Live tv", title: "1 NPO 1" });
+    expect(a.getCapabilities("tv")).toContain("remote_control");
     await a.disconnect();
   }, 30_000);
 

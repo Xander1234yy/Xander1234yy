@@ -21,11 +21,14 @@ export class DemoMediaAdapter extends DemoAdapterBase {
   readonly integration: DeviceAdapter["integration"] = "demo";
   readonly displayName = "Demo mediaspeler";
   private index = 0;
+  private channel = 1;
+  /** Laatst ingedrukte knop (alleen voor tests). */
+  lastButton: string | null = null;
 
   protected seed(): DemoDevice[] {
     return [
       demoDevice(
-        { externalId: "woonkamer-tv", name: "Woonkamer TV", model: "Demo mediaspeler", kind: "media", capabilities: ["media_playback", "media_power", "volume", "source_select"], suggestedRoomId: "woonkamer" },
+        { externalId: "woonkamer-tv", name: "Woonkamer TV", model: "Demo mediaspeler", kind: "media", capabilities: ["media_playback", "media_power", "volume", "source_select", "remote_control"], suggestedRoomId: "woonkamer" },
         { media: { power: "on", playback: "paused", ...QUEUE[0]!, volume: 15, muted: false, source: "app:demo.music", sources: SOURCES } },
       ),
     ];
@@ -49,7 +52,15 @@ export class DemoMediaAdapter extends DemoAdapterBase {
         media.artist = src.type === "input" ? undefined : media.artist;
       }
     }
-    if (c.type === "set_volume" || c.type === "volume_step" || c.type === "set_mute" || c.type === "select_source") {
+    if (c.type === "remote_button") {
+      this.lastButton = c.button;
+      if (c.button === "CHANNELUP" || c.button === "CHANNELDOWN") {
+        this.channel = Math.max(1, this.channel + (c.button === "CHANNELUP" ? 1 : -1));
+        media.title = `Zender ${this.channel} (DEMO)`;
+        media.artist = undefined;
+      }
+    }
+    if (c.type === "set_volume" || c.type === "volume_step" || c.type === "set_mute" || c.type === "select_source" || c.type === "remote_button") {
       d.state.media = { ...media };
       return;
     }

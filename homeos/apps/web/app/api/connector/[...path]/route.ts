@@ -34,7 +34,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ path: string[] 
   }
   const notLinked = await assertConnectorLinked(a);
   if (notLinked) return notLinked;
-  if (mutating && !rateLimit(`${a.userId ?? "local"}:${permission}`, permission === "control" ? 60 : 30)) {
+  if (mutating && !rateLimit(`${a.userId ?? "local"}:${permission}`, permission === "control" ? 120 : 30)) {
     return jsonError(429, "RATE_LIMITED", "Te veel verzoeken, probeer het zo opnieuw");
   }
 

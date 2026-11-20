@@ -21,6 +21,7 @@ export class FakeWebOsTv {
   muted = false;
   foreground = "com.webos.app.hdmi1";
   received: { uri?: string; type: string; payload?: unknown }[] = [];
+  buttons: string[] = [];
   private sockets = new Set<WebSocket>();
   private subs: { ws: WebSocket; id: string; uri: string }[] = [];
 
@@ -28,7 +29,7 @@ export class FakeWebOsTv {
     const pems = await selfsigned.generate([{ name: "commonName", value: "LG webOS TV" }], { keySize: 2048 });
     this.server = https.createServer({ key: pems.private, cert: pems.cert });
     this.wss = new WebSocketServer({ server: this.server, verifyClient: () => !this.off });
-    this.wss.on("connection", (ws) => this.onConnection(ws));
+    this.wss.on("connection", (ws, req) => this.onConnection(ws, req.url));
     await new Promise<void>((r) => this.server!.listen(0, "127.0.0.1", () => r()));
     this.port = (this.server.address() as { port: number }).port;
   }
@@ -64,9 +65,20 @@ export class FakeWebOsTv {
     for (const s of this.subs.filter((x) => x.uri === uri)) s.ws.send(JSON.stringify({ type: "response", id: s.id, payload: this.state(uri) }));
   }
 
-  private onConnection(ws: WebSocket) {
+  private onConnection(ws: WebSocket, url = "/") {
     this.sockets.add(ws);
     ws.on("close", () => this.sockets.delete(ws));
+    if (url.includes("netinput.pointer.sock")) {
+      ws.on("message", (raw) => {
+        const m = /type:button\nname:([A-Z0-9_]+)\n\n/.exec(raw.toString());
+        if (m) this.buttons.push(m[1]!);
+        if (m?.[1] === "CHANNELUP") {
+          this.foreground = "com.webos.app.livetv";
+          this.push("com.webos.applicationManager/getForegroundAppInfo");
+        }
+      });
+      return;
+    }
     ws.on("message", (raw) => {
       const m = JSON.parse(raw.toString()) as { id: string; type: string; uri?: string; payload?: Record<string, unknown> };
       const uri = m.uri?.replace("ssap://", "");
@@ -84,6 +96,11 @@ export class FakeWebOsTv {
       if (!uri) return;
       if (m.type === "subscribe") this.subs.push({ ws, id: m.id, uri });
       switch (uri) {
+        case "com.webos.service.networkinput/getPointerInputSocket":
+          // Een echte tv geeft zijn eigen adres; hier bewust een ander IP om te testen dat HomeOS dat negeert.
+          return reply({ type: "response", id: m.id, payload: { returnValue: true, socketPath: `wss://10.66.66.66:3001/resources/abc/netinput.pointer.sock` } });
+        case "tv/getCurrentChannel":
+          return reply({ type: "response", id: m.id, payload: { returnValue: true, channelNumber: "1", channelName: "NPO 1" } });
         case "system/getSystemInfo":
           return reply({ type: "response", id: m.id, payload: { returnValue: true, modelName: "OLED48CX6LB" } });
         case "com.webos.service.connectionmanager/getinfo":

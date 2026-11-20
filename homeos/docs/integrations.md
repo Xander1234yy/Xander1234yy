@@ -179,9 +179,21 @@ scope `openid onecta:basic.integration`, API `https://api.onecta.daikineurope.co
   niet alsof de tv al aan is: de status wordt pas "aan" als de tv zelf reageert.
 - **Tv-instellingen (CX, webOS 5):** Instellingen → Algemeen → Mobiele tv aan → "Inschakelen via Wi-Fi" aan; en
   "LG Connect Apps" aan (Instellingen → Netwerk of Algemeen, afhankelijk van de firmware).
+- **Afstandsbediening:** pijltjes, OK, terug, home, menu, zenders, cijfers, kleurknoppen en afspelen via de aparte
+  invoer-socket van de tv (`getPointerInputSocket`). HomeOS gebruikt alleen dezelfde host en dezelfde certificaatcontrole.
+  Bij de ingebouwde tuner toont HomeOS de zender; bij een HDMI-kastje weet de tv niet wat er speelt.
+- **Ziggo Next Mini:** Ziggo heeft geen officiële API. Wel: de LG-tv stuurt afstandsbedieningsknoppen via HDMI-CEC
+  (SIMPLINK) door naar een kastje op HDMI, als CEC op beide aan staat. Dat is een standaardfunctie van tv en kastje; of
+  de Next Mini alle knoppen accepteert moet thuis getest worden.
 - **Beperkingen:** de afspeelstatus (spelen/pauze) meldt de tv niet betrouwbaar en wordt als onbekend getoond. Het
   protocol is niet als openbare API gedocumenteerd door LG; een firmware-update kan het gedrag veranderen. Nieuwere
   firmware die het ondertekende manifest weigert wordt opgevangen met een manifest zonder handtekening.
+
+### Zonneplan Connect (P1) ❌ geen officiële lokale API
+- De Zonneplan Connect zit op de P1-poort van de slimme meter en stuurt de gegevens naar de Zonneplan-app. Er is geen
+  gedocumenteerde lokale of openbare API; bestaande koppelingen gebruiken de niet-officiële app-API. HomeOS doet dat niet.
+- Officiële alternatieven: een P1-meter met gedocumenteerde lokale API (bijv. HomeWizard P1), eventueel met een
+  P1-splitter zodat de Zonneplan Connect blijft werken.
 
 ### Apple TV ❌ niet ondersteund (onderzocht in fase 4b)
 - Apple biedt geen officiële, gedocumenteerde API voor lokale bediening van een Apple TV door derden. Bestaande

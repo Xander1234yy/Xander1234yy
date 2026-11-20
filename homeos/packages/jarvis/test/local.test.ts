@@ -166,7 +166,7 @@ describe("lokale Jarvis: tv", () => {
     s.devices.push(
       dev({
         id: "tv1", name: "LG OLED48CX6LB", kind: "media", roomId: "woonkamer", integration: "lg_webos", demo: false,
-        capabilities: ["media_power", "media_playback", "volume", "source_select", "wake_on_lan"],
+        capabilities: ["media_power", "media_playback", "volume", "source_select", "wake_on_lan", "remote_control"],
         state: { on: true, media: { power: "on", playback: "unknown", volume: 12, muted: false, app: "HDMI 1", source: "input:HDMI_1", sources: [
           { id: "input:HDMI_1", label: "HDMI 1", type: "input" }, { id: "input:HDMI_2", label: "PlayStation", type: "input" },
           { id: "app:netflix", label: "Netflix", type: "app" }, { id: "app:youtube.leanback.v4", label: "YouTube", type: "app" },
@@ -189,6 +189,9 @@ describe("lokale Jarvis: tv", () => {
     expect(tvCmd("zet de playstation aan")).toEqual([{ type: "select_source", sourceId: "input:HDMI_2" }]);
     expect(tvCmd("open youtube")).toEqual([{ type: "select_source", sourceId: "app:youtube.leanback.v4" }]);
     expect(tvCmd("tv uit")).toEqual([{ type: "media_power", on: false }]);
+    expect(tvCmd("volgende zender")).toEqual([{ type: "remote_button", button: "CHANNELUP" }]);
+    expect(tvCmd("vorige zender")).toEqual([{ type: "remote_button", button: "CHANNELDOWN" }]);
+    expect(tvCmd("zet zender 12 op")).toEqual([{ type: "remote_button", button: "1" }, { type: "remote_button", button: "2" }]);
   });
   it("status en vervolgvraag", () => {
     const c = withTv();
