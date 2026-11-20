@@ -19,11 +19,17 @@ export const CAPABILITIES = [
   "motion",
   "battery",
   "climate",
+  /** Volume en dempen (tv). */
+  "volume",
+  /** Ingang of app kiezen (tv). */
+  "source_select",
+  /** Kan via het netwerk worden aangezet terwijl het apparaat uit (onbereikbaar) is. */
+  "wake_on_lan",
 ] as const;
 export const CapabilitySchema = z.enum(CAPABILITIES);
 export type Capability = z.infer<typeof CapabilitySchema>;
 
-export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate"] as const;
+export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate", "lg_webos"] as const;
 export const IntegrationTypeSchema = z.enum(INTEGRATION_TYPES);
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
 
@@ -40,6 +46,15 @@ export const MediaStateSchema = z.object({
   app: z.string().max(120).optional(),
   title: z.string().max(240).optional(),
   artist: z.string().max(240).optional(),
+  /** Volume 0–100 (tv), alleen als het apparaat het meldt. */
+  volume: z.number().min(0).max(100).optional(),
+  muted: z.boolean().optional(),
+  /** Huidige ingang of app (id uit `sources`). */
+  source: z.string().max(200).optional(),
+  sources: z
+    .array(z.object({ id: z.string().max(200), label: z.string().max(120), type: z.enum(["input", "app"]) }))
+    .max(80)
+    .optional(),
 });
 export type MediaState = z.infer<typeof MediaStateSchema>;
 

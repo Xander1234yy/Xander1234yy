@@ -14,6 +14,7 @@ import { createHueService, realHueDeps, type HueDeps } from "./hue-service";
 import { createCloudIntegrations } from "./cloud-service";
 import { createMatterService, lazyMatterJsBackend, type MatterBackendFactory } from "./matter-service";
 import { createAutomationService } from "./automation-service";
+import { createWebOsService, realWebOsDeps, type WebOsDeps } from "./webos-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
 export async function createConnector(
@@ -23,6 +24,7 @@ export async function createConnector(
   hueDeps: HueDeps = realHueDeps,
   fetchImpl: typeof fetch = fetch,
   matterFactory: MatterBackendFactory = lazyMatterJsBackend,
+  webosDeps: WebOsDeps = realWebOsDeps,
 ) {
   await ensureDir(config.dataDir);
   await ensureDir(path.join(config.dataDir, "logs"));
@@ -51,6 +53,8 @@ export async function createConnector(
   adapters.push(...cloud.adapters());
   const matter = createMatterService({ registry, store: integrations, dataDir: config.dataDir, logger, factory: matterFactory });
   adapters.push(...matter.adapters());
+  const webos = createWebOsService({ registry, secrets, store: integrations, deps: webosDeps });
+  adapters.push(...webos.adapters());
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger });
 
@@ -66,6 +70,7 @@ export async function createConnector(
     hue,
     cloud,
     matter,
+    webos,
     automations,
   });
 

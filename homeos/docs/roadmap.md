@@ -114,6 +114,16 @@
 - E2E-omgeving start iedere run met een lege connector-datamap.
 - Tests: 173 unit- en integratietests, 30 E2E-tests (lokaal), 6 (cloud).
 
+## Na fase 6: LG-tv
+
+- LG webOS-tv-integratie (OLED48CX6LB): koppelen met toestemming op de tv, certificaat-pinning, versleutelde client-key,
+  aan (Wake-on-LAN), uit, volume, dempen, ingang/app. Tv-bediening in apparaatkaarten, Entertainment en het dashboard;
+  Jarvis begrijpt "tv zachter", "tv op 20", "zet Netflix op", "tv naar HDMI 2".
+- Nieuwe capabilities `volume`, `source_select`, `wake_on_lan` en opdrachten `set_volume`, `volume_step`, `set_mute`,
+  `select_source`. Migratie 3 voegt `lg_webos` toe en weigert ook sleutelvarianten als `client_key` in de configuratie.
+- Tests: 191 unit- en integratietests (met een nagebootste tv), 36 E2E-tests (lokaal), 6 (cloud). Echte test met de tv
+  volgt bij de gebruiker thuis.
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
 - Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.

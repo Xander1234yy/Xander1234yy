@@ -159,3 +159,48 @@ describe("lokale Jarvis: energie, automatiseringen, familie, tijd", () => {
     expect((await p.respond("help", ctx())).intent).toBe("help");
   });
 });
+
+describe("lokale Jarvis: tv", () => {
+  const withTv = (o: Partial<Device> = {}) => {
+    const s = snapshot();
+    s.devices.push(
+      dev({
+        id: "tv1", name: "LG OLED48CX6LB", kind: "media", roomId: "woonkamer", integration: "lg_webos", demo: false,
+        capabilities: ["media_power", "media_playback", "volume", "source_select", "wake_on_lan"],
+        state: { on: true, media: { power: "on", playback: "unknown", volume: 12, muted: false, app: "HDMI 1", source: "input:HDMI_1", sources: [
+          { id: "input:HDMI_1", label: "HDMI 1", type: "input" }, { id: "input:HDMI_2", label: "PlayStation", type: "input" },
+          { id: "app:netflix", label: "Netflix", type: "app" }, { id: "app:youtube.leanback.v4", label: "YouTube", type: "app" },
+        ] } },
+        ...o,
+      }),
+    );
+    return { ...ctx(), snapshot: s };
+  };
+  const tvCmd = (m: string, c = withTv()) => respondLocal(m, c).actions.flatMap((a) => (a.kind === "command" ? [a.command] : []));
+
+  it("volume, dempen, bronnen en aan/uit als voorstel", () => {
+    expect(tvCmd("zet de tv zachter")).toEqual([{ type: "set_volume", volume: 7 }]);
+    expect(tvCmd("tv harder")).toEqual([{ type: "set_volume", volume: 17 }]);
+    expect(tvCmd("zet de tv op twintig")).toEqual([{ type: "set_volume", volume: 20 }]);
+    expect(tvCmd("demp de tv")).toEqual([{ type: "set_mute", muted: true }]);
+    expect(tvCmd("zet netflix op de tv")).toEqual([{ type: "select_source", sourceId: "app:netflix" }]);
+    expect(tvCmd("tv naar hdmi 2")).toEqual([{ type: "select_source", sourceId: "input:HDMI_2" }]); // ook als die ingang hernoemd is
+    expect(tvCmd("tv naar hdmi 3")).toEqual([]); // bestaat niet: niet gokken
+    expect(tvCmd("zet de playstation aan")).toEqual([{ type: "select_source", sourceId: "input:HDMI_2" }]);
+    expect(tvCmd("open youtube")).toEqual([{ type: "select_source", sourceId: "app:youtube.leanback.v4" }]);
+    expect(tvCmd("tv uit")).toEqual([{ type: "media_power", on: false }]);
+  });
+  it("status en vervolgvraag", () => {
+    const c = withTv();
+    const r = respondLocal("wat staat er op tv?", c);
+    expect(r.text).toContain("HDMI 1");
+    expect(r.text).toContain("volume 12");
+    expect(respondLocal("zet hem uit", { ...c, memory: r.memory }).actions).toHaveLength(0); // "hem" is geen bekend voornaamwoord → geen gok
+    expect(tvCmd("zet ze uit", { ...c, memory: r.memory })).toEqual([{ type: "media_power", on: false }]);
+  });
+  it("tv uit en offline: aanzetten via het netwerk mag, al-uit wordt gemeld", () => {
+    const off = withTv({ status: "OFFLINE", state: { on: false, media: { power: "standby", playback: "idle" } } });
+    expect(tvCmd("zet de tv aan", off)).toEqual([{ type: "media_power", on: true }]);
+    expect(respondLocal("tv uit", off).intent).toBe("noop");
+  });
+});

@@ -2,7 +2,7 @@
 
 import { Tv } from "lucide-react";
 import { SectionCard, EmptyState } from "@/components/section";
-import { MediaControls } from "@/components/devices/controls";
+import { MediaControls, TvControls } from "@/components/devices/controls";
 import { DemoBadge, StatusBadge } from "@/components/devices/status-badge";
 import { FreshnessNote } from "@/components/devices/freshness";
 import { useHome } from "@/lib/home-context";
@@ -34,6 +34,9 @@ export function MediaCard() {
           </div>
           <div className="mt-3 flex justify-center">
             <MediaControls device={tv} />
+          </div>
+          <div className="mt-3">
+            <TvControls device={tv} />
           </div>
           <FreshnessNote device={tv} />
         </div>

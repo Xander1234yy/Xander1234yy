@@ -180,3 +180,15 @@ describe("migratie 2: klimaat", () => {
     await expect(t.as(owner, "insert into public.devices (household_id, external_id, name, kind) values ($1, 'x', 'X', 'raket')", [home])).rejects.toThrow(/kind_check/);
   });
 });
+
+describe("migratie 3: LG webOS", () => {
+  it("accepteert lg_webos als integratietype, maar nooit met geheimen", async () => {
+    await t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'lg_webos', 'LG-tv', '{\"host\":\"192.168.68.20\"}')", [home]);
+    await expect(
+      t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'lg_webos', 'LG-tv', '{\"client_key\":\"x\"}')", [home]),
+    ).rejects.toThrow();
+    await expect(
+      t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'samsung', 'X', '{}')", [home]),
+    ).rejects.toThrow(/integration_type_check/);
+  });
+});

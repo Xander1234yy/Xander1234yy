@@ -13,7 +13,7 @@ adapter de status `not_configured` of een fout met uitleg en een alternatief. Er
 | --- | --- | --- |
 | `demo-lights` | DEMO | 6 lampen (waarvan 1 bewust offline), 4 scènes |
 | `demo-plugs` | DEMO | 3 stekkers met energiemeting |
-| `demo-media` | DEMO | Mediaspeler die het gedrag van een Apple TV nabootst |
+| `demo-media` | DEMO | Mediaspeler/tv met volume en ingangen (gesimuleerd) |
 | `demo-energy` | DEMO | Deterministisch zonne- en verbruiksmodel (omvormer en P1-meter) |
 | `demo-doorbell` | DEMO | Belmeldingen en beweging, geen beelden |
 
@@ -148,6 +148,25 @@ scope `openid onecta:basic.integration`, API `https://api.onecta.daikineurope.co
   capabilities (`climate`) en opdrachten in `@homeos/shared`.
 - Opdrachten lopen via de Daikin-cloud (niet lokaal). De unit moet in de Onecta-app staan (wifi-adapter verbonden).
 - Te controleren bij de bouw: welke redirect-URL's het portal toestaat voor een lokaal draaiende app.
+
+### LG-tv (webOS) ✅ gebouwd — getest met een nagebootste tv, nog niet met jouw OLED48CX6LB
+- **Route:** het lokale "second screen"-protocol (SSAP) van webOS over een WebSocket. Dit is het protocol van LG's eigen
+  open-source Connect SDK en de LG-afstandsbedieningsapp; HomeOS gebruikt het registratiemanifest van de Connect SDK
+  ("LG Remote App", vendor `com.lge`). De officiële ThinQ Connect API ondersteunt geen tv's, dus die is niet bruikbaar.
+- **Verbinding:** `wss://<ip>:3001` met het zelfondertekende certificaat van de tv. HomeOS pint de vingerafdruk bij het
+  koppelen (zoals bij Hue) en stuurt de client-key pas na controle. Alleen privé-IP-adressen.
+- **Koppelen:** Instellingen → LG-tv. De tv toont een melding; de gebruiker kiest Toestaan. De client-key staat versleuteld
+  in de SecretStore. Vindt hij de tv niet automatisch (SSDP), vul dan het IP-adres in.
+- **Bediening:** aan (Wake-on-LAN), uit, volume (instellen, harder/zachter), dempen, ingang (HDMI) of app kiezen,
+  afspelen/pauzeren. Vorige/volgende zit niet in de tv-API en wordt dus niet getoond.
+- **Aanzetten:** een tv die uit staat is onbereikbaar. HomeOS stuurt dan een Wake-on-LAN-pakket naar het MAC-adres dat
+  bij het koppelen is uitgelezen (of handmatig ingevuld). Op de tv moet "Inschakelen via Wi-Fi" aan staan. HomeOS doet
+  niet alsof de tv al aan is: de status wordt pas "aan" als de tv zelf reageert.
+- **Tv-instellingen (CX, webOS 5):** Instellingen → Algemeen → Mobiele tv aan → "Inschakelen via Wi-Fi" aan; en
+  "LG Connect Apps" aan (Instellingen → Netwerk of Algemeen, afhankelijk van de firmware).
+- **Beperkingen:** de afspeelstatus (spelen/pauze) meldt de tv niet betrouwbaar en wordt als onbekend getoond. Het
+  protocol is niet als openbare API gedocumenteerd door LG; een firmware-update kan het gedrag veranderen. Nieuwere
+  firmware die het ondertekende manifest weigert wordt opgevangen met een manifest zonder handtekening.
 
 ### Apple TV ❌ niet ondersteund (onderzocht in fase 4b)
 - Apple biedt geen officiële, gedocumenteerde API voor lokale bediening van een Apple TV door derden. Bestaande

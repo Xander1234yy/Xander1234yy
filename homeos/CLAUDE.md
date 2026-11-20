@@ -44,6 +44,8 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   simulator). Tests gebruiken `packages/integrations/test/fake-bridge.ts`, nooit het netwerk.
 - Matter: `apps/connector/src/matter-backend.ts` (matter.js, dynamisch geladen). Tests via
   `packages/integrations/test/fake-matter.ts`; de cloudomgeving heeft geen IPv6, dus echte Matter-tests alleen lokaal.
+- LG-tv: `packages/integrations/src/webos` (SSAP over wss). Tests via `packages/integrations/test/fake-webos.ts`,
+  nooit een echte tv. Wake-on-LAN alleen via de geïnjecteerde `wol`-functie in tests.
 - Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 

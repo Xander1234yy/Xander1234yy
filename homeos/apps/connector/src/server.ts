@@ -21,6 +21,7 @@ import type { DeviceRegistry, OpResult } from "./registry";
 import type { HueService } from "./hue-service";
 import { SetupError, type CloudIntegrations } from "./cloud-service";
 import type { MatterService } from "./matter-service";
+import type { WebOsService } from "./webos-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
 
@@ -36,6 +37,7 @@ export interface ServerOptions {
   hue: HueService;
   cloud: CloudIntegrations;
   matter: MatterService;
+  webos: WebOsService;
   automations: AutomationService;
 }
 
@@ -129,7 +131,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list() }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list() }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -210,6 +212,36 @@ export function createConnectorServer(o: ServerOptions) {
       pattern: new RegExp(`^/v1/integrations/hue/${seg}$`),
       handler: async ({ params }) => {
         if (!(await o.hue.unpair(params[0]!))) throw new HttpError(404, "NOT_FOUND", "Bridge niet gevonden");
+        return { ok: true };
+      },
+    },
+    // ───── LG webOS-tv ─────
+    { method: "POST", pattern: /^\/v1\/integrations\/webos\/discover$/, handler: async () => o.webos.discover() },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/webos\/pair$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(
+          z.object({
+            host: z.string().trim().max(64),
+            mac: z.string().trim().regex(/^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/, "MAC-adres als AA:BB:CC:DD:EE:FF").nullish().or(z.literal("").transform(() => null)),
+          }),
+          await body(),
+        );
+        const r = await o.webos.pair(b.host, b.mac ?? null);
+        if (!r.ok) {
+          const status = r.code === "INVALID_HOST" ? 400 : r.code === "REJECTED" ? 403 : r.code === "TIMEOUT" ? 408 : r.code === "BUSY" ? 409 : 502;
+          throw new HttpError(status, r.code, r.message);
+        }
+        return { tv: { ...r.tv, fingerprint256: undefined } };
+      },
+    },
+    {
+      method: "DELETE",
+      pattern: /^\/v1\/integrations\/webos\/([0-9a-f]{16})$/,
+      handler: async ({ params }) => {
+        if (!(await o.webos.unpair(params[0]!))) throw new HttpError(404, "NOT_FOUND", "Tv niet gevonden");
         return { ok: true };
       },
     },

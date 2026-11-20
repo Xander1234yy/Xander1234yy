@@ -3,7 +3,7 @@
 import { Tv } from "lucide-react";
 import { Card } from "@homeos/ui";
 import { PageHeader, EmptyState } from "@/components/section";
-import { MediaControls } from "@/components/devices/controls";
+import { MediaControls, TvControls } from "@/components/devices/controls";
 import { DemoBadge, StatusBadge } from "@/components/devices/status-badge";
 import { FreshnessNote } from "@/components/devices/freshness";
 import { useHome } from "@/lib/home-context";
@@ -17,7 +17,7 @@ export default function EntertainmentPage() {
       <PageHeader title="Entertainment" description="Mediaspelers, verbindingsstatus en beschikbare bediening." />
       {media.length === 0 ? (
         <EmptyState icon={Tv} title="Geen mediaspelers">
-          Apple TV wordt in fase 4 toegevoegd, uitsluitend via een gedocumenteerde of bewezen lokale verbinding.
+          Koppel een LG-tv (webOS) bij Instellingen → LG-tv. Apple TV wordt niet ondersteund: er is geen officiële koppeling.
         </EmptyState>
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -41,7 +41,12 @@ export default function EntertainmentPage() {
               <div className="mt-5 flex justify-center">
                 <MediaControls device={tv} size="lg" />
               </div>
-              <p className="mt-4 text-center text-xs text-muted">Beschikbare bediening: {tv.capabilities.join(", ")}</p>
+              <div className="mx-auto mt-4 max-w-md">
+                <TvControls device={tv} />
+              </div>
+              {tv.status === "OFFLINE" && tv.capabilities.includes("wake_on_lan") && (
+                <p className="mt-4 text-center text-xs text-muted">De tv staat uit. Met de aan/uit-knop zet HomeOS hem aan via het netwerk.</p>
+              )}
               <FreshnessNote device={tv} />
             </Card>
           ))}

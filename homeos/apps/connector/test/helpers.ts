@@ -4,6 +4,8 @@ import path from "node:path";
 import { createConnector } from "../src/app";
 import type { ConnectorConfig } from "../src/config";
 import type { HueDeps } from "../src/hue-service";
+import type { WebOsDeps } from "../src/webos-service";
+import { lazyMatterJsBackend } from "../src/matter-service";
 
 /** Tests praten nooit met het echte netwerk. */
 const noNetworkHue: HueDeps = {
@@ -11,6 +13,14 @@ const noNetworkHue: HueDeps = {
   pair: async () => ({ ok: false, code: "UNREACHABLE", message: "geen netwerk in tests" }),
   makeAdapter: () => {
     throw new Error("geen Hue in deze test");
+  },
+};
+
+const noNetworkWebOs: WebOsDeps = {
+  discover: async () => [],
+  pair: async () => ({ ok: false, code: "UNREACHABLE", message: "geen netwerk in tests" }),
+  makeAdapter: () => {
+    throw new Error("geen tv in deze test");
   },
 };
 
@@ -25,7 +35,7 @@ const noNetworkFetch = (async () => {
   throw new Error("Netwerk is uitgeschakeld in tests");
 }) as typeof fetch;
 
-export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps, fetchImpl: typeof fetch = noNetworkFetch) {
+export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps, fetchImpl: typeof fetch = noNetworkFetch, webosDeps: WebOsDeps = noNetworkWebOs) {
   const dataDir = overrides.dataDir ?? (await tempDir());
   const config: ConnectorConfig = {
     host: "127.0.0.1",
@@ -39,7 +49,7 @@ export async function startTestConnector(overrides: Partial<ConnectorConfig> = {
     production: false,
     ...overrides,
   };
-  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue, fetchImpl);
+  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue, fetchImpl, lazyMatterJsBackend, webosDeps);
   const addr = await c.start();
   const base = `http://127.0.0.1:${addr.port}`;
   const token = c.identity.apiToken;

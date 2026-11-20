@@ -9,6 +9,10 @@ export const DeviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("media"), action: z.enum(["play", "pause", "next", "previous"]) }),
   z.object({ type: z.literal("media_power"), on: z.boolean() }),
   z.object({ type: z.literal("set_hvac_mode"), mode: HvacModeSchema }),
+  z.object({ type: z.literal("set_volume"), volume: z.number().int().min(0).max(100) }),
+  z.object({ type: z.literal("volume_step"), direction: z.enum(["up", "down"]) }),
+  z.object({ type: z.literal("set_mute"), muted: z.boolean() }),
+  z.object({ type: z.literal("select_source"), sourceId: z.string().min(1).max(200).regex(/^[\w.:-]+$/, "Ongeldige bron") }),
   z.object({
     type: z.literal("set_target_temperature"),
     temperatureC: z.number().min(10).max(32).refine((v) => Number.isInteger(v * 2), "Stappen van 0,5 °C"),
@@ -36,6 +40,10 @@ export const COMMAND_CAPABILITY: Record<DeviceCommand["type"], Capability> = {
   media_power: "media_power",
   set_hvac_mode: "climate",
   set_target_temperature: "climate",
+  set_volume: "volume",
+  volume_step: "volume",
+  set_mute: "volume",
+  select_source: "source_select",
 };
 
 /**
@@ -73,7 +81,9 @@ export function checkCommand(
       return { ok: false, code: "FORBIDDEN", reason: `${device.name} mag niet automatisch bediend worden.` };
     }
   }
-  if (device.status !== "ONLINE") {
+  // Aanzetten via het netwerk (Wake-on-LAN) kan juist wanneer het apparaat uit en dus onbereikbaar is.
+  const wake = command.type === "media_power" && command.on && device.capabilities.includes("wake_on_lan") && device.status === "OFFLINE";
+  if (device.status !== "ONLINE" && !wake) {
     return { ok: false, code: "DEVICE_UNAVAILABLE", reason: `${device.name} is niet online (${device.status}).` };
   }
   return { ok: true };

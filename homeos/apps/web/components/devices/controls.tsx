@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pause, Play, Power, SkipBack, SkipForward } from "lucide-react";
+import { Minus, Pause, Play, Plus, Power, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
 import { Button, Slider, Switch, cn } from "@homeos/ui";
 import { supportsCommand, type Device } from "@homeos/shared";
 import { useHome, useLive } from "@/lib/home-context";
@@ -14,7 +14,7 @@ function useControl(device: Device) {
   const live = useLive();
   const allowed = useCan("control");
   const usable = live && allowed && device.status === "ONLINE";
-  return { sendCommand, busy: pending.has(device.id), usable };
+  return { sendCommand, busy: pending.has(device.id), usable, canAct: live && allowed };
 }
 
 export function PowerSwitch({ device }: { device: Device }) {
@@ -102,16 +102,23 @@ export function ColorTempControl({ device }: { device: Device }) {
 }
 
 export function MediaControls({ device, size = "md" }: { device: Device; size?: "md" | "lg" }) {
-  const { sendCommand, busy, usable } = useControl(device);
+  const { sendCommand, busy, usable, canAct } = useControl(device);
   const m = device.state.media;
   if (!supportsCommand(device, "media")) return null;
   const s = size === "lg" ? "icon" : "icon-sm";
   const playing = m?.playback === "playing";
+  // Tv's (LG webOS) hebben geen vorige/volgende in hun API; die knoppen dan niet tonen.
+  const isTv = device.integration === "lg_webos";
+  // Een tv die uit staat is onbereikbaar, maar kan wel via het netwerk worden aangezet (Wake-on-LAN).
+  const canWake = device.capabilities.includes("wake_on_lan") && device.status === "OFFLINE";
+  const powerUsable = usable || (canWake && canAct);
   return (
     <div className="flex items-center gap-2">
-      <Button size={s} variant="ghost" disabled={!usable || busy} onClick={() => void sendCommand(device, { type: "media", action: "previous" })} aria-label="Vorige">
-        <SkipBack />
-      </Button>
+      {!isTv && (
+        <Button size={s} variant="ghost" disabled={!usable || busy} onClick={() => void sendCommand(device, { type: "media", action: "previous" })} aria-label="Vorige">
+          <SkipBack />
+        </Button>
+      )}
       <Button
         size={s}
         variant="primary"
@@ -122,20 +129,89 @@ export function MediaControls({ device, size = "md" }: { device: Device; size?: 
       >
         {playing ? <Pause /> : <Play />}
       </Button>
-      <Button size={s} variant="ghost" disabled={!usable || busy} onClick={() => void sendCommand(device, { type: "media", action: "next" })} aria-label="Volgende">
-        <SkipForward />
-      </Button>
+      {!isTv && (
+        <Button size={s} variant="ghost" disabled={!usable || busy} onClick={() => void sendCommand(device, { type: "media", action: "next" })} aria-label="Volgende">
+          <SkipForward />
+        </Button>
+      )}
       {supportsCommand(device, "media_power") && (
         <Button
           size={s}
           variant="ghost"
-          disabled={!usable || busy}
+          disabled={!powerUsable || busy}
           onClick={() => void sendCommand(device, { type: "media_power", on: m?.power !== "on" })}
           aria-label={m?.power === "on" ? "Naar stand-by" : "Aanzetten"}
           className={m?.power === "on" ? "text-success" : ""}
         >
           <Power />
         </Button>
+      )}
+    </div>
+  );
+}
+
+/** Tv: volume, dempen en ingang/app kiezen. Toont alleen wat de tv zelf meldt. */
+export function TvControls({ device }: { device: Device }) {
+  const { sendCommand, busy, usable } = useControl(device);
+  const m = device.state.media;
+  const [volume, setVolume] = useState(m?.volume ?? 0);
+  useEffect(() => {
+    if (m?.volume !== undefined) setVolume(m.volume);
+  }, [m?.volume]);
+  const on = m?.power === "on";
+  const hasVolume = supportsCommand(device, "set_volume") && on;
+  const sources = m?.sources ?? [];
+  const hasSources = supportsCommand(device, "select_source") && on && sources.length > 0;
+  if (!hasVolume && !hasSources) return null;
+  const disabled = !usable || busy;
+  return (
+    <div className="space-y-3">
+      {hasVolume && (
+        <div className="flex items-center gap-2">
+          <Button size="icon-sm" variant="ghost" disabled={disabled} onClick={() => void sendCommand(device, { type: "set_mute", muted: !m?.muted })} aria-label={m?.muted ? "Geluid aan" : "Dempen"} aria-pressed={!!m?.muted}>
+            {m?.muted ? <VolumeX /> : <Volume2 />}
+          </Button>
+          <Button size="icon-sm" variant="ghost" disabled={disabled} onClick={() => void sendCommand(device, { type: "volume_step", direction: "down" })} aria-label="Zachter">
+            <Minus />
+          </Button>
+          {m?.volume !== undefined && (
+            <Slider
+              value={[volume]}
+              min={0}
+              max={100}
+              step={1}
+              disabled={disabled}
+              onValueChange={([v]) => setVolume(v ?? volume)}
+              onValueCommit={([v]) => v !== undefined && void sendCommand(device, { type: "set_volume", volume: v })}
+              aria-label={`Volume ${device.name}`}
+            />
+          )}
+          <Button size="icon-sm" variant="ghost" disabled={disabled} onClick={() => void sendCommand(device, { type: "volume_step", direction: "up" })} aria-label="Harder">
+            <Plus />
+          </Button>
+          {m?.volume !== undefined && <span className="w-8 text-right text-xs tabular text-muted">{volume}</span>}
+        </div>
+      )}
+      {hasSources && (
+        <select
+          className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm disabled:opacity-50"
+          value={m?.source ?? ""}
+          disabled={disabled}
+          onChange={(e) => e.target.value && void sendCommand(device, { type: "select_source", sourceId: e.target.value })}
+          aria-label={`Ingang of app op ${device.name}`}
+        >
+          {!m?.source && <option value="">Kies ingang of app…</option>}
+          <optgroup label="Ingangen">
+            {sources.filter((s) => s.type === "input").map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Apps">
+            {sources.filter((s) => s.type === "app").map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </optgroup>
+        </select>
       )}
     </div>
   );

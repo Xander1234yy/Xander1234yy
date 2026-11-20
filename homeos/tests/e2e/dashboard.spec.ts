@@ -63,6 +63,38 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByTestId("jarvis-messages")).not.toContainText("zet ze uit");
   });
 
+  test("bedient de DEMO-tv: volume, dempen en ingang; Jarvis stelt tv-opdrachten voor", async ({ page }) => {
+    await page.goto("/entertainment");
+    const volume = page.getByText(/^\d{1,3}$/).first();
+    await expect(volume).toBeVisible();
+    const before = Number(await volume.textContent());
+    await page.getByRole("button", { name: "Harder" }).first().click();
+    await expect(volume).toHaveText(String(Math.min(100, before + 1)));
+    const mute = page.getByRole("button", { name: /Dempen|Geluid aan/ }).first();
+    const pressed = await mute.getAttribute("aria-pressed");
+    await mute.click();
+    await expect(page.getByRole("button", { name: /Dempen|Geluid aan/ }).first()).not.toHaveAttribute("aria-pressed", pressed ?? "");
+    const select = page.getByLabel(/Ingang of app op/).first();
+    await select.selectOption({ label: "Spelcomputer (DEMO)" });
+    await expect(select).toHaveValue("input:HDMI_2");
+
+    await page.goto("/jarvis");
+    const input = page.getByLabel("Bericht aan Jarvis");
+    await input.fill("zet de tv zachter");
+    await input.press("Enter");
+    await expect(page.getByTestId("jarvis-messages")).toContainText("Woonkamer TV: volume");
+    await page.getByRole("button", { name: "Annuleren" }).click();
+  });
+
+  test("LG-tv-kaart in Instellingen weigert een openbaar adres", async ({ page }) => {
+    await page.goto("/instellingen");
+    const card = page.getByTestId("tv-card");
+    await expect(card).toContainText("Nog geen tv gekoppeld");
+    await card.getByLabel("IP-adres van de tv").fill("8.8.8.8");
+    await card.getByRole("button", { name: "Koppelen" }).click();
+    await expect(page.getByText(/lokale IP-adres van de tv/).first()).toBeVisible();
+  });
+
   test("bedient de DEMO-airco (temperatuur en modus)", async ({ page }) => {
     await page.goto("/");
     const card = page.getByTestId("climate-card");

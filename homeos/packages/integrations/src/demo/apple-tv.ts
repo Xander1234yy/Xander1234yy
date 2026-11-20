@@ -2,6 +2,13 @@ import type { DeviceCommand } from "@homeos/shared";
 import type { DeviceAdapter } from "../adapter";
 import { DemoAdapterBase, demoDevice, type DemoDevice } from "./base";
 
+const SOURCES = [
+  { id: "input:HDMI_1", label: "HDMI 1 (DEMO)", type: "input" as const },
+  { id: "input:HDMI_2", label: "Spelcomputer (DEMO)", type: "input" as const },
+  { id: "app:demo.video", label: "Demo Video", type: "app" as const },
+  { id: "app:demo.music", label: "Demo Muziek", type: "app" as const },
+];
+
 const QUEUE = [
   { app: "Demo Muziek", title: "Nachtelijke stad", artist: "Demo Artiest" },
   { app: "Demo Muziek", title: "Rustige haven", artist: "Demo Artiest" },
@@ -18,8 +25,8 @@ export class DemoMediaAdapter extends DemoAdapterBase {
   protected seed(): DemoDevice[] {
     return [
       demoDevice(
-        { externalId: "woonkamer-tv", name: "Woonkamer TV", model: "Demo mediaspeler", kind: "media", capabilities: ["media_playback", "media_power"], suggestedRoomId: "woonkamer" },
-        { media: { power: "on", playback: "paused", ...QUEUE[0]! } },
+        { externalId: "woonkamer-tv", name: "Woonkamer TV", model: "Demo mediaspeler", kind: "media", capabilities: ["media_playback", "media_power", "volume", "source_select"], suggestedRoomId: "woonkamer" },
+        { media: { power: "on", playback: "paused", ...QUEUE[0]!, volume: 15, muted: false, source: "app:demo.music", sources: SOURCES } },
       ),
     ];
   }
@@ -27,7 +34,23 @@ export class DemoMediaAdapter extends DemoAdapterBase {
   protected apply(d: DemoDevice, c: DeviceCommand): void {
     const media = d.state.media ?? { power: "on" as const, playback: "idle" as const };
     if (c.type === "media_power") {
-      d.state.media = c.on ? { ...media, power: "on" } : { power: "standby", playback: "idle" };
+      d.state.media = c.on ? { ...media, power: "on" } : { ...media, power: "standby", playback: "idle" };
+      return;
+    }
+    if (c.type === "set_volume") media.volume = c.volume;
+    if (c.type === "volume_step") media.volume = Math.max(0, Math.min(100, (media.volume ?? 0) + (c.direction === "up" ? 1 : -1)));
+    if (c.type === "set_mute") media.muted = c.muted;
+    if (c.type === "select_source") {
+      const src = SOURCES.find((s) => s.id === c.sourceId);
+      if (src) {
+        media.source = src.id;
+        media.app = src.label;
+        media.title = src.type === "input" ? undefined : media.title;
+        media.artist = src.type === "input" ? undefined : media.artist;
+      }
+    }
+    if (c.type === "set_volume" || c.type === "volume_step" || c.type === "set_mute" || c.type === "select_source") {
+      d.state.media = { ...media };
       return;
     }
     if (c.type !== "media") return;

@@ -8,7 +8,7 @@ import { enc } from "@/lib/api";
 import { useHome, useLive as useLiveConnector } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { formatDateTime, formatKwh, formatTime, formatW } from "@/lib/format";
-import { BrightnessSlider, ClimateControl, ColorControl, ColorTempControl, MediaControls, PowerSwitch, hvacModeLabel } from "./controls";
+import { BrightnessSlider, ClimateControl, ColorControl, ColorTempControl, MediaControls, TvControls, PowerSwitch, hvacModeLabel } from "./controls";
 import { DeviceIcon, KIND_LABEL } from "./device-icon";
 import { FreshnessNote } from "./freshness";
 import { DemoBadge, StatusBadge } from "./status-badge";
@@ -89,6 +89,7 @@ export function DeviceCard({ device }: { device: Device }) {
           <ColorTempControl device={device} />
           <ColorControl device={device} />
           <MediaControls device={device} />
+          <TvControls device={device} />
           <ClimateControl device={device} />
           <DeviceReadings device={device} />
         </div>

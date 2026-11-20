@@ -19,6 +19,16 @@ const SolarEdgeSchema = z.object({
 });
 const DaikinSchema = z.object({ clientId: z.string().max(200), redirectUri: z.string().max(500), connectedAt: z.string() });
 const TuyaSchema = z.object({ region: z.enum(["eu", "eu-west", "us", "us-east", "cn", "in"]), accessId: z.string().max(64), uid: z.string().max(64), addedAt: z.string() });
+const WebOsTvSchema = z.object({
+  tvId: z.string().regex(/^[0-9a-f]{16}$/),
+  host: z.string().max(64),
+  name: z.string().max(80),
+  model: z.string().max(80),
+  scheme: z.enum(["wss", "ws"]),
+  fingerprint256: z.string().max(200).nullable(),
+  mac: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/).nullable(),
+  pairedAt: z.string(),
+});
 const Schema = z.object({
   version: z.literal(1),
   hue: z.array(HueBridgeSchema),
@@ -26,7 +36,9 @@ const Schema = z.object({
   daikin: DaikinSchema.nullable().default(null),
   tuya: TuyaSchema.nullable().default(null),
   matter: z.object({ enabledAt: z.string() }).nullable().default(null),
+  webos: z.array(WebOsTvSchema).default([]),
 });
+export type WebOsTvRecord = z.infer<typeof WebOsTvSchema>;
 export type SolarEdgeRecord = z.infer<typeof SolarEdgeSchema>;
 export type HueBridgeRecord = z.infer<typeof HueBridgeSchema>;
 type State = z.infer<typeof Schema>;
@@ -39,7 +51,7 @@ export class IntegrationsStore {
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
     const file = dataDir ? path.join(dataDir, "integrations.json") : null;
-    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null };
+    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [] };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {
       const p = Schema.safeParse(JSON.parse(raw));

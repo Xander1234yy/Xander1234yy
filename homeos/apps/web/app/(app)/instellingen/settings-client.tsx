@@ -8,6 +8,7 @@ import { api, connectorPath } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { HueCard } from "@/components/settings/hue-card";
+import { TvCard } from "@/components/settings/tv-card";
 import { NotificationPrefsCard } from "@/components/settings/notification-prefs";
 import { DaikinCard, MatterCard, SolarEdgeCard, TuyaCard } from "@/components/settings/cloud-cards";
 import { formatDateTime } from "@/lib/format";
@@ -92,6 +93,7 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
         <DaikinCard />
         <TuyaCard />
         <MatterCard />
+        <TvCard />
 
         <SectionCard title="Integraties" icon={Plug}>
           <ul className="space-y-2">

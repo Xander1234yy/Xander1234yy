@@ -73,7 +73,7 @@ homeos/
     connector/      HomeOS Device Connector (standalone Node.js, los van Next.js)
   packages/
     shared/         Types, zod-schema's, opdrachtcontrole, versheid, energieberekening
-    integrations/   Adapterinterface + DEMO-adapters (later Hue, stekkers, Apple TV, zon, deurbel)
+    integrations/   Adapterinterface, DEMO-adapters en echte adapters (Hue, Tuya, Matter, SolarEdge, Daikin, LG-tv)
     ui/             Design system (shadcn/ui-stijl op Radix + Tailwind)
     automation/     Automation Engine (triggers, voorwaarden, acties; draait in de connector)
     jarvis/         Jarvis: provider-interface en lokale taalverwerking (geen AI-dienst nodig)

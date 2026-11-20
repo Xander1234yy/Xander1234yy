@@ -137,6 +137,10 @@ function handle(msg: string, original: string, ctx: JarvisContext): Partial {
   const energy = energyIntent(msg, ctx, demo, stale);
   if (energy) return energy;
 
+  // ───── tv ─────
+  const tv = tvIntent(msg, s, ctx, demo, stale);
+  if (tv) return tv;
+
   // ───── klimaat ─────
   const climate = climateIntent(msg, s, ctx, demo, stale);
   if (climate) return climate;
@@ -337,6 +341,77 @@ function climateIntent(msg: string, s: Snapshot, ctx: JarvisContext, demo: strin
   }
   if (!command) return say("unclear_command", `Wat wil je met ${target.name}? Bijvoorbeeld "zet de airco op 21 graden", "airco warmer" of "airco uit".`);
   return propose(s, ctx, [{ device: target, command, label }], { deviceIds: [target.id], roomId: target.roomId });
+}
+
+function tvIntent(msg: string, s: Snapshot, ctx: JarvisContext, demo: string, stale: string): Partial | null {
+  const tvs = s.devices.filter((d) => d.kind === "media");
+  if (!tvs.length) return null;
+  const sourcesOf = (d: Device) => d.state.media?.sources ?? [];
+  const GENERIC = new Set(["hdmi", "demo", "app", "apps", "ingang"]);
+  const sourceMatch = (d: Device) => {
+    const hdmi = /hdmi\s*(\d)/.exec(msg);
+    if (hdmi) return sourcesOf(d).find((src) => src.id === `input:HDMI_${hdmi[1]}`);
+    return sourcesOf(d).find((src) => {
+      const label = normalize(src.label).replace(/\(demo\)/, "").trim();
+      if (label.length >= 3 && msg.includes(label)) return true;
+      // Losse woorden alleen bij namen zonder cijfers, en geen algemene woorden als "hdmi".
+      return !/\d/.test(label) && words(src.label).some((w) => w.length >= 4 && !GENERIC.has(w) && hasWord(msg, w));
+    });
+  };
+  const named = matchDevices(s, msg, (d) => d.kind === "media");
+  const mentionsTv = hasWord(msg, "tv", "televisie", "tv's") || named.length > 0;
+  const memTv = (ctx.memory?.deviceIds ?? []).map((id) => tvs.find((d) => d.id === id)).find(Boolean);
+  const viaSource = !mentionsTv && has(msg, "open", "start", "zet", "doe") ? tvs.find((d) => sourceMatch(d)) : undefined;
+  const pronounTv = !mentionsTv && memTv && PRONOUNS.some((p) => hasWord(msg, p)) ? memTv : undefined;
+  const target = named[0] ?? (mentionsTv ? (tvs.length === 1 ? tvs[0] : (tvs.find((d) => d.roomId === findRoom(s, msg)?.id) ?? tvs[0])) : (viaSource ?? pronounTv));
+  if (!target) return null;
+  const media = target.state.media;
+  const memory: JarvisMemory = { deviceIds: [target.id], roomId: target.roomId };
+  const label = (t: string) => `${target.name}: ${t}`;
+
+  const question = (has(msg, "wat", "welke", "staat", "is") && !has(msg, ...COMMAND_VERBS)) || msg.endsWith("?");
+  if (question && !has(msg, "zet", "doe")) {
+    if (target.status !== "ONLINE") return say("tv_status", `${target.name} staat uit of is niet bereikbaar${demo}.${stale}`, [], memory);
+    if (media?.power !== "on") return say("tv_status", `${target.name} staat op stand-by${demo}.${stale}`, [], memory);
+    const parts = [media.app ? `staat op ${media.app}` : "staat aan", media.volume !== undefined ? `volume ${media.volume}${media.muted ? " (gedempt)" : ""}` : null];
+    return say("tv_status", `${target.name} ${parts.filter(Boolean).join(", ")}${demo}.${stale}`, [], memory);
+  }
+
+  const item = (command: DeviceCommand, l: string) => propose(s, ctx, [{ device: target, command, label: label(l) }], memory);
+  const src = sourceMatch(target);
+  if (src && !/(^|\s)uit$/.test(msg)) return item({ type: "select_source", sourceId: src.id }, `${src.label}`);
+  const level = /(?:volume|geluid)?\s*(?:op|naar)\s*(\d{1,3})(?!\s*(%|procent|graden))/.exec(msg);
+  if (level && has(msg, "volume", "geluid", "tv", "televisie")) {
+    const v = Math.min(100, Number(level[1]));
+    return item({ type: "set_volume", volume: v }, `volume ${v}`);
+  }
+  if (has(msg, "zachter", "harder", "volume omhoog", "volume omlaag", "luider", "stiller")) {
+    const up = has(msg, "harder", "omhoog", "luider");
+    if (media?.volume !== undefined) {
+      const v = Math.max(0, Math.min(100, media.volume + (up ? 5 : -5)));
+      return item({ type: "set_volume", volume: v }, `volume ${v}`);
+    }
+    return item({ type: "volume_step", direction: up ? "up" : "down" }, up ? "harder" : "zachter");
+  }
+  if (has(msg, "demp", "mute", "geluid uit", "stil")) return item({ type: "set_mute", muted: true }, "dempen");
+  if (has(msg, "geluid aan", "unmute", "dempen uit")) return item({ type: "set_mute", muted: false }, "geluid aan");
+  if (/(^|\s)uit($|\s)/.test(msg)) {
+    if (target.status !== "ONLINE" || media?.power !== "on") return say("noop", `${target.name} staat al uit.`, [], memory);
+    return item({ type: "media_power", on: false }, "uit");
+  }
+  if (/(^|\s)aan($|\s)/.test(msg)) {
+    if (target.status === "ONLINE" && media?.power === "on") return say("noop", `${target.name} staat al aan.`, [], memory);
+    return item({ type: "media_power", on: true }, "aan");
+  }
+  if (has(msg, "pauzeer", "pauze")) return item({ type: "media", action: "pause" }, "pauzeren");
+  if (has(msg, "speel", "afspelen", "verder")) return item({ type: "media", action: "play" }, "afspelen");
+  const names = sourcesOf(target).slice(0, 6).map((x) => x.label);
+  return say(
+    "unclear_command",
+    `Wat wil je met ${target.name}? Bijvoorbeeld "tv zachter", "tv op 20", "demp de tv", "tv uit"${names.length ? ` of een bron: ${names.join(", ")}` : ""}.`,
+    [],
+    memory,
+  );
 }
 
 function propose(s: Snapshot, ctx: JarvisContext, items: { device: Device; command: DeviceCommand; label: string }[], memory: JarvisMemory, intro?: string): Partial {
