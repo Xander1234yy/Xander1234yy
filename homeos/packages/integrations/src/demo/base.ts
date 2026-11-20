@@ -43,6 +43,15 @@ export abstract class DemoAdapterBase implements DeviceAdapter {
       if (d.status === "ONLINE") d.lastSeen = now;
       this.devices.set(d.info.externalId, d);
     }
+    if (ctx.serverless) {
+      // Cloudmodus: DEMO-toestand bewaren tussen aanvragen (geen timers).
+      const saved = (await ctx.cache?.load()) as Record<string, Pick<DemoDevice, "state" | "status">> | null;
+      for (const [id, v] of Object.entries(saved ?? {})) {
+        const d = this.devices.get(id);
+        if (d && v) Object.assign(d, { state: v.state, status: v.status });
+      }
+      return;
+    }
     if (this.tick) {
       const t = setInterval(() => this.tick?.(), this.tickMs);
       t.unref?.();
@@ -78,6 +87,7 @@ export abstract class DemoAdapterBase implements DeviceAdapter {
     }
     this.apply(d, command);
     d.lastSeen = this.nowIso();
+    if (this.ctx?.serverless) await this.ctx.cache?.save(Object.fromEntries([...this.devices].map(([id, x]) => [id, { state: x.state, status: x.status }])));
     return { ok: true, report: this.report(d) };
   }
 

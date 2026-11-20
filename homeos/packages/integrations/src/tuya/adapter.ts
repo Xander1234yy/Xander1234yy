@@ -78,9 +78,30 @@ export class TuyaAdapter implements DeviceAdapter {
       return;
     }
     this.client = new TuyaClient({ region: this.config.region, accessId: this.config.accessId, accessSecret: secret }, this.fetchImpl, this.nowMs);
+    if (ctx.serverless) {
+      await this.restore();
+      await this.refresh();
+      return;
+    }
     await this.refresh(true);
     this.timer = setInterval(() => void this.refresh(), 30_000);
     this.timer.unref?.();
+  }
+
+  private async restore() {
+    const c = (await this.ctx?.cache?.load()) as { devices?: TuyaDeviceItem[]; specs?: [string, Spec][]; skipped?: number; fetchedAt?: string | null; lastFetch?: number; budget?: unknown } | null;
+    if (!c) return;
+    if (Array.isArray(c.devices)) this.devices = new Map(c.devices.map((d) => [d.id, d]));
+    if (Array.isArray(c.specs)) this.specs = new Map(c.specs);
+    if (typeof c.skipped === "number") this.skipped = c.skipped;
+    this.fetchedAt = c.fetchedAt ?? null;
+    if (typeof c.lastFetch === "number") this.lastFetch = c.lastFetch;
+    this.budget.importState(c.budget);
+  }
+
+  private async persist() {
+    if (!this.ctx?.serverless) return;
+    await this.ctx.cache?.save({ devices: [...this.devices.values()], specs: [...this.specs], skipped: this.skipped, fetchedAt: this.fetchedAt, lastFetch: this.lastFetch, budget: this.budget.exportState() });
   }
 
   async disconnect(): Promise<void> {
@@ -121,6 +142,7 @@ export class TuyaAdapter implements DeviceAdapter {
       this.ctx?.logger.warn("Tuya verversen mislukt", { error: this.lastError });
     }
     for (const id of this.devices.keys()) this.ctx?.emit({ type: "device_state", externalId: id, report: this.report(id) });
+    await this.persist();
   }
 
   private switchCode(d: TuyaDeviceItem): string {
@@ -182,6 +204,7 @@ export class TuyaAdapter implements DeviceAdapter {
       const status = await this.call<{ code: string; value: unknown }[]>("command", "GET", `/v1.0/devices/${encodeURIComponent(id)}/status`);
       d.status = status;
       this.fetchedAt = new Date(this.nowMs()).toISOString();
+      await this.persist();
       return { ok: true, report: this.report(id) };
     } catch (err) {
       return { ok: false, code: "ADAPTER_ERROR", message: err instanceof Error ? err.message : "Tuya niet bereikbaar" };

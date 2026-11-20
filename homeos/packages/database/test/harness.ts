@@ -35,5 +35,14 @@ export async function createTestDb() {
     });
   }
 
-  return { db, createUser, as };
+  /** Voer een query uit met een databaserol (bijv. de beperkte cloud-rol homeos_worker). */
+  async function asRole<T = Record<string, unknown>>(role: string, sql: string, params: unknown[] = []): Promise<T[]> {
+    return db.transaction(async (tx) => {
+      await tx.query(`set local role ${role}`);
+      const r = await tx.query<T>(sql, params);
+      return r.rows;
+    });
+  }
+
+  return { db, createUser, as, asRole };
 }

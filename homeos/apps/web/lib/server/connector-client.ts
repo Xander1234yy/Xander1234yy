@@ -34,6 +34,19 @@ export class ConnectorUnavailableError extends Error {
 }
 
 export async function connectorFetch(pathname: string, init: RequestInit = {}, retry = true): Promise<Response> {
+  // Cloudmodus (zonder laptop): de connector draait per aanvraag in dit proces, voor het huishouden van de gebruiker.
+  const { cloudRuntimeEnabled, cloudConnectorFetch } = await import("@/lib/cloud/runtime");
+  if (cloudRuntimeEnabled()) {
+    const { getSession } = await import("@/lib/session");
+    const s = await getSession();
+    if (!s.household) throw new ConnectorUnavailableError("Geen huishouden gekozen", "unreachable");
+    try {
+      return await cloudConnectorFetch(s.household.id, pathname, init);
+    } catch (err) {
+      console.error("[homeos] cloudconnector", err);
+      throw new ConnectorUnavailableError("De cloudverbinding van HomeOS werkt niet (controleer de instellingen op Vercel)", "unreachable");
+    }
+  }
   const token = await resolveToken();
   if (!token) throw new ConnectorUnavailableError("Geen connector-token geconfigureerd", "no_token");
   let res: Response;

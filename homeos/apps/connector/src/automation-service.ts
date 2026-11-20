@@ -1,6 +1,5 @@
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 import { z } from "zod";
 import {
   AutomationEngine,
@@ -16,7 +15,7 @@ import {
 } from "@homeos/automation";
 import { SAFETY_CRITICAL_KINDS, type DeviceEvent } from "@homeos/shared";
 import type { Logger } from "@homeos/integrations";
-import { readFileOrNull, writeFileAtomic } from "./fs-utils";
+import { readFileOrNull, writeFileAtomic, joinPath } from "./fs-utils";
 import { Journal } from "./journal";
 import type { DeviceRegistry } from "./registry";
 import { SetupError } from "./cloud-service";
@@ -34,8 +33,8 @@ const TICK_MS = 20_000;
  * Automatiseringen, uitvoeringsgeschiedenis en meldingen in de connector.
  * Alles lokaal: werkt ook zonder cloud, en stopt als de laptop uit staat (geen inhaalacties).
  */
-export async function createAutomationService(o: { registry: DeviceRegistry; dataDir: string | null; logger: Logger; now?: () => Date; tickMs?: number }) {
-  const file = o.dataDir ? path.join(o.dataDir, "automations.json") : null;
+export async function createAutomationService(o: { registry: DeviceRegistry; dataDir: string | null; logger: Logger; now?: () => Date; tickMs?: number; serverless?: boolean }) {
+  const file = o.dataDir ? joinPath(o.dataDir, "automations.json") : null;
   let store: Store = { version: 1, automations: [], preferences: {} };
   const raw = file ? await readFileOrNull(file) : null;
   if (raw) {
@@ -94,8 +93,14 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
     }
   });
 
-  const timer = setInterval(() => void engine.tick().catch((err) => o.logger.error("Automatisering-tick mislukt", { error: String(err) })), o.tickMs ?? TICK_MS);
-  timer.unref?.();
+  // Cloudmodus: geen timer; een geplande taak (cron) roept tick() aan. De engine-toestand wordt tussen ticks bewaard.
+  const stateFile = o.serverless && o.dataDir ? joinPath(o.dataDir, "automation-state.json") : null;
+  if (stateFile) {
+    const s = await readFileOrNull(stateFile);
+    if (s) engine.importState(JSON.parse(s));
+  }
+  const timer = o.serverless ? null : setInterval(() => void engine.tick().catch((err) => o.logger.error("Automatisering-tick mislukt", { error: String(err) })), o.tickMs ?? TICK_MS);
+  timer?.unref?.();
 
   const find = (id: string) => {
     const a = store.automations.find((x) => x.id === id);
@@ -121,10 +126,16 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
   return {
     events: emitter,
     stop: () => {
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
       engine.stop();
     },
-    tick: () => engine.tick(),
+    tick: async () => {
+      await engine.tick();
+      if (stateFile) await writeFileAtomic(stateFile, JSON.stringify(engine.exportState()));
+      await Promise.all([runs.flush(), notifications.flush()]);
+    },
+    /** Wacht tot logboeken zijn weggeschreven (cloudmodus, vóór het einde van een aanvraag). */
+    flush: () => Promise.all([runs.flush(), notifications.flush()]).then(() => undefined),
     list: () => store.automations.map((a) => ({ ...a, running: engine.isRunning(a.id) })),
     runs: (limit = 50, automationId?: string) => runs.latest(500).filter((r) => !automationId || r.automationId === automationId).slice(0, limit),
     templates: () => {

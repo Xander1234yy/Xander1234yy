@@ -211,3 +211,18 @@ describe("migratie 5: Zonneplan", () => {
     ).rejects.toThrow(/no_secrets/);
   });
 });
+
+describe("migratie 6: cloudmodus", () => {
+  it("gebruikers kunnen niet bij de connector-opslag; alleen de beperkte rol homeos_worker", async () => {
+    await t.asRole("homeos_worker", "insert into public.cloud_documents (household_id, key, data) values ($1, 'secrets.enc', 'versleuteld')", [home]);
+    await t.asRole("homeos_worker", "insert into public.cloud_logs (household_id, key, line) values ($1, 'logs/audit.jsonl', '{}')", [home]);
+    expect((await t.asRole("homeos_worker", "select key from public.cloud_documents")).length).toBe(1);
+    await expect(t.as(owner, "select * from public.cloud_documents")).rejects.toThrow(/permission denied/);
+    await expect(t.as(owner, "insert into public.cloud_logs (household_id, key, line) values ($1, 'x', 'y')", [home])).rejects.toThrow(/permission denied/);
+    await expect(t.as(null, "select * from public.cloud_logs")).rejects.toThrow(/permission denied/);
+    // De worker-rol ziet geen gegevens van gebruikers.
+    await expect(t.asRole("homeos_worker", "select * from public.profiles")).rejects.toThrow(/permission denied/);
+    await expect(t.asRole("homeos_worker", "select * from public.family_tasks")).rejects.toThrow(/permission denied/);
+    await expect(t.asRole("homeos_worker", "select name from public.households")).rejects.toThrow(/permission denied/);
+  });
+});

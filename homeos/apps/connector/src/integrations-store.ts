@@ -1,6 +1,5 @@
-import path from "node:path";
 import { z } from "zod";
-import { readFileOrNull, writeFileAtomic } from "./fs-utils";
+import { readFileOrNull, writeFileAtomic, joinPath } from "./fs-utils";
 
 /** Niet-geheime integratieconfiguratie (bridge-adres, ID, certificaatvingerafdruk). Keys staan in de SecretStore. */
 const HueBridgeSchema = z.object({
@@ -60,7 +59,7 @@ export class IntegrationsStore {
   ) {}
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
-    const file = dataDir ? path.join(dataDir, "integrations.json") : null;
+    const file = dataDir ? joinPath(dataDir, "integrations.json") : null;
     let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {

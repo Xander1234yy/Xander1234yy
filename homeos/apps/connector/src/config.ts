@@ -31,6 +31,11 @@ export interface ConnectorConfig {
   rateLimitPerMin: number;
   commandLimitPerMin: number;
   production: boolean;
+  /**
+   * Cloudmodus: de connector draait per aanvraag in een serverless functie (Vercel), met opslag in Supabase
+   * (dataDir = "db://<huishouden>"). Geen timers, geen lokale integraties (Hue-bridge, tv, camera, Matter).
+   */
+  serverless?: boolean;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConnectorConfig {

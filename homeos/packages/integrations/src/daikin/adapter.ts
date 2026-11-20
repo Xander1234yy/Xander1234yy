@@ -52,9 +52,35 @@ export class DaikinAdapter implements DeviceAdapter {
       this.lastError = "Nog niet aangemeld bij Daikin";
       return;
     }
+    if (ctx.serverless) {
+      await this.restore();
+      await this.refresh();
+      return;
+    }
     await this.refresh(true);
     this.timer = setInterval(() => void this.refresh(), 60_000);
     this.timer.unref?.();
+  }
+
+  private async restore() {
+    const c = (await this.ctx?.cache?.load()) as { devices?: OnectaDevice[]; fetchedAt?: string | null; lastFetch?: number; budget?: unknown } | null;
+    if (!c) return;
+    if (Array.isArray(c.devices)) {
+      this.units = new Map(
+        c.devices.flatMap((d) => {
+          const parsed = parseClimate(d);
+          return parsed ? [[d.id, { raw: d, parsed }] as const] : [];
+        }),
+      );
+    }
+    this.fetchedAt = c.fetchedAt ?? null;
+    if (typeof c.lastFetch === "number") this.lastFetch = c.lastFetch;
+    this.budget.importState(c.budget);
+  }
+
+  private async persist() {
+    if (!this.ctx?.serverless) return;
+    await this.ctx.cache?.save({ devices: [...this.units.values()].map((u) => u.raw), fetchedAt: this.fetchedAt, lastFetch: this.lastFetch, budget: this.budget.exportState() });
   }
 
   async disconnect(): Promise<void> {
@@ -132,6 +158,7 @@ export class DaikinAdapter implements DeviceAdapter {
       this.ctx?.logger.warn("Daikin verversen mislukt", { error: this.lastError });
     }
     for (const id of this.units.keys()) this.ctx?.emit({ type: "device_state", externalId: id, report: this.report(id) });
+    await this.persist();
   }
 
   // ───────────── HomeOS-model ─────────────
@@ -217,6 +244,12 @@ export class DaikinAdapter implements DeviceAdapter {
     // Daikin heeft de wijziging geaccepteerd. De cloud kan direct na een PATCH nog de oude waarde geven,
     // daarom werken we de lokale waarde bij en lezen we na 90 s opnieuw uit ter controle.
     this.applyLocal(unit, mp, command);
+    if (this.ctx?.serverless) {
+      // Geen timer mogelijk: de eerstvolgende verversing na 90 s leest de werkelijke waarde terug.
+      this.lastFetch = this.nowMs() - POLL_MS + AFTER_COMMAND_MS;
+      await this.persist();
+      return { ok: true, report: { ...this.report(externalId), stateAt: new Date(this.nowMs()).toISOString() } };
+    }
     if (this.refreshSoon) clearTimeout(this.refreshSoon);
     this.refreshSoon = setTimeout(() => {
       this.lastFetch = 0;

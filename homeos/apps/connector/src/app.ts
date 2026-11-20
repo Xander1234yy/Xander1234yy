@@ -1,8 +1,7 @@
-import path from "node:path";
 import { createDemoAdapters, type DeviceAdapter, type Logger } from "@homeos/integrations";
 import type { DeviceEvent } from "@homeos/shared";
 import { CONNECTOR_VERSION, type ConnectorConfig } from "./config";
-import { ensureDir } from "./fs-utils";
+import { ensureDir, joinPath, readFileOrNull, writeFileAtomic } from "./fs-utils";
 import { loadOrCreateIdentity } from "./identity";
 import { Journal } from "./journal";
 import { DeviceRegistry, type AuditEntry } from "./registry";
@@ -32,10 +31,12 @@ export async function createConnector(
   pushSender?: PushSender,
 ) {
   await ensureDir(config.dataDir);
-  await ensureDir(path.join(config.dataDir, "logs"));
+  await ensureDir(joinPath(config.dataDir, "logs"));
   const identity = await loadOrCreateIdentity(config.dataDir);
   const adapters: DeviceAdapter[] = [...(config.demo ? createDemoAdapters() : []), ...extraAdapters];
   if (config.demo && config.production) logger.warn("DEMO-modus staat aan in productie. Alle apparaten zijn gesimuleerd.");
+  const serverless = !!config.serverless;
+  if (serverless && !config.masterSecret) throw new Error("Cloudmodus vereist HOMEOS_CONNECTOR_SECRET (sleutel voor de versleutelde opslag)");
 
   const secrets = new SecretStore(config.dataDir, config.masterSecret);
   const integrations = await IntegrationsStore.open(config.dataDir);
@@ -50,22 +51,38 @@ export async function createConnector(
     events: await Journal.open<DeviceEvent>(config.dataDir, "events", 300),
     logger,
     pollIntervalMs: config.pollIntervalMs,
+    serverless,
+    adapterCache: (adapterId) => {
+      const file = joinPath(config.dataDir, "cache", `${adapterId.replace(/[^\w.-]/g, "_")}.json`);
+      return {
+        load: async () => {
+          const raw = await readFileOrNull(file);
+          try {
+            return raw ? (JSON.parse(raw) as unknown) : null;
+          } catch {
+            return null;
+          }
+        },
+        save: (v) => writeFileAtomic(file, JSON.stringify(v)),
+      };
+    },
   });
 
   const hue = createHueService({ registry, secrets, store: integrations, deps: hueDeps });
-  adapters.push(...hue.adapters());
+  // Lokale integraties (alleen bereikbaar in het eigen netwerk) bestaan niet in de cloudmodus.
+  if (!serverless) adapters.push(...hue.adapters());
   const cloud = createCloudIntegrations({ registry, secrets, store: integrations, fetchImpl });
   adapters.push(...cloud.adapters());
   const matter = createMatterService({ registry, store: integrations, dataDir: config.dataDir, logger, factory: matterFactory });
-  adapters.push(...matter.adapters());
+  if (!serverless) adapters.push(...matter.adapters());
   const webos = createWebOsService({ registry, secrets, store: integrations, deps: webosDeps });
-  adapters.push(...webos.adapters());
+  if (!serverless) adapters.push(...webos.adapters());
   const cameras = createCameraService({ registry, secrets, store: integrations, deps: cameraDeps });
-  adapters.push(...cameras.adapters());
+  if (!serverless) adapters.push(...cameras.adapters());
   const zonneplan = createZonneplanService({ registry, secrets, store: integrations, fetchImpl });
   adapters.push(...zonneplan.adapters());
 
-  const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger });
+  const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger, serverless });
   const push = createPushService({ secrets, logger, ...(pushSender ? { sender: pushSender } : {}) });
   // Iedere melding (na de categorie-instellingen) ook als pushmelding naar telefoons/tablets.
   automations.events.on("notification", (n) => void push.notify(n).catch((err) => logger.warn("Push mislukt", { error: String(err) })));
@@ -79,6 +96,7 @@ export async function createConnector(
     rateLimitPerMin: config.rateLimitPerMin,
     commandLimitPerMin: config.commandLimitPerMin,
     allowedHosts,
+    cloudMode: serverless,
     hue,
     cloud,
     matter,
@@ -99,6 +117,10 @@ export async function createConnector(
     },
     automations,
     push,
+    /** Cloudmodus: alles wegschrijven vóór het einde van de aanvraag. */
+    async flush() {
+      await Promise.all([registry.flush(), automations.flush()]);
+    },
     async stop() {
       automations.stop();
       cameras.stopAll();

@@ -37,6 +37,8 @@ export interface ServerOptions {
   commandLimitPerMin: number;
   /** Toegestane Host-headers (bescherming tegen DNS-rebinding). */
   allowedHosts: string[];
+  /** Cloudmodus: lokale integraties (Hue-bridge, tv, camera, Matter) zijn niet beschikbaar. */
+  cloudMode?: boolean;
   hue: HueService;
   cloud: CloudIntegrations;
   matter: MatterService;
@@ -142,7 +144,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list() }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), mode: o.cloudMode ? "cloud" : "local" }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -478,6 +480,9 @@ export function createConnectorServer(o: ServerOptions) {
       const ip = req.socket.remoteAddress ?? "unknown";
       if (!general.take(ip)) throw new HttpError(429, "RATE_LIMITED", "Te veel verzoeken");
       if (!authorized(req)) throw new HttpError(401, "UNAUTHORIZED", "Ongeldig of ontbrekend connector-token");
+      if (o.cloudMode && /^\/v1\/(integrations\/(hue|webos|tapo|matter)|cameras)(\/|$)/.test(url.pathname)) {
+        throw new HttpError(409, "LOCAL_ONLY", "Niet beschikbaar in de cloudmodus: dit apparaat is alleen bereikbaar via je eigen netwerk.");
+      }
 
       for (const route of routes) {
         if (route.method !== req.method) continue;

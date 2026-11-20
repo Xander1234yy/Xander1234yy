@@ -15,7 +15,7 @@ import {
   type Scene,
   type Snapshot,
 } from "@homeos/shared";
-import type { AdapterEvent, DeviceAdapter, DiscoveredDevice, Logger, StatusReport } from "@homeos/integrations";
+import type { AdapterCache, AdapterContext, AdapterEvent, DeviceAdapter, DiscoveredDevice, Logger, StatusReport } from "@homeos/integrations";
 import type { Journal } from "./journal";
 import type { SecretStore } from "./secret-store";
 import type { StateStore } from "./state-store";
@@ -58,6 +58,9 @@ export interface RegistryOptions {
   logger: Logger;
   pollIntervalMs: number;
   now?: () => Date;
+  /** Cloudmodus: geen timers; adapters bewaren hun gegevens via deze cache. */
+  serverless?: boolean;
+  adapterCache?: (adapterId: string) => AdapterCache;
 }
 
 const deviceId = (adapter: DeviceAdapter, externalId: string) => `${adapter.id}:${externalId}`;
@@ -83,15 +86,20 @@ export class DeviceRegistry extends EventEmitter {
 
   // ---------- levenscyclus ----------
 
+  private contextFor(adapter: DeviceAdapter): AdapterContext {
+    return {
+      logger: this.o.logger,
+      now: this.now,
+      emit: (e) => this.onAdapterEvent(adapter, e),
+      secrets: this.o.secrets.scoped(adapter.id),
+      ...(this.o.serverless ? { serverless: true, ...(this.o.adapterCache ? { cache: this.o.adapterCache(adapter.id) } : {}) } : {}),
+    };
+  }
+
   async start(): Promise<void> {
     for (const adapter of this.o.adapters) {
       try {
-        await adapter.connect({
-          logger: this.o.logger,
-          now: this.now,
-          emit: (e) => this.onAdapterEvent(adapter, e),
-          secrets: this.o.secrets.scoped(adapter.id),
-        });
+        await adapter.connect(this.contextFor(adapter));
         await this.discoverAdapter(adapter);
       } catch (err) {
         this.o.logger.error("Adapter kon niet verbinden", { adapter: adapter.id, error: String(err) });
@@ -106,6 +114,7 @@ export class DeviceRegistry extends EventEmitter {
       await this.o.store.save();
     }
     await this.syncAll("system");
+    if (this.o.serverless) return;
     this.pollTimer = setInterval(() => void this.syncAll("system"), this.o.pollIntervalMs);
     this.pollTimer.unref?.();
   }
@@ -114,12 +123,7 @@ export class DeviceRegistry extends EventEmitter {
   async addAdapter(adapter: DeviceAdapter, autoAdd = false): Promise<void> {
     if (this.o.adapters.some((a) => a.id === adapter.id)) await this.removeAdapter(adapter.id, false);
     this.o.adapters.push(adapter);
-    await adapter.connect({
-      logger: this.o.logger,
-      now: this.now,
-      emit: (e) => this.onAdapterEvent(adapter, e),
-      secrets: this.o.secrets.scoped(adapter.id),
-    });
+    await adapter.connect(this.contextFor(adapter));
     await this.discoverAdapter(adapter);
     if (autoAdd) {
       const roomIds = new Set(this.o.store.state.rooms.map((r) => r.id));
@@ -523,6 +527,11 @@ export class DeviceRegistry extends EventEmitter {
     const base = rest.length ? (rest.length === 1 ? rest[0]! : combineHistories(rest)) : null;
     if (!grid.length) return base;
     return mergeGridHistory(base, grid[0]!);
+  }
+
+  /** Cloudmodus: wacht tot logboeken en opslag zijn weggeschreven. */
+  async flush(): Promise<void> {
+    await Promise.all([this.o.audit.flush(), this.o.events.flush(), this.o.store.save()]);
   }
 
   /** Auditregel voor acties buiten de opdrachten om (bijv. camerabeeld bekeken). */

@@ -31,6 +31,24 @@ export class ZonneplanAdapter implements DeviceAdapter {
   private lastOk: string | null = null;
   private lastError: string | null = null;
   private metaTimer: ReturnType<typeof setInterval> | null = null;
+  private lastMetaAt = 0;
+  private lastTotalsAt = 0;
+
+  private async restore() {
+    const c = (await this.ctx?.cache?.load()) as { meta?: P1Meta; groups?: MeasurementGroup[]; lastOk?: string | null; lastMetaAt?: number; lastTotalsAt?: number; budget?: unknown } | null;
+    if (!c) return;
+    if (c.meta) this.meta = c.meta;
+    if (Array.isArray(c.groups)) this.groups = c.groups;
+    this.lastOk = c.lastOk ?? null;
+    this.lastMetaAt = c.lastMetaAt ?? 0;
+    this.lastTotalsAt = c.lastTotalsAt ?? 0;
+    this.budget.importState(c.budget);
+  }
+
+  private async persist() {
+    if (!this.ctx?.serverless) return;
+    await this.ctx.cache?.save({ meta: this.meta, groups: this.groups, lastOk: this.lastOk, lastMetaAt: this.lastMetaAt, lastTotalsAt: this.lastTotalsAt, budget: this.budget.exportState() });
+  }
   private totalsTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -52,6 +70,13 @@ export class ZonneplanAdapter implements DeviceAdapter {
     }
     if (!this.tokens) {
       this.lastError = "Niet ingelogd bij Zonneplan";
+      return;
+    }
+    if (ctx.serverless) {
+      await this.restore();
+      if (Date.now() - this.lastMetaAt >= META_MS) await this.refreshMeta();
+      if (Date.now() - this.lastTotalsAt >= TOTALS_MS) await this.refreshTotals();
+      await this.persist();
       return;
     }
     await this.refreshMeta();
@@ -100,6 +125,7 @@ export class ZonneplanAdapter implements DeviceAdapter {
       const c = conns.find((x) => x.connectionUuid === this.config.connectionUuid);
       if (!c?.p1) throw new ZonneplanError("Geen Zonneplan Connect meer gevonden bij deze aansluiting", "SERVER");
       this.meta = c.p1.meta;
+      this.lastMetaAt = Date.now();
       this.lastOk = new Date().toISOString();
       this.lastError = null;
     } catch (e) {
@@ -111,6 +137,7 @@ export class ZonneplanAdapter implements DeviceAdapter {
   private async refreshTotals() {
     try {
       this.groups = await this.call((t) => this.api.electricity(t, this.config.connectionUuid));
+      this.lastTotalsAt = Date.now();
     } catch {
       /* totalen zijn aanvullend; status komt van refreshMeta */
     }

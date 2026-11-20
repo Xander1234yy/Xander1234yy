@@ -1,5 +1,4 @@
-import { appendFile, readFile } from "node:fs/promises";
-import path from "node:path";
+import { appendLine, joinPath, readLines } from "./fs-utils";
 
 /** Append-only JSONL-logboek met een in-memory staart (audit- en gebeurtenislog). */
 export class Journal<T extends object> {
@@ -11,11 +10,10 @@ export class Journal<T extends object> {
   ) {}
 
   static async open<T extends object>(dataDir: string | null, name: string, keep = 500): Promise<Journal<T>> {
-    const j = new Journal<T>(dataDir ? path.join(dataDir, "logs", `${name}.jsonl`) : null, keep);
+    const j = new Journal<T>(dataDir ? joinPath(dataDir, "logs", `${name}.jsonl`) : null, keep);
     if (j.file) {
       try {
-        const lines = (await readFile(j.file, "utf8")).trim().split("\n").slice(-keep);
-        j.tail = lines.filter(Boolean).map((l) => JSON.parse(l) as T);
+        j.tail = (await readLines(j.file, keep)).map((l) => JSON.parse(l) as T);
       } catch {
         j.tail = [];
       }
@@ -23,10 +21,19 @@ export class Journal<T extends object> {
     return j;
   }
 
+  /** Voor de cloudmodus: wacht tot alle schrijfacties klaar zijn voordat de functie eindigt. */
+  private pending: Promise<void> = Promise.resolve();
+  flush(): Promise<void> {
+    return this.pending;
+  }
+
   append(entry: T): void {
     this.tail.push(entry);
     if (this.tail.length > this.keep) this.tail.splice(0, this.tail.length - this.keep);
-    if (this.file) void appendFile(this.file, JSON.stringify(entry) + "\n", { mode: 0o600 }).catch(() => undefined);
+    if (this.file) {
+      const file = this.file;
+      this.pending = this.pending.then(() => appendLine(file, JSON.stringify(entry))).catch(() => undefined);
+    }
   }
 
   /** Nieuwste eerst. */

@@ -3,7 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { getSupabaseConfig, localModeAllowed, SESSION_COOKIE_OPTIONS } from "@/lib/supabase/config";
 import { ACCESS_COOKIE, accessCode, isLoopbackRequest, validAccessCookie } from "@/lib/server/local-access";
 
-const PUBLIC_PATHS = ["/login", "/registreren", "/wachtwoord-vergeten", "/auth/", "/setup"];
+// /api/cloud/tick heeft een eigen geheim (geplande taak), geen gebruikerssessie.
+const PUBLIC_PATHS = ["/login", "/registreren", "/wachtwoord-vergeten", "/auth/", "/setup", "/api/cloud/tick"];
 
 /**
  * Draait vóór iedere pagina en API-route:

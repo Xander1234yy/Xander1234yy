@@ -18,8 +18,8 @@ const nextConfig: NextConfig = {
   ...(allowedOrigins.length ? { experimental: { serverActions: { allowedOrigins } } } : {}),
   poweredByHeader: false,
   reactStrictMode: true,
-  transpilePackages: ["@homeos/shared", "@homeos/ui", "@homeos/automation", "@homeos/jarvis"],
-  serverExternalPackages: ["ws"],
+  transpilePackages: ["@homeos/shared", "@homeos/ui", "@homeos/automation", "@homeos/jarvis", "@homeos/integrations", "@homeos/connector"],
+  serverExternalPackages: ["ws", "web-push", "postgres", "@matter/main", "@matter/nodejs", "@project-chip/matter.js"],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

@@ -2,7 +2,7 @@
   "name": "@homeos/connector",
   "version": "0.1.0",
   "private": true,
-  "description": "HomeOS Device Connector — draait lokaal op je laptop en praat met je apparaten.",
+  "description": "HomeOS Device Connector \u2014 draait lokaal op je laptop en praat met je apparaten.",
   "type": "module",
   "bin": {
     "homeos-connector": "./src/index.ts"
@@ -28,5 +28,8 @@
   "devDependencies": {
     "@types/web-push": "3.6.4",
     "@types/ws": "8.18.2"
+  },
+  "exports": {
+    "./cloud": "./src/cloud.ts"
   }
 }

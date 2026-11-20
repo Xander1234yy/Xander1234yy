@@ -105,9 +105,28 @@ export class SolarEdgeAdapter implements DeviceAdapter {
       this.lastError = "Geen API-key opgeslagen";
       return;
     }
+    if (ctx.serverless) {
+      await this.restore();
+      await this.refreshOverview();
+      return;
+    }
     await this.refreshOverview();
     this.timer = setInterval(() => void this.refreshOverview(), 60_000);
     this.timer.unref?.();
+  }
+
+  private async restore() {
+    const c = (await this.ctx?.cache?.load()) as { overview?: Overview["overview"]; overviewAt?: number; history?: [EnergyRange, { at: number; data: EnergyHistory }][]; budget?: unknown } | null;
+    if (!c) return;
+    if (c.overview) this.overview = c.overview;
+    if (typeof c.overviewAt === "number") this.overviewAt = c.overviewAt;
+    if (Array.isArray(c.history)) this.history = new Map(c.history);
+    this.budget.importState(c.budget);
+  }
+
+  private async persist() {
+    if (!this.ctx?.serverless) return;
+    await this.ctx.cache?.save({ overview: this.overview, overviewAt: this.overviewAt, history: [...this.history], budget: this.budget.exportState() });
   }
 
   async disconnect(): Promise<void> {
@@ -140,6 +159,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
       this.ctx?.logger.warn("SolarEdge verversen mislukt", { error: this.lastError });
     }
     this.ctx?.emit({ type: "device_state", externalId: "site", report: this.report() });
+    await this.persist();
   }
 
   private measuredAt(): string | null {
@@ -225,6 +245,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
     try {
       const data = await this.fetchHistory(range);
       this.history.set(range, { at: this.nowMs(), data });
+      await this.persist();
       return data;
     } catch (err) {
       if (cached) return cached.data; // liever oudere historie (met eigen tijden) dan niets

@@ -1,7 +1,6 @@
-import path from "node:path";
 import { z } from "zod";
 import { RoomSchema, type Room } from "@homeos/shared";
-import { readFileOrNull, writeFileAtomic } from "./fs-utils";
+import { readFileOrNull, writeFileAtomic, joinPath } from "./fs-utils";
 
 const PersistedSchema = z.object({
   version: z.literal(1),
@@ -35,7 +34,7 @@ export class StateStore {
   ) {}
 
   static async open(dataDir: string | null): Promise<StateStore> {
-    const file = dataDir ? path.join(dataDir, "registry.json") : null;
+    const file = dataDir ? joinPath(dataDir, "registry.json") : null;
     let state = initial();
     if (file) {
       const raw = await readFileOrNull(file);

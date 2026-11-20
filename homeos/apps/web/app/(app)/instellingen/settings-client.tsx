@@ -8,6 +8,7 @@ import { api, connectorPath } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { HueCard } from "@/components/settings/hue-card";
+import { HueCloudCard } from "@/components/settings/hue-cloud-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
 import { ZonneplanCard } from "@/components/settings/zonneplan-card";
@@ -37,7 +38,7 @@ function Planned({ phase, children }: { phase: number; children: React.ReactNode
   );
 }
 
-export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNode }) {
+export function SettingsClient({ cloudSection, cloudRuntime = false }: { cloudSection?: React.ReactNode; cloudRuntime?: boolean }) {
   const { snapshot, connector, lastSync, setEmergencyStop } = useHome();
   const live = useLive();
   const mayControl = useCan("control");
@@ -76,9 +77,17 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
           ) : (
             <p className="text-sm text-muted">Nog geen verbinding met de connector.</p>
           )}
-          <p className="mt-4 text-xs text-muted">
-            De connector draait op je laptop en is alleen lokaal bereikbaar. Het toegangstoken staat uitsluitend server-side; de browser praat nooit rechtstreeks met de connector.
-          </p>
+          {cloudRuntime ? (
+            <p className="mt-4 rounded-xl bg-accent/10 px-3 py-2 text-xs text-accent-soft" data-testid="cloud-mode-note">
+              HomeOS draait in de cloud (Vercel + Supabase): je laptop hoeft niet aan te staan. Alleen apparaten met een cloudkoppeling werken
+              (Daikin, Smart Life, SolarEdge, Zonneplan, Hue via de Hue-cloud). Tv, camera en Matter zijn alleen bereikbaar via je eigen netwerk en daarom
+              uitgeschakeld.
+            </p>
+          ) : (
+            <p className="mt-4 text-xs text-muted">
+              De connector draait op je laptop en is alleen lokaal bereikbaar. Het toegangstoken staat uitsluitend server-side; de browser praat nooit rechtstreeks met de connector.
+            </p>
+          )}
         </SectionCard>
 
         <SectionCard title="Noodstop" icon={OctagonPause}>
@@ -91,14 +100,18 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
           </div>
         </SectionCard>
 
-        <HueCard />
+        {cloudRuntime ? <HueCloudCard /> : <HueCard />}
         <SolarEdgeCard />
         <ZonneplanCard />
         <DaikinCard />
         <TuyaCard />
-        <MatterCard />
-        <TvCard />
-        <TapoCard />
+        {!cloudRuntime && (
+          <>
+            <MatterCard />
+            <TvCard />
+            <TapoCard />
+          </>
+        )}
 
         <SectionCard title="Integraties" icon={Plug}>
           <ul className="space-y-2">

@@ -30,6 +30,18 @@ export interface AdapterContext {
   emit(event: AdapterEvent): void;
   /** Versleutelde, uitsluitend lokale opslag voor tokens van deze adapter. */
   secrets: SecretAccess;
+  /**
+   * Cloudmodus (serverless): geen timers; de adapter bewaart zijn laatste gegevens en budget via `cache` en ververst
+   * alleen als de gegevens verouderd zijn. Iedere aanvraag start een nieuwe adapter.
+   */
+  serverless?: boolean;
+  cache?: AdapterCache;
+}
+
+/** Niet-geheime tussenopslag per adapter (laatste API-antwoorden, budget). */
+export interface AdapterCache {
+  load(): Promise<unknown>;
+  save(value: unknown): Promise<void>;
 }
 
 export interface SecretAccess {

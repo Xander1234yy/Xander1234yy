@@ -1,4 +1,5 @@
 import "server-only";
+import { cloudRuntimeEnabled } from "@/lib/cloud/runtime";
 import { can, type HouseholdRole, type Permission } from "@homeos/shared";
 import { getSession } from "@/lib/session";
 import { authMode, localModeAllowed } from "@/lib/supabase/config";
@@ -45,6 +46,8 @@ export async function connectorIdentity(force = false): Promise<{ connectorId: s
 /** In cloudmodus mag een huishouden alleen de connector gebruiken die eraan gekoppeld is. */
 export async function assertConnectorLinked(ctx: AuthzContext): Promise<Response | null> {
   if (ctx.mode === "local") return null;
+  // Cloudmodus: ieder huishouden heeft zijn eigen connector in de cloud; er is niets te koppelen.
+  if (cloudRuntimeEnabled()) return null;
   const supabase = await createSupabaseServer();
   const { data } = await supabase.from("connector_status").select("connector_id").eq("household_id", ctx.householdId!).maybeSingle();
   if (!data) return jsonError(409, "CONNECTOR_NOT_LINKED", "Koppel eerst de connector aan dit huishouden (Instellingen)");

@@ -1,7 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
-import path from "node:path";
 import type { SecretAccess } from "@homeos/integrations";
-import { readFileOrNull, writeFileAtomic } from "./fs-utils";
+import { readFileOrNull, writeFileAtomic, joinPath } from "./fs-utils";
 
 /**
  * Versleutelde lokale opslag (AES-256-GCM) voor integratietokens, zoals de Hue application key.
@@ -21,7 +20,7 @@ export class SecretStore {
     if (this.key) return this.key;
     let secret = this.masterSecret;
     if (!secret) {
-      const keyFile = path.join(this.dataDir, "master.key");
+      const keyFile = joinPath(this.dataDir, "master.key");
       secret = (await readFileOrNull(keyFile))?.trim() ?? null;
       if (!secret) {
         secret = randomBytes(32).toString("base64url");
@@ -33,7 +32,7 @@ export class SecretStore {
   }
 
   private get file() {
-    return path.join(this.dataDir, "secrets.enc");
+    return joinPath(this.dataDir, "secrets.enc");
   }
 
   private async load(): Promise<Record<string, string>> {

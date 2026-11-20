@@ -75,6 +75,28 @@ export class AutomationEngine {
 
   constructor(private readonly d: EngineDeps) {}
 
+  /** Cloudmodus: de toestand (laatste runs, drempelovergangen) bewaren tussen ticks. */
+  exportState() {
+    return {
+      lastRun: [...this.lastRun],
+      runsToday: [...this.runsToday],
+      firedTimes: [...this.firedTimes].slice(-500),
+      edge: [...this.edge],
+      offlineFired: [...this.offlineFired],
+      offlineSeen: [...this.offlineSeen],
+    };
+  }
+  importState(s: unknown) {
+    const v = (s ?? {}) as Partial<ReturnType<AutomationEngine["exportState"]>>;
+    const arr = <T>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : []);
+    this.lastRun = new Map(arr<[string, number]>(v.lastRun));
+    this.runsToday = new Map(arr<[string, { day: string; count: number }]>(v.runsToday));
+    this.firedTimes = new Set(arr<string>(v.firedTimes));
+    this.edge = new Map(arr<[string, boolean]>(v.edge));
+    this.offlineFired = new Set(arr<string>(v.offlineFired));
+    this.offlineSeen = new Map(arr<[string, number]>(v.offlineSeen));
+  }
+
   setAutomations(list: Automation[]): void {
     this.automations = list;
     const ids = new Set(list.map((a) => a.id));

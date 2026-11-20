@@ -48,6 +48,19 @@ export class RequestBudget {
     this.blockedUntil = Math.max(this.blockedUntil, this.now() + seconds * 1000);
   }
 
+  /** Voor de cloudmodus: budget bewaren tussen aanvragen. */
+  exportState(): { calls: number[]; blockedUntil: number } {
+    this.prune();
+    return { calls: [...this.calls], blockedUntil: this.blockedUntil };
+  }
+  importState(s: unknown): void {
+    const v = s as { calls?: unknown; blockedUntil?: unknown } | null;
+    if (!v) return;
+    if (Array.isArray(v.calls)) this.calls = v.calls.filter((n): n is number => typeof n === "number").sort((a, b) => a - b).slice(-this.perDay * 2);
+    if (typeof v.blockedUntil === "number") this.blockedUntil = v.blockedUntil;
+    this.prune();
+  }
+
   blockedForSeconds(): number {
     return Math.max(0, Math.ceil((this.blockedUntil - this.now()) / 1000));
   }

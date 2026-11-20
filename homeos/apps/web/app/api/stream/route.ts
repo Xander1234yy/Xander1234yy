@@ -4,6 +4,7 @@ import { assertConnectorLinked, authorize } from "@/lib/server/authz";
 import { syncRoomsToConnector } from "@/lib/server/rooms-sync";
 import { mirrorEvent, mirrorNotification, mirrorRun, mirrorSnapshot } from "@/lib/server/registry-mirror";
 import { connectorFetch } from "@/lib/server/connector-client";
+import { cloudRuntimeEnabled } from "@/lib/cloud/runtime";
 import { can, type DeviceEvent, type Snapshot } from "@homeos/shared";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,18 @@ export async function GET(req: Request) {
     });
   }
   if (auth.ctx.mode === "cloud") await syncRoomsToConnector(auth.ctx.householdId!);
+  if (cloudRuntimeEnabled()) {
+    // Cloudmodus: geen blijvende verbinding (serverless). Eén momentopname, daarna vraagt de browser na 15 s opnieuw.
+    let body = "retry: 15000\n\n";
+    try {
+      const res = await connectorFetch("/v1/snapshot");
+      body += `event: connector\ndata: ${JSON.stringify({ online: res.ok })}\n\n`;
+      if (res.ok) body += `event: snapshot\ndata: ${await res.text()}\n\n`;
+    } catch {
+      body += `event: connector\ndata: ${JSON.stringify({ online: false, reason: "unreachable" })}\n\n`;
+    }
+    return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store" } });
+  }
   const token = await getConnectorToken();
   // Beheerders spiegelen de registry naar Supabase (RLS staat schrijven alleen voor beheerders toe).
   const mirrorTo = auth.ctx.mode === "cloud" && can(auth.ctx.role, "manage_devices") ? auth.ctx.householdId : null;

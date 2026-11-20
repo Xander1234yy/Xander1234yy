@@ -5,6 +5,7 @@ import { connectorIdentity } from "@/lib/server/authz";
 import { getSession } from "@/lib/session";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { SettingsClient } from "./settings-client";
+import { cloudRuntimeEnabled } from "@/lib/cloud/runtime";
 
 export const metadata: Metadata = { title: "Instellingen" };
 export const dynamic = "force-dynamic";
@@ -12,6 +13,21 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const s = await getSession();
   if (s.mode === "local" || !s.household) return <SettingsClient />;
+  if (cloudRuntimeEnabled()) {
+    const supabase = await createSupabaseServer();
+    const members = await supabase.rpc("household_member_list", { p_household: s.household.id });
+    return (
+      <SettingsClient
+        cloudRuntime
+        cloudSection={
+          <>
+            <MembersCard members={(members.data ?? []) as MemberRow[]} />
+            <HouseholdCard />
+          </>
+        }
+      />
+    );
+  }
   const supabase = await createSupabaseServer();
   const [members, link, identity] = await Promise.all([
     supabase.rpc("household_member_list", { p_household: s.household.id }),

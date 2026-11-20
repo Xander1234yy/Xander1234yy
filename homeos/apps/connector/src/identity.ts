@@ -1,7 +1,6 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import path from "node:path";
 import { z } from "zod";
-import { readFileOrNull, writeFileAtomic } from "./fs-utils";
+import { readFileOrNull, writeFileAtomic, joinPath } from "./fs-utils";
 
 const IdentitySchema = z.object({ connectorId: z.uuid(), createdAt: z.string() });
 export type ConnectorIdentity = z.infer<typeof IdentitySchema> & { apiToken: string };
@@ -13,8 +12,8 @@ export const TOKEN_FILE = "api-token";
  * wordt server-side door de HomeOS webapp gebruikt — nooit in de browser.
  */
 export async function loadOrCreateIdentity(dataDir: string): Promise<ConnectorIdentity> {
-  const idFile = path.join(dataDir, "identity.json");
-  const tokenFile = path.join(dataDir, TOKEN_FILE);
+  const idFile = joinPath(dataDir, "identity.json");
+  const tokenFile = joinPath(dataDir, TOKEN_FILE);
   let identity = parseIdentity(await readFileOrNull(idFile));
   if (!identity) {
     identity = { connectorId: randomUUID(), createdAt: new Date().toISOString() };
@@ -30,7 +29,7 @@ export async function loadOrCreateIdentity(dataDir: string): Promise<ConnectorId
 
 export async function rotateToken(dataDir: string): Promise<string> {
   const apiToken = randomBytes(32).toString("base64url");
-  await writeFileAtomic(path.join(dataDir, TOKEN_FILE), apiToken + "\n");
+  await writeFileAtomic(joinPath(dataDir, TOKEN_FILE), apiToken + "\n");
   return apiToken;
 }
 
