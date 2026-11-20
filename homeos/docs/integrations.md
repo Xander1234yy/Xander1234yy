@@ -88,10 +88,25 @@ Getest met nagebootste API-antwoorden; nog niet tegen jouw echte installatie.
   (batterij, via hub H200) ondersteunt dit officieel niet.
 - Daarom: geen belmeldingen in HomeOS (nog niet), wel eventueel een live beeld (privé, nooit openbaar) als je model het
   officieel ondersteunt.
-- **Jouw situatie: Tapo D235 op batterij.** In deze opstelling is er geen officiële koppeling: RTSP/ONVIF werkt bij de D235
+- **Jouw situatie: Tapo D235 op batterij (bevestigd: blijft op batterij).** In deze opstelling is er geen officiële koppeling: RTSP/ONVIF werkt bij de D235
   alleen bedraad (met jumperkabel en "always-on"). HomeOS toont de deurbel daarom als "niet ondersteund in deze opstelling",
   met uitleg. Wordt hij later bedraad, dan kan HomeOS het live beeld tonen; belmeldingen blijven ook dan officieel
   onbeschikbaar. De DEMO-deurbel blijft beschikbaar om de interface te testen.
+
+### Tapo-camera's (C500) ✅ gebouwd — getest met een nagebootste camera en echte ffmpeg, nog niet met jouw C500
+- **Route:** TP-Link's officiële koppeling voor recorders van derden: ONVIF Profile S (poort 2020) en RTSP (poort 554,
+  `stream1` hoog / `stream2` laag) met een apart **camera-account** uit de Tapo-app. Alleen camera's op netstroom.
+- **Wat HomeOS doet:** status (ONVIF), bewegings- en persoonsmeldingen (ONVIF PullPoint; meldingen max. eens per 5 min per
+  camera, categorie Beveiliging), draaien/kantelen (ONVIF PTZ, alleen handmatig), momentopname en live beeld.
+- **Beeld:** ffmpeg op de laptop zet `stream2` om naar MJPEG (5 beelden/s). Eén ffmpeg-proces per camera, gedeeld door
+  kijkers, stopt na 10 s zonder kijkers of na 15 min. ffmpeg: `brew install ffmpeg` (of `HOMEOS_FFMPEG_PATH`).
+- **Privacy:** beelden gaan camera → connector → ingelogde webapp, nooit via een cloud, en worden niet opgeslagen.
+  Alleen leden en hoger (`view_cameras`), geen gasten. Iedere live-weergave in de auditlog. Jarvis en automatiseringen
+  kunnen camera's niet bedienen (`SAFETY_CRITICAL_KINDS`); Jarvis kan wel vertellen wanneer er beweging was.
+- **Beperkingen:** ONVIF en RTSP op Tapo zijn niet versleuteld (HTTP/RTSP op je eigen netwerk). Het ONVIF-wachtwoord gaat
+  als digest, RTSP met digest-authenticatie. Het RTSP-adres met wachtwoord staat in de ffmpeg-opdrachtregel en is dus
+  zichtbaar voor andere gebruikers op dezelfde Mac (`ps`). Tapo staat max. twee van: Tapo Care, SD-kaart, ONVIF/RTSP toe;
+  met alleen een SD-kaart is dat geen probleem.
 
 ### IKEA Home smart ✅ via Matter (met beperkingen)
 - IKEA heeft **geen officiële publieke API** voor de DIRIGERA-hub. Bestaande integraties gebruiken een

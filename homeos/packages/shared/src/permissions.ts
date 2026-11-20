@@ -13,6 +13,7 @@ export const ROLE_LABEL: Record<HouseholdRole, string> = {
 
 export type Permission =
   | "view" // dashboard en status bekijken
+  | "view_cameras" // camerabeelden bekijken (privacygevoelig: niet voor gasten)
   | "control" // apparaten bedienen, scènes, noodstop
   | "family_write" // agenda, taken, boodschappen, notities, onderhoud
   | "manage_devices" // apparaten toevoegen/verwijderen/hernoemen/verplaatsen, connector koppelen
@@ -26,6 +27,7 @@ const RANK: Record<HouseholdRole, number> = { guest: 0, member: 1, admin: 2, own
 
 const MIN_ROLE: Record<Permission, HouseholdRole> = {
   view: "guest",
+  view_cameras: "member",
   control: "member",
   family_write: "member",
   manage_devices: "admin",
@@ -54,6 +56,10 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
     if (path === "v1/notifications/preferences") return m === "GET" ? "view" : "manage_household";
     return m === "GET" || path === "v1/notifications/read" ? "view" : null;
   }
+  if (/^v1\/cameras(\/|$)/.test(path)) {
+    return m === "GET" && /^v1\/cameras(\/[^/]+\/(snapshot|stream))?$/.test(path) ? "view_cameras" : null;
+  }
+  if (/^v1\/integrations\/tapo(\/[0-9a-f]{16})?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
   if (m === "GET") {
     if (/^v1\/audit$/.test(path)) return "view_audit";
     if (/^v1\/(snapshot|devices\/available|energy\/(summary|history)|events|integrations)$/.test(path)) return "view";

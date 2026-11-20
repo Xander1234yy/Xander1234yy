@@ -72,7 +72,7 @@ test.describe.serial("accounts, huishoudens en rollen", () => {
     await page.getByRole("tab", { name: /Boodschappen/ }).click();
     await page.getByLabel("Product").fill("Appels");
     await page.getByLabel("Aantal").fill("1 kg");
-    await page.getByRole("button", { name: "Toevoegen" }).click();
+    await page.getByRole("button", { name: "Toevoegen", exact: true }).click();
     await expect(page.getByText("Appels")).toBeVisible();
 
     await page.goto("/jarvis");
@@ -107,7 +107,7 @@ test.describe.serial("accounts, huishoudens en rollen", () => {
 
     await page.goto("/kamers");
     await page.getByLabel("Nieuwe kamer").fill("Zolder");
-    await page.getByRole("button", { name: "Toevoegen" }).click();
+    await page.getByRole("button", { name: "Toevoegen", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Zolder" })).toBeVisible();
     await signOutVia(page);
   });
@@ -119,7 +119,7 @@ test.describe.serial("accounts, huishoudens en rollen", () => {
     await page.goto("/instellingen");
     await page.getByLabel("E-mailadres").fill(guest.email);
     await page.getByLabel("Rol", { exact: true }).selectOption("guest");
-    await page.getByRole("button", { name: "Toevoegen" }).click();
+    await page.getByRole("button", { name: "Toevoegen", exact: true }).click();
     await expect(page.getByTestId("members-card")).toContainText(guest.email);
     await signOutVia(page);
 

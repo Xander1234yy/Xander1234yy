@@ -7,21 +7,30 @@ import { DeviceReadings } from "@/components/devices/device-card";
 import { DemoBadge, StatusBadge } from "@/components/devices/status-badge";
 import { FreshnessNote } from "@/components/devices/freshness";
 import { useHome } from "@/lib/home-context";
+import { CameraCard } from "@/components/cameras/camera-card";
 import { formatDateTime } from "@/lib/format";
 
 export default function SecurityPage() {
   const { snapshot, events } = useHome();
   const bells = (snapshot?.devices ?? []).filter((d) => d.kind === "doorbell");
-  const ids = new Set(bells.map((b) => b.id));
+  const cameras = (snapshot?.devices ?? []).filter((d) => d.kind === "camera");
+  const ids = new Set([...bells, ...cameras].map((b) => b.id));
   const securityEvents = events.filter((e) => ids.has(e.deviceId) || e.type === "status_change");
   return (
     <div>
-      <PageHeader title="Beveiliging" description="Deurbel, meldingen en privacy." />
+      <PageHeader title="Beveiliging" description="Camera's, deurbel, meldingen en privacy." />
+      {cameras.length > 0 && (
+        <div className="mb-5 grid gap-5 md:grid-cols-2">
+          {cameras.map((c) => (
+            <CameraCard key={c.id} device={c} />
+          ))}
+        </div>
+      )}
       <div className="grid gap-5 lg:grid-cols-12">
         <div className="space-y-5 lg:col-span-5">
           {bells.length === 0 && (
             <EmptyState icon={BellRing} title="Geen deurbel gekoppeld">
-              Deurbelintegraties volgen in fase 4 via officiële koppelingen.
+              Een Tapo-deurbel op batterij heeft geen officiële lokale koppeling. Aangesloten op een trafo met &quot;always-on&quot; kan hij als camera worden toegevoegd.
             </EmptyState>
           )}
           {bells.map((b) => (
@@ -42,14 +51,14 @@ export default function SecurityPage() {
           ))}
           <SectionCard title="Privacy" icon={EyeOff}>
             <ul className="space-y-2 text-sm text-muted">
-              <li>• Camerabeelden worden nooit openbaar toegankelijk gemaakt.</li>
-              <li>• Momenteel worden geen snapshots of video opgeslagen.</li>
-              <li>• Gebeurtenissen staan alleen lokaal in het connectorlogboek op je laptop.</li>
-              <li>• Instelbare bewaartermijnen en snapshots (indien de integratie dat officieel ondersteunt) volgen in fase 4.</li>
+              <li>• Camerabeelden gaan alleen van de camera via je laptop naar de ingelogde webapp; nooit openbaar.</li>
+              <li>• HomeOS slaat geen beelden of video op. Opnames blijven op de SD-kaart in de camera.</li>
+              <li>• Alleen leden van het huishouden zien beelden; gasten niet. Iedere live-weergave staat in de auditlog.</li>
+              <li>• Jarvis en automatiseringen kunnen camera&apos;s niet bewegen of bekijken.</li>
             </ul>
           </SectionCard>
         </div>
-        <SectionCard title="Meldingen" description="Deurbel en verbindingswijzigingen" icon={ShieldCheck} className="lg:col-span-7">
+        <SectionCard title="Meldingen" description="Beweging, deurbel en verbindingswijzigingen" icon={ShieldCheck} className="lg:col-span-7">
           {securityEvents.length === 0 ? (
             <p className="text-sm text-muted">Nog geen meldingen.</p>
           ) : (

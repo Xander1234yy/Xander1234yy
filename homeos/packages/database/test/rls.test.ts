@@ -192,3 +192,13 @@ describe("migratie 3: LG webOS", () => {
     ).rejects.toThrow(/integration_type_check/);
   });
 });
+
+describe("migratie 4: camera's", () => {
+  it("accepteert camera's als apparaat en tapo_camera als integratie, zonder wachtwoord", async () => {
+    await t.as(owner, "insert into public.devices (household_id, external_id, name, kind) values ($1, 'tapo-abcdef:camera', 'Tuin', 'camera')", [home]);
+    await t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'tapo_camera', 'Tuin', '{\"host\":\"192.168.68.40\"}')", [home]);
+    await expect(
+      t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'tapo_camera', 'Tuin', '{\"password\":\"x\"}')", [home]),
+    ).rejects.toThrow(/no_secrets/);
+  });
+});

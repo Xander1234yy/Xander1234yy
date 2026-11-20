@@ -22,6 +22,7 @@ import type { HueService } from "./hue-service";
 import { SetupError, type CloudIntegrations } from "./cloud-service";
 import type { MatterService } from "./matter-service";
 import type { WebOsService } from "./webos-service";
+import type { CameraService } from "./camera-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
 
@@ -38,6 +39,7 @@ export interface ServerOptions {
   cloud: CloudIntegrations;
   matter: MatterService;
   webos: WebOsService;
+  cameras: CameraService;
   automations: AutomationService;
 }
 
@@ -61,6 +63,11 @@ class HttpError extends Error {
   ) {
     super(message);
   }
+}
+
+/** Antwoord dat zelf naar de response schrijft (afbeeldingen, videostream) in plaats van JSON. */
+class RawResponse {
+  constructor(readonly write: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>) {}
 }
 
 type Handler = (ctx: { req: IncomingMessage; params: string[]; url: URL; body: () => Promise<unknown> }) => Promise<unknown>;
@@ -131,7 +138,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list() }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list() }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -215,6 +222,76 @@ export function createConnectorServer(o: ServerOptions) {
         return { ok: true };
       },
     },
+    // ───── Tapo-camera's ─────
+    { method: "GET", pattern: /^\/v1\/cameras$/, handler: async () => o.cameras.list() },
+    {
+      method: "GET",
+      pattern: new RegExp(`^/v1/cameras/${seg}/snapshot$`),
+      handler: async ({ params }) => {
+        const jpeg = await setup(() => o.cameras.snapshot(params[0]!));
+        return new RawResponse((_req, res) => {
+          res.writeHead(200, { "content-type": "image/jpeg", "content-length": jpeg.length, "cache-control": "no-store", "x-content-type-options": "nosniff" });
+          res.end(jpeg);
+        });
+      },
+    },
+    {
+      method: "GET",
+      pattern: new RegExp(`^/v1/cameras/${seg}/stream$`),
+      handler: async ({ params }) => {
+        const deviceId = params[0]!;
+        // Eerst controleren dat de camera bestaat, vóór er een stream-antwoord begint.
+        await setup(async () => o.cameras.check(deviceId));
+        registry.recordAudit("camera.view", deviceId, true);
+        return new RawResponse((req, res) => {
+          let unsub: (() => void) | null = null;
+          const boundary = "homeosframe";
+          const end = () => {
+            unsub?.();
+            unsub = null;
+            if (!res.writableEnded) res.end();
+          };
+          try {
+            unsub = o.cameras.subscribe(deviceId, (jpeg) => {
+              if (!res.headersSent) {
+                if (!jpeg.length) {
+                  unsub?.();
+                  return send(res, 502, { error: { code: "NO_IMAGE", message: o.cameras.lastStreamError(deviceId) ?? "Geen beeld van de camera" } });
+                }
+                res.writeHead(200, { "content-type": `multipart/x-mixed-replace; boundary=${boundary}`, "cache-control": "no-store", "x-content-type-options": "nosniff", connection: "close" });
+              }
+              if (!jpeg.length) return end();
+              if (res.writableLength > 2_000_000) return; // trage kijker: beeld overslaan
+              res.write(`--${boundary}\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`);
+              res.write(jpeg);
+              res.write("\r\n");
+            });
+          } catch (err) {
+            if (err instanceof SetupError) return send(res, err.status, { error: { code: err.code, message: err.message } });
+            throw err;
+          }
+          req.on("close", end);
+        });
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/tapo$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(
+          z.object({
+            host: z.string().trim().max(64),
+            username: z.string().trim().min(1, "Gebruikersnaam ontbreekt").max(64),
+            password: z.string().min(1, "Wachtwoord ontbreekt").max(128),
+            name: z.string().trim().max(80).optional(),
+          }),
+          await body(),
+        );
+        return setup(() => o.cameras.add(b));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/tapo\/([0-9a-f]{16})$/, handler: async ({ params }) => setup(() => o.cameras.remove(params[0]!)) },
     // ───── LG webOS-tv ─────
     { method: "POST", pattern: /^\/v1\/integrations\/webos\/discover$/, handler: async () => o.webos.discover() },
     {
@@ -364,6 +441,7 @@ export function createConnectorServer(o: ServerOptions) {
         if (route.command && !commands.take(ip)) throw new HttpError(429, "RATE_LIMITED", "Te veel opdrachten, probeer het zo opnieuw");
         const params = m.slice(1).map((p) => decodeURIComponent(p));
         const data = await route.handler({ req, params, url, body: readBody(req) });
+        if (data instanceof RawResponse) return await data.write(req, res);
         return send(res, 200, data);
       }
       throw new HttpError(404, "NOT_FOUND", "Onbekend endpoint");

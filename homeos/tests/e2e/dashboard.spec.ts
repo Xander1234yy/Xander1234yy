@@ -95,6 +95,17 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByText(/lokale IP-adres van de tv/).first()).toBeVisible();
   });
 
+  test("Tapo-camerakaart in Instellingen weigert een openbaar adres", async ({ page }) => {
+    await page.goto("/instellingen");
+    const card = page.getByTestId("tapo-card");
+    await expect(card).toContainText("Nog geen camera toegevoegd");
+    await card.getByLabel("IP-adres van de camera").fill("8.8.8.8");
+    await card.getByLabel("Gebruikersnaam camera-account").fill("homeos");
+    await card.getByLabel("Wachtwoord camera-account").fill("test-wachtwoord");
+    await card.getByRole("button", { name: "Camera toevoegen" }).click();
+    await expect(page.getByText(/lokale IP-adres van de camera/).first()).toBeVisible();
+  });
+
   test("bedient de DEMO-airco (temperatuur en modus)", async ({ page }) => {
     await page.goto("/");
     const card = page.getByTestId("climate-card");

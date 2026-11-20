@@ -15,6 +15,7 @@ import { createCloudIntegrations } from "./cloud-service";
 import { createMatterService, lazyMatterJsBackend, type MatterBackendFactory } from "./matter-service";
 import { createAutomationService } from "./automation-service";
 import { createWebOsService, realWebOsDeps, type WebOsDeps } from "./webos-service";
+import { createCameraService, type CameraDeps } from "./camera-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
 export async function createConnector(
@@ -25,6 +26,7 @@ export async function createConnector(
   fetchImpl: typeof fetch = fetch,
   matterFactory: MatterBackendFactory = lazyMatterJsBackend,
   webosDeps: WebOsDeps = realWebOsDeps,
+  cameraDeps: CameraDeps = {},
 ) {
   await ensureDir(config.dataDir);
   await ensureDir(path.join(config.dataDir, "logs"));
@@ -55,6 +57,8 @@ export async function createConnector(
   adapters.push(...matter.adapters());
   const webos = createWebOsService({ registry, secrets, store: integrations, deps: webosDeps });
   adapters.push(...webos.adapters());
+  const cameras = createCameraService({ registry, secrets, store: integrations, deps: cameraDeps });
+  adapters.push(...cameras.adapters());
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger });
 
@@ -71,6 +75,7 @@ export async function createConnector(
     cloud,
     matter,
     webos,
+    cameras,
     automations,
   });
 
@@ -85,6 +90,7 @@ export async function createConnector(
     automations,
     async stop() {
       automations.stop();
+      cameras.stopAll();
       await api.close();
       await registry.stop();
     },

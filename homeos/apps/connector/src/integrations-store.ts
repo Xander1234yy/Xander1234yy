@@ -29,6 +29,13 @@ const WebOsTvSchema = z.object({
   mac: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/).nullable(),
   pairedAt: z.string(),
 });
+const TapoCameraSchema = z.object({
+  cameraId: z.string().regex(/^[0-9a-f]{16}$/),
+  host: z.string().max(64),
+  name: z.string().max(80),
+  model: z.string().max(80),
+  addedAt: z.string(),
+});
 const Schema = z.object({
   version: z.literal(1),
   hue: z.array(HueBridgeSchema),
@@ -37,7 +44,9 @@ const Schema = z.object({
   tuya: TuyaSchema.nullable().default(null),
   matter: z.object({ enabledAt: z.string() }).nullable().default(null),
   webos: z.array(WebOsTvSchema).default([]),
+  tapo: z.array(TapoCameraSchema).default([]),
 });
+export type TapoCameraRecord = z.infer<typeof TapoCameraSchema>;
 export type WebOsTvRecord = z.infer<typeof WebOsTvSchema>;
 export type SolarEdgeRecord = z.infer<typeof SolarEdgeSchema>;
 export type HueBridgeRecord = z.infer<typeof HueBridgeSchema>;
@@ -51,7 +60,7 @@ export class IntegrationsStore {
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
     const file = dataDir ? path.join(dataDir, "integrations.json") : null;
-    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [] };
+    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [] };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {
       const p = Schema.safeParse(JSON.parse(raw));

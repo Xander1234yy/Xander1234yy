@@ -12,6 +12,7 @@ export const DeviceCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("set_volume"), volume: z.number().int().min(0).max(100) }),
   z.object({ type: z.literal("volume_step"), direction: z.enum(["up", "down"]) }),
   z.object({ type: z.literal("set_mute"), muted: z.boolean() }),
+  z.object({ type: z.literal("ptz_move"), direction: z.enum(["up", "down", "left", "right"]) }),
   z.object({ type: z.literal("select_source"), sourceId: z.string().min(1).max(200).regex(/^[\w.:-]+$/, "Ongeldige bron") }),
   z.object({
     type: z.literal("set_target_temperature"),
@@ -44,13 +45,14 @@ export const COMMAND_CAPABILITY: Record<DeviceCommand["type"], Capability> = {
   volume_step: "volume",
   set_mute: "volume",
   select_source: "source_select",
+  ptz_move: "ptz",
 };
 
 /**
  * Apparaattypen die nooit door automatiseringen of Jarvis zelfstandig bediend mogen worden.
  * (Veiligheidskritisch of privacygevoelig.)
  */
-export const SAFETY_CRITICAL_KINDS = new Set<Device["kind"]>(["doorbell", "bridge", "energy_meter", "solar_inverter"]);
+export const SAFETY_CRITICAL_KINDS = new Set<Device["kind"]>(["doorbell", "bridge", "energy_meter", "solar_inverter", "camera"]);
 
 export type CommandCheck = { ok: true } | { ok: false; code: CommandErrorCode; reason: string };
 

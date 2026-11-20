@@ -14,7 +14,7 @@ import {
   type HomeNotification,
   type NotificationCategory,
 } from "@homeos/automation";
-import type { DeviceEvent } from "@homeos/shared";
+import { SAFETY_CRITICAL_KINDS, type DeviceEvent } from "@homeos/shared";
 import type { Logger } from "@homeos/integrations";
 import { readFileOrNull, writeFileAtomic } from "./fs-utils";
 import { Journal } from "./journal";
@@ -82,9 +82,16 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
   });
   engine.setAutomations(store.automations);
 
-  // Deurbel → beveiligingsmelding.
+  // Deurbel en camerabeweging → beveiligingsmelding. Beweging maximaal eens per 5 minuten per camera.
+  const lastMotionNotice = new Map<string, number>();
   o.registry.on("event", (e: DeviceEvent) => {
     if (e.type === "doorbell_ring") notify({ category: "security", title: "Er wordt aangebeld", body: `${e.message}${e.demo ? " (DEMO)" : ""}` });
+    if (e.type === "motion") {
+      const t = Date.parse(e.at) || Date.now();
+      if (t - (lastMotionNotice.get(e.deviceId) ?? 0) < 5 * 60_000) return;
+      lastMotionNotice.set(e.deviceId, t);
+      notify({ category: "security", title: "Beweging gezien", body: `${e.message}${e.demo ? " (DEMO)" : ""}` });
+    }
   });
 
   const timer = setInterval(() => void engine.tick().catch((err) => o.logger.error("Automatisering-tick mislukt", { error: String(err) })), o.tickMs ?? TICK_MS);
@@ -104,7 +111,7 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
       if (a.type === "scene" && !scenes.has(a.sceneId)) throw new SetupError(400, "INVALID", "Onbekende scène in een actie");
       if (a.type === "device_command") {
         const d = snap.devices.find((x) => x.id === a.deviceId)!;
-        if (["doorbell", "bridge", "energy_meter", "solar_inverter"].includes(d.kind)) throw new SetupError(400, "FORBIDDEN", `${d.name} mag niet door automatiseringen bediend worden`);
+        if (SAFETY_CRITICAL_KINDS.has(d.kind)) throw new SetupError(400, "FORBIDDEN", `${d.name} mag niet door automatiseringen bediend worden`);
       }
     }
     const t = input.trigger;

@@ -42,4 +42,16 @@ describe("rollen en rechten", () => {
     expect(roomSlug("Kinderkamer Émma")).toBe("kinderkamer-emma");
     expect(roomSlug("!!!")).toBe("kamer");
   });
+
+  it("camerabeelden alleen voor leden en hoger; camera's toevoegen alleen voor beheerders", () => {
+    expect(can("guest", "view_cameras")).toBe(false);
+    expect(can("member", "view_cameras")).toBe(true);
+    expect(permissionForConnectorRoute("GET", "v1/cameras/tapo-abcdef%3Acamera/stream")).toBe("view_cameras");
+    expect(permissionForConnectorRoute("GET", "v1/cameras")).toBe("view_cameras");
+    expect(permissionForConnectorRoute("POST", "v1/cameras/x/stream")).toBeNull();
+    expect(permissionForConnectorRoute("POST", "v1/integrations/tapo")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("GET", "v1/integrations/tapo")).toBeNull();
+    expect(permissionForConnectorRoute("POST", "v1/integrations/webos/pair")).toBe("manage_devices");
+  });
 });
+

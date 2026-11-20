@@ -137,6 +137,14 @@ function handle(msg: string, original: string, ctx: JarvisContext): Partial {
   const energy = energyIntent(msg, ctx, demo, stale);
   if (energy) return energy;
 
+  // ───── camera's (alleen informatie; Jarvis bedient of bekijkt geen camera's) ─────
+  const cams = s.devices.filter((d) => d.kind === "camera");
+  if (cams.length && has(msg, "beweging", "camera", "iemand")) {
+    if (has(msg, ...COMMAND_VERBS) && !has(msg, "beweging")) return say("denied", "Camera's bedien ik bewust niet. Je kunt ze bekijken en draaien op de pagina Beveiliging.");
+    const lines = cams.map((c) => `${c.name}: ${c.status !== "ONLINE" ? "niet bereikbaar" : c.state.lastMotionAt ? `laatste beweging ${new Date(c.state.lastMotionAt).toLocaleString("nl-NL", { weekday: "short", hour: "2-digit", minute: "2-digit" })}` : "geen beweging gezien"}`);
+    return say("camera_motion", `${lines.join(". ")}.${stale}`);
+  }
+
   // ───── tv ─────
   const tv = tvIntent(msg, s, ctx, demo, stale);
   if (tv) return tv;

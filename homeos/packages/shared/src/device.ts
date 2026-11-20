@@ -25,15 +25,19 @@ export const CAPABILITIES = [
   "source_select",
   /** Kan via het netwerk worden aangezet terwijl het apparaat uit (onbereikbaar) is. */
   "wake_on_lan",
+  /** Live beeld en momentopnames (camera). */
+  "camera_stream",
+  /** Draaien/kantelen (camera). */
+  "ptz",
 ] as const;
 export const CapabilitySchema = z.enum(CAPABILITIES);
 export type Capability = z.infer<typeof CapabilitySchema>;
 
-export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate", "lg_webos"] as const;
+export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate", "lg_webos", "tapo_camera"] as const;
 export const IntegrationTypeSchema = z.enum(INTEGRATION_TYPES);
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
 
-export const DEVICE_KINDS = ["light", "plug", "media", "solar_inverter", "energy_meter", "doorbell", "bridge", "climate"] as const;
+export const DEVICE_KINDS = ["light", "plug", "media", "solar_inverter", "energy_meter", "doorbell", "bridge", "climate", "camera"] as const;
 export const DeviceKindSchema = z.enum(DEVICE_KINDS);
 export type DeviceKind = z.infer<typeof DeviceKindSchema>;
 

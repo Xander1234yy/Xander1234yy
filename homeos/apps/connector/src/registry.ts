@@ -515,6 +515,11 @@ export class DeviceRegistry extends EventEmitter {
     return ok.length === 1 ? ok[0]! : combineHistories(ok);
   }
 
+  /** Auditregel voor acties buiten de opdrachten om (bijv. camerabeeld bekeken). */
+  recordAudit(action: string, target: string | null, ok: boolean, detail: unknown = null) {
+    this.audit(action, "user", target, detail, ok);
+  }
+
   // ---------- intern ----------
 
   private audit(action: string, source: AuditEntry["source"], target: string | null, detail: unknown, ok: boolean, message?: string) {

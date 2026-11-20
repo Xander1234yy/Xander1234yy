@@ -124,6 +124,14 @@
 - Tests: 191 unit- en integratietests (met een nagebootste tv), 36 E2E-tests (lokaal), 6 (cloud). Echte test met de tv
   volgt bij de gebruiker thuis.
 
+## Na fase 6: Tapo-camera's
+
+- Tapo C500 via het officiële camera-account (ONVIF/RTSP): status, bewegingsmeldingen, draaien/kantelen, momentopname en
+  live beeld (ffmpeg → MJPEG). Camerakaarten op Beveiliging, instelkaart Tapo-camera's, nieuwe rol-permissie
+  `view_cameras` (geen gasten), camera's uitgesloten voor Jarvis en automatiseringen. Migratie 4 (apparaattype camera).
+- Deurbel D235 blijft op batterij: geen officiële koppeling, dus niet toegevoegd.
+- Tests: 205 unit- en integratietests (nagebootste ONVIF-camera, echte ffmpeg met testbeeld), 39 E2E (lokaal), 6 (cloud).
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
 - Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.

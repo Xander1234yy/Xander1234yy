@@ -15,6 +15,8 @@
 | Noodstop blokkeert alle opdrachten van automatiseringen en Jarvis | `checkCommand()` |
 | Jarvis en automatiseringen mogen deurbel, energiemeters en bridges niet bedienen | `SAFETY_CRITICAL_KINDS` |
 | Jarvis draait lokaal: vragen gaan niet naar een externe AI-dienst | `packages/jarvis` |
+| Camera's: beelden alleen voor leden+ (`view_cameras`), niet opgeslagen, live-weergave in auditlog, geen Jarvis/automatisering | `camera-service.ts`, `/api/cameras` |
+| Camera-account versleuteld; wachtwoord nooit in API-antwoorden of logs (ffmpeg-meldingen worden geschoond) | `tapo/stream.ts` (`redact`) |
 | LG-tv: alleen privé-IP's, certificaat-pinning vóór het versturen van de client-key, key versleuteld, geen wachtrij | `packages/integrations/src/webos` |
 | Jarvis doet alleen voorstellen; oude voorstellen uit de geschiedenis zijn niet te bevestigen; rollen worden gecontroleerd | `jarvis-chat.tsx`, `/api/jarvis` |
 | Jarvis-gesprekken in Supabase alleen zichtbaar voor de eigen gebruiker (RLS); in de browser alleen tekst, geen geheimen | `ai_conversations`, `lib/jarvis/settings.ts` |

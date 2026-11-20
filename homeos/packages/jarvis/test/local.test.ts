@@ -204,3 +204,15 @@ describe("lokale Jarvis: tv", () => {
     expect(respondLocal("tv uit", off).intent).toBe("noop");
   });
 });
+
+describe("lokale Jarvis: camera's", () => {
+  it("meldt beweging, maar bedient geen camera's", () => {
+    const s = snapshot();
+    s.devices.push(dev({ id: "cam1", name: "Tuin C500", kind: "camera", capabilities: ["camera_stream", "motion", "ptz"], state: { lastMotionAt: "2026-11-21T10:15:00Z" } }));
+    const c = { ...ctx(), snapshot: s };
+    expect(respondLocal("is er beweging geweest?", c).text).toContain("Tuin C500: laatste beweging");
+    const r = respondLocal("draai de camera naar links", c);
+    expect(r.actions).toEqual([]);
+    expect(r.intent).toBe("denied");
+  });
+});

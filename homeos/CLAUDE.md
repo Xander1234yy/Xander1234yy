@@ -46,6 +46,8 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   `packages/integrations/test/fake-matter.ts`; de cloudomgeving heeft geen IPv6, dus echte Matter-tests alleen lokaal.
 - LG-tv: `packages/integrations/src/webos` (SSAP over wss). Tests via `packages/integrations/test/fake-webos.ts`,
   nooit een echte tv. Wake-on-LAN alleen via de geïnjecteerde `wol`-functie in tests.
+- Tapo-camera's: `packages/integrations/src/tapo` (ONVIF + ffmpeg/MJPEG). Tests via
+  `packages/integrations/test/fake-onvif.ts` en een ffmpeg-testbeeld (`lavfi testsrc`), nooit een echte camera.
 - Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 
