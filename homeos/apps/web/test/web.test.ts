@@ -155,3 +155,15 @@ describe("Jarvis airco", () => {
     expect(handleLocal("airco uit", withAc()).actions[0]).toMatchObject({ command: { type: "set_power", on: false } });
   });
 });
+
+describe("Jarvis automatiseringen", () => {
+  it("stelt een avondautomatisering voor die na bevestiging wordt aangemaakt", () => {
+    const r = handleLocal("Stel een avondautomatisering voor", ctx());
+    expect(r.actions).toEqual([expect.objectContaining({ kind: "create_automation", template: "evening" })]);
+    expect(r.text).toContain("Avondmodus");
+  });
+  it("kent ook energie- en offline-sjablonen", () => {
+    expect(handleLocal("maak een automatisering voor hoge zonne-opwek", ctx()).actions[0]).toMatchObject({ template: "energy" });
+    expect(handleLocal("stel een automatisering voor als iets offline gaat", ctx()).actions[0]).toMatchObject({ template: "offline" });
+  });
+});

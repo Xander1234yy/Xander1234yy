@@ -33,6 +33,14 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^v1\/integrations\/tuya$/ },
   { method: "DELETE", pattern: /^v1\/integrations\/tuya$/ },
   { method: "POST", pattern: /^v1\/integrations\/matter\/commission$/ },
+  { method: "GET", pattern: /^v1\/automations(\/(templates|runs))?$/ },
+  { method: "POST", pattern: /^v1\/automations$/ },
+  { method: "PATCH", pattern: new RegExp(`^v1/automations/${seg}$`) },
+  { method: "DELETE", pattern: new RegExp(`^v1/automations/${seg}$`) },
+  { method: "POST", pattern: new RegExp(`^v1/automations/${seg}/run$`) },
+  { method: "GET", pattern: /^v1\/notifications(\/preferences)?$/ },
+  { method: "POST", pattern: /^v1\/notifications\/read$/ },
+  { method: "PUT", pattern: /^v1\/notifications\/preferences$/ },
   { method: "DELETE", pattern: /^v1\/integrations\/matter\/nodes\/\d{1,20}$/ },
 ];
 

@@ -11,7 +11,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  transpilePackages: ["@homeos/shared", "@homeos/ui"],
+  transpilePackages: ["@homeos/shared", "@homeos/ui", "@homeos/automation"],
   serverExternalPackages: ["ws"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

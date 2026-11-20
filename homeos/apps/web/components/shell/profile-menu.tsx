@@ -12,7 +12,8 @@ export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const close = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    // composedPath() bevat het pad op het moment van klikken, ook als het aangeklikte icoon intussen opnieuw gerenderd is.
+    const close = (e: MouseEvent) => ref.current && !e.composedPath().includes(ref.current) && setOpen(false);
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, []);

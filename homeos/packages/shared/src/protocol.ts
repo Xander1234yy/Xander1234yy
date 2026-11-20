@@ -34,6 +34,8 @@ export type Snapshot = z.infer<typeof SnapshotSchema>;
 export const ConnectorMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("snapshot"), data: SnapshotSchema }),
   z.object({ type: z.literal("event"), data: DeviceEventSchema }),
+  z.object({ type: z.literal("notification"), data: z.object({ id: z.string(), at: z.string(), category: z.string(), title: z.string(), body: z.string(), read: z.boolean() }) }),
+  z.object({ type: z.literal("automation_run"), data: z.object({ id: z.string(), automationId: z.string(), automationName: z.string(), status: z.string() }).passthrough() }),
 ]);
 export type ConnectorMessage = z.infer<typeof ConnectorMessageSchema>;
 

@@ -17,6 +17,7 @@ export type Permission =
   | "family_write" // agenda, taken, boodschappen, notities, onderhoud
   | "manage_devices" // apparaten toevoegen/verwijderen/hernoemen/verplaatsen, connector koppelen
   | "manage_rooms"
+  | "manage_automations"
   | "view_audit"
   | "manage_members"
   | "manage_household";
@@ -29,6 +30,7 @@ const MIN_ROLE: Record<Permission, HouseholdRole> = {
   family_write: "member",
   manage_devices: "admin",
   manage_rooms: "admin",
+  manage_automations: "admin",
   view_audit: "admin",
   manage_members: "admin",
   manage_household: "admin",
@@ -43,6 +45,15 @@ export function can(role: HouseholdRole | null | undefined, permission: Permissi
 /** Welke permissie is nodig voor een connector-endpoint (pad zonder leidende slash). */
 export function permissionForConnectorRoute(method: string, path: string): Permission | null {
   const m = method.toUpperCase();
+  if (/^v1\/automations(\/|$)/.test(path)) {
+    if (m === "GET") return /^v1\/automations(\/(templates|runs))?$/.test(path) ? "view" : null;
+    if (m === "POST" && /^v1\/automations\/[^/]+\/run$/.test(path)) return "control";
+    return /^v1\/automations(\/[^/]+)?$/.test(path) ? "manage_automations" : null;
+  }
+  if (/^v1\/notifications(\/|$)/.test(path)) {
+    if (path === "v1/notifications/preferences") return m === "GET" ? "view" : "manage_household";
+    return m === "GET" || path === "v1/notifications/read" ? "view" : null;
+  }
   if (m === "GET") {
     if (/^v1\/audit$/.test(path)) return "view_audit";
     if (/^v1\/(snapshot|devices\/available|energy\/(summary|history)|events|integrations)$/.test(path)) return "view";

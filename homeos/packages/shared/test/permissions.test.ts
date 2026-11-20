@@ -20,6 +20,13 @@ describe("rollen en rechten", () => {
     expect(permissionForConnectorRoute("DELETE", "v1/devices/a%3Ab")).toBe("manage_devices");
     expect(permissionForConnectorRoute("POST", "v1/rooms")).toBe("manage_rooms");
     expect(permissionForConnectorRoute("POST", "v1/onbekend")).toBeNull();
+    expect(permissionForConnectorRoute("GET", "v1/automations")).toBe("view");
+    expect(permissionForConnectorRoute("POST", "v1/automations")).toBe("manage_automations");
+    expect(permissionForConnectorRoute("POST", "v1/automations/abc/run")).toBe("control");
+    expect(permissionForConnectorRoute("DELETE", "v1/automations/abc")).toBe("manage_automations");
+    expect(permissionForConnectorRoute("POST", "v1/notifications/read")).toBe("view");
+    expect(permissionForConnectorRoute("PUT", "v1/notifications/preferences")).toBe("manage_household");
+    expect(can("member", "manage_automations")).toBe(false);
     expect(permissionForConnectorRoute("GET", "v1/integrations")).toBe("view");
     expect(permissionForConnectorRoute("POST", "v1/integrations/hue/pair")).toBe("manage_devices");
     expect(permissionForConnectorRoute("DELETE", "v1/integrations/hue/001788fffe123456")).toBe("manage_devices");

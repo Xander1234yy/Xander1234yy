@@ -10,6 +10,8 @@ import { Logo } from "./logo";
 import { ProfileMenu } from "./profile-menu";
 import { useSession } from "@/components/session-context";
 
+const CATEGORY: Record<string, string> = { connection: "Verbinding", energy: "Energie", maintenance: "Onderhoud", automation: "Automatisering", security: "Beveiliging", system: "Systeem" };
+
 function useToday() {
   const [d, setD] = useState<string | null>(null);
   useEffect(() => {
@@ -23,15 +25,14 @@ function useToday() {
 export function TopBar() {
   const today = useToday();
   const session = useSession();
-  const { events, snapshot } = useHome();
+  const { notifications, markNotificationsRead } = useHome();
   const [open, setOpen] = useState(false);
-  const [seen, setSeen] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
-  const unread = events.filter((e) => !seen || e.at > seen).length;
-  const deviceName = (id: string) => snapshot?.devices.find((d) => d.id === id)?.name ?? id;
+  const unread = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
-    const close = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    // composedPath() bevat het pad op het moment van klikken, ook als het aangeklikte icoon intussen opnieuw gerenderd is.
+    const close = (e: MouseEvent) => ref.current && !e.composedPath().includes(ref.current) && setOpen(false);
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, []);
@@ -53,7 +54,7 @@ export function TopBar() {
             <button
               onClick={() => {
                 setOpen((o) => !o);
-                if (!open) setSeen(new Date().toISOString());
+                if (!open && unread) void markNotificationsRead();
               }}
               className="relative flex size-10 items-center justify-center rounded-full border border-white/[0.07] bg-white/[0.03] text-muted transition hover:text-fg"
               aria-label={`Meldingen${unread ? ` (${unread} nieuw)` : ""}`}
@@ -69,18 +70,18 @@ export function TopBar() {
               <div className="absolute right-0 top-12 w-[min(22rem,calc(100vw-2rem))] animate-fade-up overflow-hidden rounded-2xl border border-white/10 bg-navy-850/95 shadow-2xl backdrop-blur-xl">
                 <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
                   <p className="text-sm font-semibold">Meldingen</p>
-                  <span className="text-[11px] text-muted">Apparaatgebeurtenissen</span>
+                  <Link href="/instellingen" className="text-[11px] text-accent hover:underline" onClick={() => setOpen(false)}>
+                    Voorkeuren
+                  </Link>
                 </div>
                 <ul className="max-h-96 overflow-y-auto">
-                  {events.length === 0 && <li className="px-4 py-6 text-center text-sm text-muted">Geen meldingen</li>}
-                  {events.slice(0, 20).map((e) => (
-                    <li key={e.id} className="border-b border-white/[0.04] px-4 py-3 last:border-0">
-                      <p className="text-sm text-fg">
-                        {e.message}
-                        {e.demo && <span className="ml-1.5 text-[10px] font-semibold text-demo">DEMO</span>}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        {deviceName(e.deviceId)} · {formatDateTime(e.at)}
+                  {notifications.length === 0 && <li className="px-4 py-6 text-center text-sm text-muted">Geen meldingen</li>}
+                  {notifications.slice(0, 25).map((n) => (
+                    <li key={n.id} className="border-b border-white/[0.04] px-4 py-3 last:border-0" data-testid="notification">
+                      <p className="text-sm text-fg">{n.title}</p>
+                      {n.body && <p className="mt-0.5 text-xs text-muted">{n.body}</p>}
+                      <p className="mt-0.5 text-[11px] text-muted/80">
+                        {CATEGORY[n.category]} · {formatDateTime(n.at)}
                       </p>
                     </li>
                   ))}

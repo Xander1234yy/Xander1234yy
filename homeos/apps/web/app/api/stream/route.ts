@@ -2,7 +2,8 @@ import WebSocket from "ws";
 import { connectorWsUrl, getConnectorToken } from "@/lib/server/connector-client";
 import { assertConnectorLinked, authorize } from "@/lib/server/authz";
 import { syncRoomsToConnector } from "@/lib/server/rooms-sync";
-import { mirrorEvent, mirrorSnapshot } from "@/lib/server/registry-mirror";
+import { mirrorEvent, mirrorNotification, mirrorRun, mirrorSnapshot } from "@/lib/server/registry-mirror";
+import { connectorFetch } from "@/lib/server/connector-client";
 import { can, type DeviceEvent, type Snapshot } from "@homeos/shared";
 
 export const dynamic = "force-dynamic";
@@ -63,7 +64,15 @@ export async function GET(req: Request) {
         ws.on("message", (raw) => {
           try {
             const msg = JSON.parse(String(raw)) as { type: string; data: unknown };
-            if (msg.type === "snapshot" || msg.type === "event") send(msg.type, msg.data);
+            if (msg.type === "snapshot" || msg.type === "event" || msg.type === "notification" || msg.type === "automation_run") send(msg.type, msg.data);
+            if (mirrorTo && msg.type === "notification") void mirrorNotification(mirrorTo, msg.data as { category: string; title: string; body: string });
+            if (mirrorTo && msg.type === "automation_run") {
+              const run = msg.data as Parameters<typeof mirrorRun>[1];
+              void connectorFetch("/v1/automations")
+                .then((r) => r.json() as Promise<{ automations: { id: string; name: string; enabled: boolean }[] }>)
+                .then((l) => mirrorRun(mirrorTo, run, l.automations.find((a) => a.id === run.automationId)))
+                .catch(() => mirrorRun(mirrorTo, run));
+            }
             if (mirrorTo && msg.type === "snapshot") void mirrorSnapshot(mirrorTo, msg.data as Snapshot);
             if (mirrorTo && msg.type === "event") void mirrorEvent(mirrorTo, msg.data as DeviceEvent);
           } catch {

@@ -13,6 +13,7 @@ import { IntegrationsStore } from "./integrations-store";
 import { createHueService, realHueDeps, type HueDeps } from "./hue-service";
 import { createCloudIntegrations } from "./cloud-service";
 import { createMatterService, lazyMatterJsBackend, type MatterBackendFactory } from "./matter-service";
+import { createAutomationService } from "./automation-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
 export async function createConnector(
@@ -51,6 +52,8 @@ export async function createConnector(
   const matter = createMatterService({ registry, store: integrations, dataDir: config.dataDir, logger, factory: matterFactory });
   adapters.push(...matter.adapters());
 
+  const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger });
+
   const allowedHosts = ["localhost", "127.0.0.1", "::1", config.host.toLowerCase()];
   const api = createConnectorServer({
     registry,
@@ -63,6 +66,7 @@ export async function createConnector(
     hue,
     cloud,
     matter,
+    automations,
   });
 
   return {
@@ -73,7 +77,9 @@ export async function createConnector(
       await registry.start();
       return api.listen(config.port, config.host);
     },
+    automations,
     async stop() {
+      automations.stop();
       await api.close();
       await registry.stop();
     },

@@ -83,3 +83,44 @@ export async function mirrorEvent(householdId: string, event: DeviceEvent): Prom
     /* best-effort */
   }
 }
+
+interface RunMessage {
+  id: string;
+  automationId: string;
+  automationName: string;
+  status: string;
+  startedAt: string;
+  finishedAt: string | null;
+  error: string | null;
+  steps: unknown[];
+  trigger: string;
+}
+
+/** Spiegelt een automatisering-run (en de automatisering zelf) naar Supabase voor de geschiedenis. */
+export async function mirrorRun(householdId: string, run: RunMessage, definition?: { name: string; enabled: boolean; [k: string]: unknown }): Promise<void> {
+  try {
+    const supabase = await createSupabaseServer();
+    await supabase.from("automations").upsert(
+      { id: run.automationId, household_id: householdId, name: definition?.name ?? run.automationName, enabled: definition?.enabled ?? true, definition: definition ?? {} },
+      { onConflict: "id" },
+    );
+    const status = ["running", "succeeded", "failed", "skipped", "blocked"].includes(run.status) ? run.status : "failed";
+    await supabase.from("automation_runs").upsert(
+      { id: run.id, automation_id: run.automationId, household_id: householdId, started_at: run.startedAt, finished_at: run.finishedAt, status, error: run.error, details: { trigger: run.trigger, steps: run.steps } },
+      { onConflict: "id" },
+    );
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Spiegelt een melding naar Supabase (huishoudbreed), zodat hij later ook in de cloud-geschiedenis staat. */
+export async function mirrorNotification(householdId: string, n: { category: string; title: string; body: string }): Promise<void> {
+  try {
+    const supabase = await createSupabaseServer();
+    const category = ["connection", "energy", "maintenance", "automation", "security", "system"].includes(n.category) ? n.category : "system";
+    await supabase.from("notifications").insert({ household_id: householdId, user_id: null, category, title: n.title.slice(0, 120), body: n.body.slice(0, 1000) });
+  } catch {
+    /* best-effort */
+  }
+}

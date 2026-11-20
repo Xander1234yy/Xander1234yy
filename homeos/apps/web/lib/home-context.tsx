@@ -7,6 +7,15 @@ import { useToast } from "@/components/toast";
 
 export type LinkState = "online" | "offline" | "connecting";
 
+export interface HomeNotification {
+  id: string;
+  at: string;
+  category: "connection" | "energy" | "maintenance" | "automation" | "security" | "system";
+  title: string;
+  body: string;
+  read: boolean;
+}
+
 interface HomeState {
   snapshot: Snapshot | null;
   /** true als de snapshot uit de lokale cache komt (niet live). */
@@ -17,6 +26,10 @@ interface HomeState {
   connector: LinkState;
   connectorReason: string | null;
   events: DeviceEvent[];
+  notifications: HomeNotification[];
+  markNotificationsRead(): Promise<void>;
+  /** Telt op bij iedere automatisering-run (om lijsten te verversen). */
+  runTick: number;
   pending: Set<string>;
   sendCommand(device: Device, command: DeviceCommand, source?: "user" | "jarvis"): Promise<boolean>;
   activateScene(sceneId: string, source?: "user" | "jarvis"): Promise<boolean>;
@@ -37,6 +50,8 @@ export function HomeProvider({ children }: { children: ReactNode }) {
   const [connector, setConnector] = useState<LinkState>("connecting");
   const [connectorReason, setConnectorReason] = useState<string | null>(null);
   const [events, setEvents] = useState<DeviceEvent[]>([]);
+  const [notifications, setNotifications] = useState<HomeNotification[]>([]);
+  const [runTick, setRunTick] = useState(0);
   const [pending, setPending] = useState<Set<string>>(new Set());
   const esRef = useRef<EventSource | null>(null);
 
@@ -74,8 +89,12 @@ export function HomeProvider({ children }: { children: ReactNode }) {
 
   const loadEvents = useCallback(async () => {
     try {
-      const r = await api<{ events: DeviceEvent[] }>(connectorPath("v1/events?limit=40"));
+      const [r, n] = await Promise.all([
+        api<{ events: DeviceEvent[] }>(connectorPath("v1/events?limit=40")),
+        api<{ notifications: HomeNotification[] }>(connectorPath("v1/notifications?limit=40")),
+      ]);
       setEvents(r.events);
+      setNotifications(n.notifications);
     } catch {
       /* connector offline */
     }
@@ -110,8 +129,13 @@ export function HomeProvider({ children }: { children: ReactNode }) {
       es.addEventListener("event", (ev) => {
         const e = JSON.parse((ev as MessageEvent).data) as DeviceEvent;
         setEvents((cur) => [e, ...cur.filter((x) => x.id !== e.id)].slice(0, 60));
-        if (e.type === "doorbell_ring") toast.push({ title: "Er wordt aangebeld", description: e.message + (e.demo ? " (DEMO)" : ""), tone: "accent" });
       });
+      es.addEventListener("notification", (ev) => {
+        const n = JSON.parse((ev as MessageEvent).data) as HomeNotification;
+        setNotifications((cur) => [n, ...cur.filter((x) => x.id !== n.id)].slice(0, 60));
+        toast.push({ title: n.title, description: n.body, tone: n.category === "security" ? "accent" : n.category === "automation" && /mislukt/.test(n.title) ? "danger" : "accent" });
+      });
+      es.addEventListener("automation_run", () => setRunTick((t) => t + 1));
       es.addEventListener("connector", (ev) => {
         const d = JSON.parse((ev as MessageEvent).data) as { online: boolean; reason?: string };
         setCloud("online");
@@ -244,6 +268,15 @@ export function HomeProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
+  const markNotificationsRead = useCallback(async () => {
+    setNotifications((cur) => cur.map((n) => ({ ...n, read: true })));
+    try {
+      await api(connectorPath("v1/notifications/read"), { method: "POST", body: JSON.stringify({ ids: "all" }) });
+    } catch {
+      /* niet kritiek */
+    }
+  }, []);
+
   const syncAll = useCallback(async () => {
     await withPending("sync", async () => {
       try {
@@ -256,8 +289,8 @@ export function HomeProvider({ children }: { children: ReactNode }) {
   }, [accept, toast, withPending]);
 
   const value = useMemo<HomeState>(
-    () => ({ snapshot, fromCache, lastSync, cloud, connector, connectorReason, events, pending, sendCommand, activateScene, setEmergencyStop, syncAll, mutate }),
-    [snapshot, fromCache, lastSync, cloud, connector, connectorReason, events, pending, sendCommand, activateScene, setEmergencyStop, syncAll, mutate],
+    () => ({ snapshot, fromCache, lastSync, cloud, connector, connectorReason, events, notifications, markNotificationsRead, runTick, pending, sendCommand, activateScene, setEmergencyStop, syncAll, mutate }),
+    [snapshot, fromCache, lastSync, cloud, connector, connectorReason, events, notifications, markNotificationsRead, runTick, pending, sendCommand, activateScene, setEmergencyStop, syncAll, mutate],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

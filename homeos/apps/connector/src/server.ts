@@ -21,6 +21,8 @@ import type { DeviceRegistry, OpResult } from "./registry";
 import type { HueService } from "./hue-service";
 import { SetupError, type CloudIntegrations } from "./cloud-service";
 import type { MatterService } from "./matter-service";
+import type { AutomationService } from "./automation-service";
+import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
 
 export interface ServerOptions {
   registry: DeviceRegistry;
@@ -34,6 +36,7 @@ export interface ServerOptions {
   hue: HueService;
   cloud: CloudIntegrations;
   matter: MatterService;
+  automations: AutomationService;
 }
 
 const MAX_BODY = 64 * 1024;
@@ -210,6 +213,31 @@ export function createConnectorServer(o: ServerOptions) {
         return { ok: true };
       },
     },
+    // ───── automatiseringen ─────
+    { method: "GET", pattern: /^\/v1\/automations$/, handler: async () => ({ automations: o.automations.list() }) },
+    { method: "GET", pattern: /^\/v1\/automations\/templates$/, handler: async () => o.automations.templates() },
+    {
+      method: "GET",
+      pattern: /^\/v1\/automations\/runs$/,
+      handler: async ({ url }) => ({ runs: o.automations.runs(parse(limitSchema, url.searchParams.get("limit") ?? undefined), url.searchParams.get("automationId") ?? undefined) }),
+    },
+    { method: "POST", pattern: /^\/v1\/automations$/, handler: async ({ body }) => setup(async () => o.automations.create(await body())) },
+    { method: "PATCH", pattern: new RegExp(`^/v1/automations/${seg}$`), handler: async ({ params, body }) => setup(async () => o.automations.update(params[0]!, await body())) },
+    { method: "DELETE", pattern: new RegExp(`^/v1/automations/${seg}$`), handler: async ({ params }) => setup(() => o.automations.remove(params[0]!)) },
+    { method: "POST", pattern: new RegExp(`^/v1/automations/${seg}/run$`), command: true, handler: async ({ params }) => setup(() => o.automations.runNow(params[0]!)) },
+    // ───── meldingen ─────
+    { method: "GET", pattern: /^\/v1\/notifications$/, handler: async ({ url }) => ({ notifications: o.automations.notifications(parse(limitSchema, url.searchParams.get("limit") ?? undefined)) }) },
+    {
+      method: "POST",
+      pattern: /^\/v1\/notifications\/read$/,
+      handler: async ({ body }) => o.automations.markRead(parse(z.object({ ids: z.array(z.string().max(64)).max(300).or(z.literal("all")) }), await body()).ids),
+    },
+    { method: "GET", pattern: /^\/v1\/notifications\/preferences$/, handler: async () => o.automations.preferences() },
+    {
+      method: "PUT",
+      pattern: /^\/v1\/notifications\/preferences$/,
+      handler: async ({ body }) => o.automations.setPreferences(parse(z.partialRecord(z.enum(NOTIFICATION_CATEGORIES), z.boolean()), await body())),
+    },
     { method: "GET", pattern: /^\/v1\/identity$/, handler: async () => registry.identity() },
     { method: "PUT", pattern: /^\/v1\/rooms$/, handler: async ({ body }) => unwrap(await registry.replaceRooms(parse(RoomsReplaceSchema, await body()).rooms)) },
     { method: "POST", pattern: /^\/v1\/rooms$/, handler: async ({ body }) => unwrap(await registry.createRoom(parse(RoomInputSchema, await body()))) },
@@ -338,6 +366,8 @@ export function createConnectorServer(o: ServerOptions) {
   };
   registry.on("snapshot", (data) => broadcast({ type: "snapshot", data }));
   registry.on("event", (data) => broadcast({ type: "event", data }));
+  o.automations.events.on("notification", (data) => broadcast({ type: "notification", data }));
+  o.automations.events.on("run", (data) => broadcast({ type: "automation_run", data }));
 
   return {
     server,

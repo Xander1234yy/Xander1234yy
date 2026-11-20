@@ -30,7 +30,8 @@ export interface JarvisContext {
 export type JarvisAction =
   | { kind: "command"; deviceId: string; deviceName: string; command: DeviceCommand; label: string }
   | { kind: "scene"; sceneId: string; sceneName: string; label: string }
-  | { kind: "shopping_add"; name: string; label: string };
+  | { kind: "shopping_add"; name: string; label: string }
+  | { kind: "create_automation"; template: "evening" | "energy" | "offline"; label: string };
 
 export interface JarvisReply {
   intent: string;
@@ -111,11 +112,22 @@ export function handleLocal(message: string, ctx: JarvisContext): JarvisReply {
     return familyIntent(message, msg, ctx.family);
   }
 
-  if (has(msg, "automatiser", "routine") && has(msg, "stel", "voorstel", "maak", "bedenk")) {
-    const scene = s?.scenes.find((x) => normalize(x.name) === "avond");
+  if ((msg.includes("automatiser") || has(msg, "routine")) && has(msg, "stel", "voorstel", "maak", "bedenk")) {
+    if (has(msg, "energie", "zon", "opwek")) {
+      return reply("suggest_automation", 'Voorstel "Energiemelding": als de zonne-opwek boven 3000 W komt, krijg je een melding met de actuele opbrengst (max. 3× per dag). Zal ik hem aanmaken?', [
+        { kind: "create_automation", template: "energy", label: "Automatisering Energiemelding aanmaken" },
+      ]);
+    }
+    if (has(msg, "offline")) {
+      return reply("suggest_automation", 'Voorstel "Apparaat offline": als een apparaat 30 minuten niet bereikbaar is, krijg je een melding met het tijdstip waarop het laatst gezien is. Zal ik hem aanmaken?', [
+        { kind: "create_automation", template: "offline", label: "Automatisering Apparaat offline aanmaken" },
+      ]);
+    }
+    const scene = s?.scenes.find((x) => /avond|ontspan/.test(normalize(x.name)));
     return reply(
       "suggest_automation",
-      `Voorstel "Avondmodus": elke dag om 19:30${scene ? ` scène "${scene.name}" activeren` : " de woonkamerverlichting dimmen"}, daarna een avondoverzicht tonen met openstaande herinneringen. De automatiseringsmotor komt in fase 5; dan kun je dit voorstel met één tik opslaan.`,
+      `Voorstel "Avondmodus": elke dag om 20:00${scene ? ` scène "${scene.name}" activeren` : ""} en een avondoverzicht sturen (lampen, apparaten en energie van vandaag). Zal ik hem aanmaken? Je kunt het tijdstip daarna aanpassen bij Automatiseringen.`,
+      [{ kind: "create_automation", template: "evening", label: "Automatisering Avondmodus aanmaken" }],
     );
   }
 

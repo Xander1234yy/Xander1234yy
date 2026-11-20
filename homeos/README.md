@@ -5,8 +5,8 @@
 HomeOS is een zelfstandig smart-homeplatform, zonder Home Assistant. De webapp draait in de browser
 (iPhone, iPad, laptop) en een lichte **Device Connector** draait op je eigen laptop en praat lokaal met je apparaten.
 
-> **Status: fase 4 van 8 afgerond.** Philips Hue (lokaal), SolarEdge, Daikin Onecta en Smart Life/Tuya (officiële
-> cloud-API's) en Matter (experimenteel, o.a. IKEA) zijn gebouwd. Dashboard, Device Connector, accounts, huishoudens, rollen en een Supabase-database
+> **Status: fase 5 van 8 afgerond.** Philips Hue (lokaal), SolarEdge, Daikin Onecta en Smart Life/Tuya (officiële
+> cloud-API's), Matter (experimenteel, o.a. IKEA), plus een eigen automatiseringsmotor met meldingen. Dashboard, Device Connector, accounts, huishoudens, rollen en een Supabase-database
 > met Row Level Security. Familie (agenda, taken, boodschappen, notities) en Onderhoud werken.
 > Apparaten zijn nog gesimuleerd en overal gemarkeerd als **DEMO**. Echte integraties volgen vanaf fase 3
 > (Philips Hue). Zie [docs/roadmap.md](docs/roadmap.md).
@@ -75,7 +75,7 @@ homeos/
     shared/         Types, zod-schema's, opdrachtcontrole, versheid, energieberekening
     integrations/   Adapterinterface + DEMO-adapters (later Hue, stekkers, Apple TV, zon, deurbel)
     ui/             Design system (shadcn/ui-stijl op Radix + Tailwind)
-    automation/     Automation Engine (fase 5)
+    automation/     Automation Engine (triggers, voorwaarden, acties; draait in de connector)
     database/       Rijtypen, invoerschema's en RLS-tests
   supabase/         Migraties, seed (DEMO) en config voor de Supabase CLI
   docs/             Architectuur, beveiliging, integraties, roadmap

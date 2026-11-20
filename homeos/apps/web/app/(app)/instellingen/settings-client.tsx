@@ -8,6 +8,7 @@ import { api, connectorPath } from "@/lib/api";
 import { useHome, useLive } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { HueCard } from "@/components/settings/hue-card";
+import { NotificationPrefsCard } from "@/components/settings/notification-prefs";
 import { DaikinCard, MatterCard, SolarEdgeCard, TuyaCard } from "@/components/settings/cloud-cards";
 import { formatDateTime } from "@/lib/format";
 
@@ -112,6 +113,8 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
           </div>
         </SectionCard>
 
+        <NotificationPrefsCard />
+
         <SectionCard title="Auditlog" description={mayAudit ? "Laatste acties via de connector" : "Alleen zichtbaar voor beheerders"} icon={ScrollText}>
           {audit.length === 0 ? (
             <p className="text-sm text-muted">Nog geen acties vastgelegd.</p>
@@ -149,7 +152,7 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
               <span className="flex items-center gap-2"><Palette className="size-4 text-muted" /> Thema</span>
               <span className="text-muted">Donker (standaard)</span>
             </div>
-            <Planned phase={5}><span className="inline-flex items-center gap-2"><Bell className="size-4" /> Notificaties en categorieën, pushmeldingen</span></Planned>
+            <Planned phase={7}><span className="inline-flex items-center gap-2"><Bell className="size-4" /> Pushmeldingen op iPhone/iPad</span></Planned>
             <Planned phase={6}><span className="inline-flex items-center gap-2"><Bot className="size-4" /> AI-provider en Jarvis-instellingen</span></Planned>
             <Planned phase={7}><span className="inline-flex items-center gap-2"><DatabaseBackup className="size-4" /> Back-ups en clouddeployment</span></Planned>
           </div>

@@ -58,6 +58,24 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await card.getByRole("button", { name: "Verwarmen" }).click();
   });
 
+  test("maakt Avondmodus uit een sjabloon, voert hem uit en toont geschiedenis en melding", async ({ page }, testInfo) => {
+    const name = `Avondmodus E2E ${testInfo.project.name}`;
+    await page.goto("/automatiseringen");
+    await page.getByTestId("template-evening").click();
+    await expect(page.getByTestId("automation-editor")).toBeVisible();
+    await page.getByLabel("Naam automatisering").fill(name);
+    await page.getByRole("button", { name: "Opslaan" }).click();
+    const card = page.getByTestId("automation-card").filter({ hasText: name });
+    await expect(card).toContainText("Om 20:00");
+    await card.getByRole("button", { name: "Nu uitvoeren" }).click();
+    await expect(page.getByTestId("run-history")).toContainText(name);
+    await expect(page.getByTestId("run-history")).toContainText("Gelukt");
+    await page.getByRole("button", { name: /Meldingen/ }).click();
+    await expect(page.getByTestId("notification").first()).toContainText("Avondoverzicht");
+    await card.getByRole("switch").click();
+    await expect(card.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+  });
+
   test("alle pagina's laden zonder fouten", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));

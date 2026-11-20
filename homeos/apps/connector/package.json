@@ -14,6 +14,7 @@
     "typecheck": "tsc -p ../../tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@homeos/automation": "^0.1.0",
     "@homeos/integrations": "0.1.0",
     "@homeos/shared": "0.1.0",
     "@matter/main": "^0.18.0",

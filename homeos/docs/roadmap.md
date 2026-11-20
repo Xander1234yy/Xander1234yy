@@ -6,8 +6,8 @@
 | 2 | Supabase: schema en migraties (alle 20 tabellen), RLS, Auth, huishoudens, kamers naar de database, familie en onderhoud | ✅ Klaar |
 | 3 | Philips Hue-adapter, pairing, apparaatregistry naar Supabase (devices/device_states), macOS-autostart | ✅ Klaar |
 | 4 | Stekkers, Apple TV (onderzoek), zonnepanelen, deurbel | |
-| 5 | Automation Engine, notificaties, geschiedenis | ⏭ Volgende |
-| 6 | Jarvis AI-provider (provider-interface), spraak, opdrachtverwerking | |
+| 5 | Automation Engine, notificaties, geschiedenis | ✅ Klaar |
+| 6 | Jarvis AI-provider (provider-interface), spraak, opdrachtverwerking | ⏭ Volgende |
 | 7 | PWA (service worker, offline cache, iOS-iconen), cloudkoppeling van de connector, Vercel-deployment | |
 | 8 | Beveiligingsaudit, volledige tests, documentatie, optimalisatie | |
 
@@ -75,6 +75,24 @@
   stabiel als Matter niet kan starten.
 - Apple TV onderzocht: geen officiële route → niet ondersteund. Tapo D235 op batterij: geen officiële route.
 - Tests: 132 unit- en integratietests, 24 E2E-tests (lokaal), 6 (cloud).
+
+## Fase 5: opgeleverd
+
+- `@homeos/automation`: eigen rules engine met triggers (tijdstip + dagen, apparaatstatus, energie-drempel,
+  apparaat offline, handmatig), voorwaarden (tijdvenster, dagen, apparaat online/aan, energie) en acties (Hue-scène,
+  apparaat aan/uit, melding met variabelen, Jarvis-rapport, wachten).
+- Veiligheid: geen inhaalacties na uitval, drempels alleen op een overgang, één run tegelijk, afkoeltijd, max. runs per
+  dag, noodstop blokkeert runs, deurbel/meters/bridges nooit automatisch, alle opdrachten via de registry (bron
+  "automation", met auditlog).
+- Draait lokaal in de connector (tick elke 20 s); automatiseringen en geschiedenis staan in de datamap.
+- Meldingen in de app (bel, toasts) met instelbare categorieën; deurbel → beveiligingsmelding; mislukte runs → melding.
+- Automatiseringen-pagina met sjablonen (Avondmodus, Energiemelding, Apparaat offline), editor, pauzeren, nu uitvoeren,
+  verwijderen en uitvoeringsgeschiedenis; dashboardkaart met volgende run en laatste resultaten.
+- Jarvis stelt automatiseringen voor en maakt ze na bevestiging aan.
+- Cloudmodus: runs, automatiseringen en meldingen worden gespiegeld naar Supabase zolang een beheerder verbonden is
+  (best-effort; niet apart end-to-end getest).
+- Pushmeldingen op iPhone/iPad volgen in fase 7 (vereist de installeerbare app met service worker).
+- Tests: 149 unit- en integratietests, 27 E2E-tests (lokaal), 6 (cloud).
 
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).

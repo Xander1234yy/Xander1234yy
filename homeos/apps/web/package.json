@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@homeos/automation": "^0.1.0",
     "@homeos/shared": "0.1.0",
     "@homeos/ui": "0.1.0",
     "@supabase/ssr": "^0.12.7",
