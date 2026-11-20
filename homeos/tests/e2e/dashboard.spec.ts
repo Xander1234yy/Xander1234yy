@@ -104,6 +104,15 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByText(/lokale IP-adres van de tv/).first()).toBeVisible();
   });
 
+  test("Zonneplan-kaart is duidelijk als niet-officieel gemarkeerd", async ({ page }) => {
+    await page.goto("/instellingen");
+    const card = page.getByTestId("zonneplan-card");
+    await expect(card).toContainText("Niet-officiële koppeling");
+    await expect(card.getByRole("button", { name: "Code aanvragen" })).toBeDisabled();
+    await card.getByLabel("E-mailadres Zonneplan").fill("ik@example.test");
+    await expect(card.getByRole("button", { name: "Code aanvragen" })).toBeEnabled();
+  });
+
   test("Tapo-camerakaart in Instellingen weigert een openbaar adres", async ({ page }) => {
     await page.goto("/instellingen");
     const card = page.getByTestId("tapo-card");

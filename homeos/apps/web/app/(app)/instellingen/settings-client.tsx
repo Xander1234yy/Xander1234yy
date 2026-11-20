@@ -10,6 +10,7 @@ import { useCan } from "@/components/session-context";
 import { HueCard } from "@/components/settings/hue-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
+import { ZonneplanCard } from "@/components/settings/zonneplan-card";
 import { NotificationPrefsCard } from "@/components/settings/notification-prefs";
 import { DaikinCard, MatterCard, SolarEdgeCard, TuyaCard } from "@/components/settings/cloud-cards";
 import { formatDateTime } from "@/lib/format";
@@ -91,6 +92,7 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
 
         <HueCard />
         <SolarEdgeCard />
+        <ZonneplanCard />
         <DaikinCard />
         <TuyaCard />
         <MatterCard />

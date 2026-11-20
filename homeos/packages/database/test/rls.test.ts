@@ -202,3 +202,12 @@ describe("migratie 4: camera's", () => {
     ).rejects.toThrow(/no_secrets/);
   });
 });
+
+describe("migratie 5: Zonneplan", () => {
+  it("accepteert zonneplan als integratietype, zonder tokens", async () => {
+    await t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'zonneplan', 'Zonneplan', '{}')", [home]);
+    await expect(
+      t.as(owner, "insert into public.device_integrations (household_id, integration_type, display_name, config) values ($1, 'zonneplan', 'Zonneplan', '{\"refresh_token\":\"x\"}')", [home]),
+    ).rejects.toThrow(/no_secrets/);
+  });
+});

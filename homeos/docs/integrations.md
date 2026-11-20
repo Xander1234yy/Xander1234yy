@@ -189,11 +189,18 @@ scope `openid onecta:basic.integration`, API `https://api.onecta.daikineurope.co
   protocol is niet als openbare API gedocumenteerd door LG; een firmware-update kan het gedrag veranderen. Nieuwere
   firmware die het ondertekende manifest weigert wordt opgevangen met een manifest zonder handtekening.
 
-### Zonneplan Connect (P1) ❌ geen officiële lokale API
-- De Zonneplan Connect zit op de P1-poort van de slimme meter en stuurt de gegevens naar de Zonneplan-app. Er is geen
-  gedocumenteerde lokale of openbare API; bestaande koppelingen gebruiken de niet-officiële app-API. HomeOS doet dat niet.
-- Officiële alternatieven: een P1-meter met gedocumenteerde lokale API (bijv. HomeWizard P1), eventueel met een
-  P1-splitter zodat de Zonneplan Connect blijft werken.
+### Zonneplan Connect (P1) ⚠️ NIET-OFFICIEEL — gebouwd op uitdrukkelijk verzoek van de gebruiker
+- Zonneplan heeft geen openbare API. Op verzoek van de gebruiker gebruikt HomeOS dezelfde server als de Zonneplan-app
+  (`app-api.zonneplan.nl`), net als de open-source Home Assistant-integratie. Dit is de enige uitzondering op de regel
+  "alleen officiële API's" en staat overal als **niet-officieel** gemarkeerd (instelkaart, apparaatmodel, health).
+- **Inloggen:** e-mailadres → Zonneplan mailt een code → code invullen (OAuth met PKCE). Geen wachtwoord. Het e-mailadres
+  wordt niet bewaard; tokens alleen versleuteld in de SecretStore en automatisch vernieuwd.
+- **Alleen-lezen:** stroom van het net en teruglevering (live, laatste meting van de Connect, elke 3 min opgehaald) en
+  totalen vandaag/maand/jaar (elke 15 min). Max. 1000 verzoeken per dag, `Retry-After` bij 429 wordt gerespecteerd.
+- **Eigen verbruik:** met SolarEdge-opwek erbij rekent HomeOS uit: verbruik = opwek + afname − teruglevering (energie-rol
+  `grid` naast `production`). Zonder opwekbron wordt verbruik niet gegokt.
+- **Risico's:** kan zonder aankondiging breken als Zonneplan de app-API wijzigt; dan toont HomeOS een fout in plaats van
+  oude gegevens als actueel. Officieel alternatief blijft een P1-meter met lokale API (bijv. HomeWizard) + P1-splitter.
 
 ### Apple TV ❌ niet ondersteund (onderzocht in fase 4b)
 - Apple biedt geen officiële, gedocumenteerde API voor lokale bediening van een Apple TV door derden. Bestaande

@@ -70,7 +70,7 @@ export default function EnergyPage() {
           </Card>
           {summary.gridImportW == null && summary.currentConsumptionW == null ? (
             <Card className="p-5 sm:col-span-2 lg:col-span-3">
-              <Stat label="Verbruik en net" value="Niet gemeten" sub="Er is geen slimme meter of SolarEdge-energiemeter gekoppeld. Alleen opwek is beschikbaar." />
+              <Stat label="Verbruik en net" value="Niet gemeten" sub="Er is geen meter gekoppeld. Koppel je Zonneplan Connect bij Instellingen om verbruik en teruglevering te zien." />
             </Card>
           ) : (
           <>

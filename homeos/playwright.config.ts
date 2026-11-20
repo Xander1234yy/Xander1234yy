@@ -27,7 +27,7 @@ export default defineConfig({
       // Begin iedere run met een lege datamap, zodat gegevens van een vorige run (automatiseringen, logs) niet meetellen.
       command: `node -e "require('fs').rmSync(process.argv[1],{recursive:true,force:true})" "${dataDir}" && npx tsx apps/connector/src/index.ts`,
       url: "http://127.0.0.1:8788/health",
-      env: { HOMEOS_CONNECTOR_PORT: "8788", HOMEOS_DATA_DIR: dataDir, HOMEOS_DEMO: "true" },
+      env: { HOMEOS_CONNECTOR_PORT: "8788", HOMEOS_DATA_DIR: dataDir, HOMEOS_DEMO: "true", HOMEOS_RATE_LIMIT_PER_MIN: "3000" },
       reuseExistingServer: false,
       timeout: 30_000,
     },

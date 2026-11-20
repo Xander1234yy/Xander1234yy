@@ -16,6 +16,7 @@ import { createMatterService, lazyMatterJsBackend, type MatterBackendFactory } f
 import { createAutomationService } from "./automation-service";
 import { createWebOsService, realWebOsDeps, type WebOsDeps } from "./webos-service";
 import { createCameraService, type CameraDeps } from "./camera-service";
+import { createZonneplanService } from "./zonneplan-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
 export async function createConnector(
@@ -59,6 +60,8 @@ export async function createConnector(
   adapters.push(...webos.adapters());
   const cameras = createCameraService({ registry, secrets, store: integrations, deps: cameraDeps });
   adapters.push(...cameras.adapters());
+  const zonneplan = createZonneplanService({ registry, secrets, store: integrations, fetchImpl });
+  adapters.push(...zonneplan.adapters());
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger });
 
@@ -76,6 +79,7 @@ export async function createConnector(
     matter,
     webos,
     cameras,
+    zonneplan,
     automations,
   });
 

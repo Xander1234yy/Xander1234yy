@@ -93,6 +93,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
   private readonly nowMs: () => number;
 
   readonly energy: EnergyProvider = {
+    role: "production",
     getSummary: () => this.summary(),
     getHistory: (range) => this.getHistory(range),
   };

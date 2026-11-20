@@ -66,6 +66,11 @@ export type CommandResult =
   | { ok: false; code: "UNSUPPORTED" | "DEVICE_UNAVAILABLE" | "ADAPTER_ERROR" | "NOT_FOUND"; message: string };
 
 export interface EnergyProvider {
+  /**
+   * "production": alleen opwek (zonnepanelen). "grid": alleen net/meter (P1). "full" (standaard): alles.
+   * Bij een combinatie van opwek en meter rekent de registry het eigen verbruik uit: opwek + afname − teruglevering.
+   */
+  role?: "production" | "grid" | "full";
   getSummary(): Promise<EnergySummary>;
   getHistory(range: EnergyRange): Promise<EnergyHistory>;
 }

@@ -138,6 +138,12 @@
   bediening; zender bij de ingebouwde tuner; Jarvis: "volgende zender", "zender 7". Ziggo Next Mini via HDMI-CEC.
 - Zonneplan Connect: geen officiële API → niet gekoppeld; alternatief voorgesteld (HomeWizard P1 + splitter).
 
+## Na fase 6: Zonneplan Connect
+
+- Op verzoek van de gebruiker: Zonneplan Connect (P1) via de niet-officiële app-API, alleen-lezen, inloggen met e-mailcode.
+  Registry combineert opwek (SolarEdge) en meter tot eigen verbruik, ook in de historie. Migratie 5.
+- Tests: 215 unit- en integratietests (nagebootste Zonneplan-server), 42 E2E (lokaal), 6 (cloud).
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
 - Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.

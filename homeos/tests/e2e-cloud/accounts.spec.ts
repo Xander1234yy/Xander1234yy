@@ -9,7 +9,7 @@ const outsider = { name: "Buiten Test", email: `buiten-${run}@example.test`, pas
 async function signUp(page: Page, u: typeof owner) {
   await page.goto("/registreren");
   await page.getByLabel("Je naam").fill(u.name);
-  await page.getByLabel("E-mailadres").fill(u.email);
+  await page.getByLabel("E-mailadres", { exact: true }).fill(u.email);
   await page.getByLabel(/Wachtwoord/).fill(u.password);
   await page.getByRole("button", { name: "Account aanmaken" }).click();
   await expect(page).toHaveURL(/\/welkom$/);
@@ -17,7 +17,7 @@ async function signUp(page: Page, u: typeof owner) {
 
 async function signIn(page: Page, u: typeof owner, expectSuccess = true) {
   await page.goto("/login");
-  await page.getByLabel("E-mailadres").fill(u.email);
+  await page.getByLabel("E-mailadres", { exact: true }).fill(u.email);
   await page.getByLabel("Wachtwoord").fill(u.password);
   await page.getByRole("button", { name: "Inloggen" }).click();
   if (expectSuccess) await expect(page.getByTestId("welcome-card")).toBeVisible();
@@ -117,7 +117,7 @@ test.describe.serial("accounts, huishoudens en rollen", () => {
     await page.getByRole("button", { name: "Uitloggen" }).click();
     await signIn(page, owner);
     await page.goto("/instellingen");
-    await page.getByLabel("E-mailadres").fill(guest.email);
+    await page.getByLabel("E-mailadres", { exact: true }).fill(guest.email);
     await page.getByLabel("Rol", { exact: true }).selectOption("guest");
     await page.getByRole("button", { name: "Toevoegen", exact: true }).click();
     await expect(page.getByTestId("members-card")).toContainText(guest.email);

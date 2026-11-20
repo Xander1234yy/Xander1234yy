@@ -502,17 +502,27 @@ export class DeviceRegistry extends EventEmitter {
   }
 
   async energySummary(): Promise<EnergySummary | null> {
-    const results = await Promise.allSettled(this.energyAdapters().map((a) => a.energy!.getSummary()));
-    const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    const adapters = this.energyAdapters();
+    const results = await Promise.allSettled(adapters.map((a) => a.energy!.getSummary()));
+    const ok = results.flatMap((r, i) => (r.status === "fulfilled" ? [{ s: r.value, role: adapters[i]!.energy!.role ?? "full" }] : []));
     if (!ok.length) return null;
-    return ok.length === 1 ? ok[0]! : combineSummaries(ok);
+    const grid = ok.filter((x) => x.role === "grid").map((x) => x.s);
+    const rest = ok.filter((x) => x.role !== "grid").map((x) => x.s);
+    const base = rest.length ? (rest.length === 1 ? rest[0]! : combineSummaries(rest)) : null;
+    if (!grid.length) return base;
+    return mergeGrid(base, grid.length === 1 ? grid[0]! : combineSummaries(grid));
   }
 
   async energyHistory(range: EnergyRange): Promise<EnergyHistory | null> {
-    const results = await Promise.allSettled(this.energyAdapters().map((a) => a.energy!.getHistory(range)));
-    const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    const adapters = this.energyAdapters();
+    const results = await Promise.allSettled(adapters.map((a) => a.energy!.getHistory(range)));
+    const ok = results.flatMap((r, i) => (r.status === "fulfilled" ? [{ h: r.value, role: adapters[i]!.energy!.role ?? "full" }] : []));
     if (!ok.length) return null;
-    return ok.length === 1 ? ok[0]! : combineHistories(ok);
+    const grid = ok.filter((x) => x.role === "grid").map((x) => x.h);
+    const rest = ok.filter((x) => x.role !== "grid").map((x) => x.h);
+    const base = rest.length ? (rest.length === 1 ? rest[0]! : combineHistories(rest)) : null;
+    if (!grid.length) return base;
+    return mergeGridHistory(base, grid[0]!);
   }
 
   /** Auditregel voor acties buiten de opdrachten om (bijv. camerabeeld bekeken). */
@@ -572,6 +582,49 @@ function combineSummaries(list: EnergySummary[]): EnergySummary {
     month: period("month"),
     year: period("year"),
   };
+}
+
+const consumption = (prod: number | null, imp: number | null, exp: number | null) =>
+  prod === null || imp === null || exp === null ? null : Math.max(0, Math.round((prod + imp - exp) * 1000) / 1000);
+
+/** Opwek (zonnepanelen) + meter (P1): eigen verbruik = opwek + afname − teruglevering. Ontbreekt iets, dan null. */
+export function mergeGrid(base: EnergySummary | null, grid: EnergySummary): EnergySummary {
+  const prodNow = base?.currentProductionW ?? null;
+  const period = (k: "today" | "month" | "year") => {
+    const productionKwh = base?.[k].productionKwh ?? null;
+    const { importKwh, exportKwh } = grid[k];
+    return { productionKwh, importKwh, exportKwh, consumptionKwh: consumption(productionKwh, importKwh, exportKwh) };
+  };
+  return {
+    sourceId: base ? `combined:${base.sourceId}+${grid.sourceId}` : grid.sourceId,
+    demo: (base?.demo ?? false) || grid.demo,
+    updatedAt: [base?.updatedAt, grid.updatedAt].filter((x): x is string => !!x).sort()[0]!,
+    currentProductionW: prodNow,
+    gridImportW: grid.gridImportW,
+    gridExportW: grid.gridExportW,
+    currentConsumptionW: prodNow === null || grid.gridImportW === null || grid.gridExportW === null ? null : Math.max(0, Math.round(prodNow + grid.gridImportW - grid.gridExportW)),
+    today: period("today"),
+    month: period("month"),
+    year: period("year"),
+  };
+}
+
+/** Historie: per meter-interval de opwek optellen die erin valt (opwek kan fijner zijn, bijv. per kwartier). */
+export function mergeGridHistory(base: EnergyHistory | null, grid: EnergyHistory): EnergyHistory {
+  if (!grid.points.length) return base ?? grid;
+  const gt = grid.points.map((p) => Date.parse(p.t));
+  const step = gt.length > 1 ? gt[1]! - gt[0]! : grid.bucket === "hour" ? 3_600_000 : grid.bucket === "day" ? 86_400_000 : 31 * 86_400_000;
+  const points = grid.points.map((p, i) => {
+    const start = gt[i]!;
+    const end = gt[i + 1] ?? start + step;
+    const inside = (base?.points ?? []).filter((b) => {
+      const t = Date.parse(b.t);
+      return t >= start && t < end;
+    });
+    const productionKwh = !base ? null : inside.length && inside.every((b) => b.productionKwh !== null) ? Math.round(inside.reduce((a, b) => a + b.productionKwh!, 0) * 1000) / 1000 : null;
+    return { t: p.t, productionKwh, importKwh: p.importKwh, exportKwh: p.exportKwh, consumptionKwh: consumption(productionKwh, p.importKwh, p.exportKwh) };
+  });
+  return { sourceId: base ? `combined:${base.sourceId}+${grid.sourceId}` : grid.sourceId, demo: (base?.demo ?? false) || grid.demo, range: grid.range, bucket: grid.bucket, points };
 }
 
 function combineHistories(list: EnergyHistory[]): EnergyHistory {

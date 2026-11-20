@@ -23,6 +23,7 @@ import { SetupError, type CloudIntegrations } from "./cloud-service";
 import type { MatterService } from "./matter-service";
 import type { WebOsService } from "./webos-service";
 import type { CameraService } from "./camera-service";
+import type { ZonneplanService } from "./zonneplan-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
 
@@ -40,6 +41,7 @@ export interface ServerOptions {
   matter: MatterService;
   webos: WebOsService;
   cameras: CameraService;
+  zonneplan: ZonneplanService;
   automations: AutomationService;
 }
 
@@ -138,7 +140,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list() }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list() }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -222,6 +224,26 @@ export function createConnectorServer(o: ServerOptions) {
         return { ok: true };
       },
     },
+    // ───── Zonneplan Connect (niet-officieel) ─────
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/zonneplan\/start$/,
+      command: true,
+      handler: async ({ body }) => {
+        const { email } = parse(z.object({ email: z.email("Ongeldig e-mailadres").max(254) }), await body());
+        return setup(() => o.zonneplan.start(email));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/zonneplan\/complete$/,
+      command: true,
+      handler: async ({ body }) => {
+        const { code } = parse(z.object({ code: z.string().trim().regex(/^[0-9A-Za-z]{4,12}$/, "Vul de code uit de e-mail in") }), await body());
+        return setup(() => o.zonneplan.complete(code));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/zonneplan$/, handler: async () => setup(() => o.zonneplan.remove()) },
     // ───── Tapo-camera's ─────
     { method: "GET", pattern: /^\/v1\/cameras$/, handler: async () => o.cameras.list() },
     {
