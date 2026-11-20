@@ -42,6 +42,7 @@ export default defineConfig({
         SUPABASE_PUBLISHABLE_KEY: "",
         HOMEOS_CONNECTOR_TOKEN_FILE: path.join(dataDir, "api-token"),
         NEXT_TELEMETRY_DISABLED: "1",
+        HOMEOS_ACCESS_CODE: "e2e-toegangscode",
       },
       reuseExistingServer: false,
       timeout: 240_000,

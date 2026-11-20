@@ -11,6 +11,7 @@ import { HueCard } from "@/components/settings/hue-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
 import { ZonneplanCard } from "@/components/settings/zonneplan-card";
+import { PushCard } from "@/components/pwa/push-card";
 import { NotificationPrefsCard } from "@/components/settings/notification-prefs";
 import { DaikinCard, MatterCard, SolarEdgeCard, TuyaCard } from "@/components/settings/cloud-cards";
 import { formatDateTime } from "@/lib/format";
@@ -119,6 +120,7 @@ export function SettingsClient({ cloudSection }: { cloudSection?: React.ReactNod
           </div>
         </SectionCard>
 
+        <PushCard />
         <NotificationPrefsCard />
 
         <SectionCard title="Auditlog" description={mayAudit ? "Laatste acties via de connector" : "Alleen zichtbaar voor beheerders"} icon={ScrollText}>

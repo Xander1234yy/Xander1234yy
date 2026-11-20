@@ -8,8 +8,8 @@
 | 4 | Stekkers, Apple TV (onderzoek), zonnepanelen, deurbel | |
 | 5 | Automation Engine, notificaties, geschiedenis | ✅ Klaar |
 | 6 | Jarvis: lokaal en gratis, provider-interface, spraak, opdrachtverwerking, geschiedenis | ✅ Klaar |
-| 7 | PWA (service worker, offline cache, iOS-iconen), cloudkoppeling van de connector, Vercel-deployment | ⏭ Volgende |
-| 8 | Beveiligingsaudit, volledige tests, documentatie, optimalisatie | |
+| 7 | PWA (installeerbaar, service worker, offline, iOS-iconen), pushmeldingen, veilige toegang via Tailscale | ✅ Klaar |
+| 8 | Beveiligingsaudit, volledige tests, documentatie, optimalisatie | ⏭ Volgende |
 
 ## Fase 1: opgeleverd
 
@@ -143,6 +143,17 @@
 - Op verzoek van de gebruiker: Zonneplan Connect (P1) via de niet-officiële app-API, alleen-lezen, inloggen met e-mailcode.
   Registry combineert opwek (SolarEdge) en meter tot eigen verbruik, ook in de historie. Migratie 5.
 - Tests: 215 unit- en integratietests (nagebootste Zonneplan-server), 42 E2E (lokaal), 6 (cloud).
+
+## Fase 7: opgeleverd
+
+- Installeerbare app (PWA): manifest, iconen voor iPhone/iPad/Android (ook maskable), snelkoppelingen, service worker die
+  alleen statische bestanden en een offline-pagina cachet (nooit gegevens, API's of camerabeelden).
+- Pushmeldingen (Web Push/VAPID) vanaf de connector, met de bestaande meldingscategorieën; instelkaart "App en
+  pushmeldingen" met installatie-uitleg voor iOS, testmelding en uitzetten. Verlopen abonnementen worden opgeruimd.
+- Toegang vanaf je telefoon via Tailscale (`npm run remote:on`): geen open poorten, alleen eigen apparaten, https.
+  Webapp als LaunchAgent (`npm run web:install:macos`). Toegangscode verplicht voor de lokale modus van buiten de laptop.
+- Keuze: geen Vercel-deployment met cloudrelais (zie docs/remote-access.md); kan later.
+- Tests: 219 unit- en integratietests, 44 E2E (lokaal, o.a. service worker, offline, toegangscode), 6 (cloud).
 
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).

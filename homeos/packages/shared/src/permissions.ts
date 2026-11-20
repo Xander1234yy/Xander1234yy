@@ -59,6 +59,10 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
   if (/^v1\/cameras(\/|$)/.test(path)) {
     return m === "GET" && /^v1\/cameras(\/[^/]+\/(snapshot|stream))?$/.test(path) ? "view_cameras" : null;
   }
+  if (/^v1\/push(\/|$)/.test(path)) {
+    if (m === "GET") return path === "v1/push" ? "view" : null;
+    return /^v1\/push\/(subscriptions|unsubscribe|test)$/.test(path) ? "control" : null;
+  }
   if (/^v1\/integrations\/zonneplan(\/(start|complete))?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
   if (/^v1\/integrations\/tapo(\/[0-9a-f]{16})?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
   if (m === "GET") {

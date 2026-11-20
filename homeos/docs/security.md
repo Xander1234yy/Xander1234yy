@@ -14,6 +14,9 @@
 | Auditlog van iedere opdracht en beheeractie (JSONL, lokaal) | `registry.ts`, `journal.ts` |
 | Noodstop blokkeert alle opdrachten van automatiseringen en Jarvis | `checkCommand()` |
 | Jarvis en automatiseringen mogen deurbel, energiemeters en bridges niet bedienen | `SAFETY_CRITICAL_KINDS` |
+| PWA: service worker cachet alleen statische bestanden; nooit API's, gegevenspagina's of camerabeelden | `public/sw.js` |
+| Pushmeldingen: alleen bekende pushdiensten, VAPID-sleutels en abonnementen versleuteld, alleen leden+ | `push-service.ts` |
+| Toegang van buiten (Tailscale): alleen eigen tailnet, geen open poorten; lokale modus vereist een toegangscode (HMAC-cookie, httpOnly, SameSite=Strict, 5 pogingen/min) | `local-access.ts`, `proxy.ts` |
 | Jarvis draait lokaal: vragen gaan niet naar een externe AI-dienst | `packages/jarvis` |
 | Camera's: beelden alleen voor leden+ (`view_cameras`), niet opgeslagen, live-weergave in auditlog, geen Jarvis/automatisering | `camera-service.ts`, `/api/cameras` |
 | Camera-account versleuteld; wachtwoord nooit in API-antwoorden of logs (ffmpeg-meldingen worden geschoond) | `tapo/stream.ts` (`redact`) |

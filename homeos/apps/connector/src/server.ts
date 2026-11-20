@@ -24,6 +24,7 @@ import type { MatterService } from "./matter-service";
 import type { WebOsService } from "./webos-service";
 import type { CameraService } from "./camera-service";
 import type { ZonneplanService } from "./zonneplan-service";
+import type { PushService } from "./push-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
 
@@ -42,6 +43,7 @@ export interface ServerOptions {
   webos: WebOsService;
   cameras: CameraService;
   zonneplan: ZonneplanService;
+  push: PushService;
   automations: AutomationService;
 }
 
@@ -223,6 +225,27 @@ export function createConnectorServer(o: ServerOptions) {
         if (!(await o.hue.unpair(params[0]!))) throw new HttpError(404, "NOT_FOUND", "Bridge niet gevonden");
         return { ok: true };
       },
+    },
+    // ───── pushmeldingen ─────
+    { method: "GET", pattern: /^\/v1\/push$/, handler: async () => o.push.info() },
+    {
+      method: "POST",
+      pattern: /^\/v1\/push\/subscriptions$/,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ subscription: z.unknown(), label: z.string().trim().max(80).default("Apparaat") }), await body());
+        return setup(() => o.push.subscribe(b.subscription, b.label));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/push\/unsubscribe$/,
+      handler: async ({ body }) => o.push.unsubscribe(parse(z.object({ endpoint: z.string().max(1000) }), await body()).endpoint),
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/push\/test$/,
+      command: true,
+      handler: async ({ body }) => setup(async () => o.push.test(parse(z.object({ endpoint: z.string().max(1000).nullish() }), (await body()) ?? {}).endpoint ?? null)),
     },
     // ───── Zonneplan Connect (niet-officieel) ─────
     {

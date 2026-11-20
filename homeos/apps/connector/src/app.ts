@@ -17,6 +17,7 @@ import { createAutomationService } from "./automation-service";
 import { createWebOsService, realWebOsDeps, type WebOsDeps } from "./webos-service";
 import { createCameraService, type CameraDeps } from "./camera-service";
 import { createZonneplanService } from "./zonneplan-service";
+import { createPushService, type PushSender } from "./push-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
 export async function createConnector(
@@ -28,6 +29,7 @@ export async function createConnector(
   matterFactory: MatterBackendFactory = lazyMatterJsBackend,
   webosDeps: WebOsDeps = realWebOsDeps,
   cameraDeps: CameraDeps = {},
+  pushSender?: PushSender,
 ) {
   await ensureDir(config.dataDir);
   await ensureDir(path.join(config.dataDir, "logs"));
@@ -64,6 +66,9 @@ export async function createConnector(
   adapters.push(...zonneplan.adapters());
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger });
+  const push = createPushService({ secrets, logger, ...(pushSender ? { sender: pushSender } : {}) });
+  // Iedere melding (na de categorie-instellingen) ook als pushmelding naar telefoons/tablets.
+  automations.events.on("notification", (n) => void push.notify(n).catch((err) => logger.warn("Push mislukt", { error: String(err) })));
 
   const allowedHosts = ["localhost", "127.0.0.1", "::1", config.host.toLowerCase()];
   const api = createConnectorServer({
@@ -80,6 +85,7 @@ export async function createConnector(
     webos,
     cameras,
     zonneplan,
+    push,
     automations,
   });
 
@@ -92,6 +98,7 @@ export async function createConnector(
       return api.listen(config.port, config.host);
     },
     automations,
+    push,
     async stop() {
       automations.stop();
       cameras.stopAll();

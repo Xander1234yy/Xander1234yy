@@ -167,3 +167,42 @@ describe("Jarvis automatiseringen", () => {
     expect(handleLocal("stel een automatisering voor als iets offline gaat", ctx()).actions[0]).toMatchObject({ template: "offline" });
   });
 });
+
+describe("toegang van buitenaf (lokale modus)", () => {
+  it("alleen een direct verzoek op de laptop telt als lokaal", async () => {
+    const { isLoopbackRequest } = await import("../lib/server/local-access");
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000" }))).toBe(true);
+    expect(isLoopbackRequest(new Headers({ host: "localhost:3000" }))).toBe(true);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "127.0.0.1", "x-forwarded-host": "127.0.0.1:3000" }))).toBe(true); // Next.js zelf
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "::1" }))).toBe(true);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "100.64.0.2" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "100.64.0.2, 127.0.0.1" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-host": "mijn-mac.tailnet.ts.net" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "tailscale-user-login": "ik@example.test" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "mijn-mac.tailnet.ts.net" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "192.168.68.10:3000" }))).toBe(false);
+  });
+
+  it("toegangscode: minimaal 8 tekens, cookie bevat nooit de code zelf", async () => {
+    const m = await import("../lib/server/local-access");
+    process.env.HOMEOS_ACCESS_CODE = "kort";
+    expect(m.accessCode()).toBeNull();
+    process.env.HOMEOS_ACCESS_CODE = "geheime-code-123";
+    expect(m.codeMatches("geheime-code-123")).toBe(true);
+    expect(m.codeMatches("fout")).toBe(false);
+    const token = m.accessToken("geheime-code-123");
+    expect(token).not.toContain("geheime");
+    expect(m.validAccessCookie(token)).toBe(true);
+    expect(m.validAccessCookie("x")).toBe(false);
+    delete process.env.HOMEOS_ACCESS_CODE;
+    expect(m.validAccessCookie(token)).toBe(false);
+  });
+
+  it("CSRF: extra adressen alleen exact en via https", () => {
+    process.env.HOMEOS_ALLOWED_ORIGINS = "mijn-mac.tailnet.ts.net";
+    expect(isSameOrigin(new Headers({ origin: "https://mijn-mac.tailnet.ts.net", host: "127.0.0.1:3000" }))).toBe(true);
+    expect(isSameOrigin(new Headers({ origin: "http://mijn-mac.tailnet.ts.net", host: "127.0.0.1:3000" }))).toBe(false);
+    expect(isSameOrigin(new Headers({ origin: "https://andere.tailnet.ts.net", host: "127.0.0.1:3000" }))).toBe(false);
+    delete process.env.HOMEOS_ALLOWED_ORIGINS;
+  });
+});

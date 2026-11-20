@@ -28,6 +28,8 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^v1/integrations/hue/[0-9a-f]{16}$`) },
   { method: "POST", pattern: /^v1\/integrations\/webos\/(discover|pair)$/ },
   { method: "GET", pattern: /^v1\/cameras$/ },
+  { method: "GET", pattern: /^v1\/push$/ },
+  { method: "POST", pattern: /^v1\/push\/(subscriptions|unsubscribe|test)$/ },
   { method: "POST", pattern: /^v1\/integrations\/zonneplan\/(start|complete)$/ },
   { method: "DELETE", pattern: /^v1\/integrations\/zonneplan$/ },
   { method: "POST", pattern: /^v1\/integrations\/tapo$/ },
@@ -62,7 +64,11 @@ export function isSameOrigin(headers: Headers): boolean {
   const host = headers.get("x-forwarded-host") ?? headers.get("host");
   if (!origin || !host) return false;
   try {
-    return new URL(origin).host === host;
+    const o = new URL(origin);
+    if (o.host === host) return true;
+    // Exacte extra adressen (bijv. https://mijn-mac.tailnet.ts.net) als een proxy de eigen host niet doorgeeft. Geen jokers.
+    const extra = (process.env.HOMEOS_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    return o.protocol === "https:" && extra.includes(o.host.toLowerCase());
   } catch {
     return false;
   }

@@ -36,6 +36,12 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   `apps/connector/src/automation-service.ts`. Nooit inhaalacties, drempels alleen op overgangen, apparaatopdrachten
   altijd via `registry.executeCommand(..., "automation")`.
 
+## PWA en toegang op afstand
+- Service worker `apps/web/public/sw.js`: cache nooit API-antwoorden, gegevenspagina's of beelden. Push via
+  `apps/connector/src/push-service.ts` (web-push). Lokale modus van buiten de laptop vereist `HOMEOS_ACCESS_CODE`
+  (`lib/server/local-access.ts`); let op: Next.js vult zelf X-Forwarded-* in, beoordeel de adressen, niet het bestaan.
+- Toegang op afstand via Tailscale (`scripts/macos/remote-access.sh`), nooit via open poorten of `tailscale funnel`.
+
 ## Jarvis
 - `packages/jarvis`: `JarvisProvider`-interface en `LocalJarvis` (puur, getest in `packages/jarvis/test`). Alleen
   voorstellen teruggeven; uitvoeren gebeurt in `components/jarvis-chat.tsx` na bevestiging via de normale API's.
@@ -54,4 +60,4 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 
 ## Fase
-Fase 1 t/m 6 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.
+Fase 1 t/m 7 zijn af. Zie `docs/roadmap.md` voor wat volgt en houd dat document bij.

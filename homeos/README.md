@@ -86,6 +86,7 @@ homeos/
 
 ## Documentatie
 
+- [Toegang vanaf je telefoon (app, pushmeldingen, Tailscale)](docs/remote-access.md)
 - [Architectuur](docs/architecture.md)
 - [Supabase, accounts en rechten](docs/supabase.md)
 - [Beveiliging](docs/security.md)

@@ -8,13 +8,31 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
+// Extra hostnamen (bijv. een Tailscale-adres) als die proxy niet de eigen host doorgeeft. Komma-gescheiden.
+const allowedOrigins = (process.env.HOMEOS_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const nextConfig: NextConfig = {
+  ...(allowedOrigins.length ? { experimental: { serverActions: { allowedOrigins } } } : {}),
   poweredByHeader: false,
   reactStrictMode: true,
   transpilePackages: ["@homeos/shared", "@homeos/ui", "@homeos/automation", "@homeos/jarvis"],
   serverExternalPackages: ["ws"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
   },
 };
 

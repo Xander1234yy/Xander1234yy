@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getSupabaseConfig, localModeAllowed, SESSION_COOKIE_OPTIONS } from "@/lib/supabase/config";
+import { ACCESS_COOKIE, accessCode, isLoopbackRequest, validAccessCookie } from "@/lib/server/local-access";
 
 const PUBLIC_PATHS = ["/login", "/registreren", "/wachtwoord-vergeten", "/auth/", "/setup"];
 
@@ -17,7 +18,16 @@ export async function proxy(request: NextRequest) {
   const config = getSupabaseConfig();
 
   if (!config) {
-    if (localModeAllowed() || pathname === "/setup") return NextResponse.next();
+    if (localModeAllowed()) {
+      // Lokale modus zonder accounts: op de laptop zelf vrij; van buiten (telefoon via Tailscale) alleen met toegangscode.
+      if (isLoopbackRequest(request.headers) || pathname === "/toegang" || pathname === "/api/access") return NextResponse.next();
+      if (accessCode() && validAccessCookie(request.cookies.get(ACCESS_COOKIE)?.value)) return NextResponse.next();
+      if (isApi) return NextResponse.json({ error: { code: "ACCESS_CODE_REQUIRED", message: "Toegangscode vereist" } }, { status: 401 });
+      const url = new URL("/toegang", request.url);
+      if (pathname !== "/") url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
+    if (pathname === "/setup") return NextResponse.next();
     if (isApi) return NextResponse.json({ error: { code: "AUTH_NOT_CONFIGURED", message: "Supabase is niet geconfigureerd" } }, { status: 503 });
     return NextResponse.redirect(new URL("/setup", request.url));
   }
@@ -52,5 +62,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|icon.svg|manifest.webmanifest|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|icon.svg|manifest.webmanifest|favicon.ico|sw.js|offline.html|apple-touch-icon.png|icon-192.png|icon-512.png|icon-maskable-512.png|badge-96.png).*)"],
 };

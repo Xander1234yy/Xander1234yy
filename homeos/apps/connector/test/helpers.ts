@@ -6,6 +6,7 @@ import type { ConnectorConfig } from "../src/config";
 import type { HueDeps } from "../src/hue-service";
 import type { WebOsDeps } from "../src/webos-service";
 import type { CameraDeps } from "../src/camera-service";
+import type { PushSender } from "../src/push-service";
 import { lazyMatterJsBackend } from "../src/matter-service";
 
 /** Tests praten nooit met het echte netwerk. */
@@ -36,7 +37,9 @@ const noNetworkFetch = (async () => {
   throw new Error("Netwerk is uitgeschakeld in tests");
 }) as typeof fetch;
 
-export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps, fetchImpl: typeof fetch = noNetworkFetch, webosDeps: WebOsDeps = noNetworkWebOs, cameraDeps: CameraDeps = { fetchImpl: noNetworkFetch }) {
+export async function startTestConnector(overrides: Partial<ConnectorConfig> = {}, hueDeps?: HueDeps, fetchImpl: typeof fetch = noNetworkFetch, webosDeps: WebOsDeps = noNetworkWebOs, cameraDeps: CameraDeps = { fetchImpl: noNetworkFetch }, pushSender: PushSender = async () => {
+  throw new Error("Netwerk is uitgeschakeld in tests");
+}) {
   const dataDir = overrides.dataDir ?? (await tempDir());
   const config: ConnectorConfig = {
     host: "127.0.0.1",
@@ -50,7 +53,7 @@ export async function startTestConnector(overrides: Partial<ConnectorConfig> = {
     production: false,
     ...overrides,
   };
-  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue, fetchImpl, lazyMatterJsBackend, webosDeps, cameraDeps);
+  const c = await createConnector(config, silent, [], hueDeps ?? noNetworkHue, fetchImpl, lazyMatterJsBackend, webosDeps, cameraDeps, pushSender);
   const addr = await c.start();
   const base = `http://127.0.0.1:${addr.port}`;
   const token = c.identity.apiToken;
