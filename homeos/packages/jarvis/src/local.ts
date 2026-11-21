@@ -107,7 +107,7 @@ function handle(msg: string, original: string, ctx: JarvisContext): Partial {
   if (has(msg, "help", "wat kun je", "wat kan je", "hoe werk")) {
     return say(
       "help",
-      'Ik werk lokaal, zonder internet of AI-dienst. Vraag bijvoorbeeld: "welke lampen staan aan?", "zet de lampen in de keuken uit", "maak de plafondlamp blauw", "woonkamer feller", "zet de airco op 21 graden", "wat is de opbrengst vandaag?", "weekoverzicht energie", "wat staat er morgen op de agenda?", "zet melk op de boodschappenlijst" of "voer avondmodus uit". Ik vraag altijd om bevestiging voordat er iets gebeurt.',
+      'Ik werk lokaal, zonder internet of AI-dienst. Vraag bijvoorbeeld: "welke lampen staan aan?", "zet de lampen in de keuken uit", "maak de plafondlamp blauw", "woonkamer feller", "zet de airco op 21 graden", "zet RTL 4 op", "wat is de opbrengst vandaag?", "weekoverzicht energie", "wat staat er morgen op de agenda?", "zet melk op de boodschappenlijst" of "voer avondmodus uit". Ik vraag altijd om bevestiging voordat er iets gebeurt.',
     );
   }
   if (/^(hallo|hoi|hey|goedemorgen|goedemiddag|goedenavond|dag jarvis|hallo jarvis)\b/.test(msg)) {
@@ -366,14 +366,35 @@ function tvIntent(msg: string, s: Snapshot, ctx: JarvisContext, demo: string, st
       return !/\d/.test(label) && words(src.label).some((w) => w.length >= 4 && !GENERIC.has(w) && hasWord(msg, w));
     });
   };
+  // Zenders (Ziggo-box): op naam ("zet rtl 4 op", langste naam wint: "npo 1 extra" boven "npo 1") of nummer ("zender 7").
+  const channelsOf = (d: Device) => sourcesOf(d).filter((x) => x.type === "channel");
+  const channelName = (l: string) => normalize(l.replace(/^\d+\.\s*/, ""));
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const zapIntent = has(msg, "zet", "doe", "naar", "kijk", "zender", "kanaal", "tv", "televisie", "ziggo", "schakel") || /(^|\s)op($|\s)/.test(msg);
+  const channelByName = (d: Device) => {
+    if (!zapIntent) return undefined;
+    let best: ReturnType<typeof channelsOf>[number] | undefined;
+    for (const c of channelsOf(d)) {
+      const n = channelName(c.label);
+      if (n.replace(/\d|\s/g, "").length < 2) continue; // alleen een nummer is geen naam
+      if (new RegExp(`(^|\\s)${esc(n)}($|\\s)`).test(msg) && (!best || n.length > channelName(best.label).length)) best = c;
+    }
+    return best;
+  };
+  const channelByNumber = (d: Device) => {
+    const m = /(?:zender|kanaal)\s*(\d{1,4})/.exec(msg);
+    return m ? channelsOf(d).find((c) => c.label.startsWith(`${m[1]}. `)) : undefined;
+  };
+  const channelMatch = (d: Device) => channelByNumber(d) ?? channelByName(d);
   const named = matchDevices(s, msg, (d) => d.kind === "media");
   const zapping = has(msg, "zender", "kanaal") && tvs.some((d) => d.capabilities.includes("remote_control"));
   const mentionsTv = hasWord(msg, "tv", "televisie", "tv's") || named.length > 0 || zapping;
   const memTv = (ctx.memory?.deviceIds ?? []).map((id) => tvs.find((d) => d.id === id)).find(Boolean);
-  const viaSource = !mentionsTv && has(msg, "open", "start", "zet", "doe") ? tvs.find((d) => sourceMatch(d)) : undefined;
+  const viaSource = !mentionsTv && has(msg, "open", "start", "zet", "doe", "kijk") ? tvs.find((d) => sourceMatch(d) || channelMatch(d)) : undefined;
   const pronounTv = !mentionsTv && memTv && PRONOUNS.some((p) => hasWord(msg, p)) ? memTv : undefined;
   const remoteTvs = zapping && !named.length && !hasWord(msg, "tv", "televisie") ? tvs.filter((d) => d.capabilities.includes("remote_control")) : tvs;
-  const target = named[0] ?? (mentionsTv ? (remoteTvs.length === 1 ? remoteTvs[0] : tvs.length === 1 ? tvs[0] : (tvs.find((d) => d.roomId === findRoom(s, msg)?.id) ?? tvs[0])) : (viaSource ?? pronounTv));
+  const channelTv = named.length ? undefined : tvs.find((d) => channelMatch(d));
+  const target = named[0] ?? channelTv ?? (mentionsTv ? (remoteTvs.length === 1 ? remoteTvs[0] : tvs.length === 1 ? tvs[0] : (tvs.find((d) => d.roomId === findRoom(s, msg)?.id) ?? tvs[0])) : (viaSource ?? pronounTv));
   if (!target) return null;
   const media = target.state.media;
   const memory: JarvisMemory = { deviceIds: [target.id], roomId: target.roomId };
@@ -383,11 +404,13 @@ function tvIntent(msg: string, s: Snapshot, ctx: JarvisContext, demo: string, st
   if (question && !has(msg, "zet", "doe")) {
     if (target.status !== "ONLINE") return say("tv_status", `${target.name} staat uit of is niet bereikbaar${demo}.${stale}`, [], memory);
     if (media?.power !== "on") return say("tv_status", `${target.name} staat op stand-by${demo}.${stale}`, [], memory);
-    const parts = [media.app ? `staat op ${media.app}` : "staat aan", media.volume !== undefined ? `volume ${media.volume}${media.muted ? " (gedempt)" : ""}` : null];
+    const parts = [media.app ? `staat op ${media.app}` : media.title ? `staat op ${media.title}` : "staat aan", media.volume !== undefined ? `volume ${media.volume}${media.muted ? " (gedempt)" : ""}` : null];
     return say("tv_status", `${target.name} ${parts.filter(Boolean).join(", ")}${demo}.${stale}`, [], memory);
   }
 
   const item = (command: DeviceCommand, l: string) => propose(s, ctx, [{ device: target, command, label: label(l) }], memory);
+  const channel = channelMatch(target);
+  if (channel && !/(^|\s)uit$/.test(msg)) return item({ type: "select_source", sourceId: channel.id }, channel.label);
   if (has(msg, "zender", "kanaal") && target.capabilities.includes("remote_control")) {
     const num = /(?:zender|kanaal)\s*(\d{1,4})/.exec(msg);
     if (num) {

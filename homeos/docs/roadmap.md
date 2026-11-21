@@ -193,6 +193,7 @@
 - **Ziggo Mediabox** (op uitdrukkelijk verzoek, niet-officieel): zenders kiezen (lijst bij Entertainment), aan/stand-by
   met statuscontrole, afspelen/pauzeren en afstandsbedieningsknoppen. Eigen MQTT-client over wss, korte sessies (werkt
   in de cloudmodus).
+- **Jarvis en Ziggo:** "zet RTL 4 op", "zender 7", "ziggo naar NPO 1 Extra", "wat staat er op de ziggo?" (zenders op naam of nummer, langste naam wint; Netflix blijft op de tv).
 - **Zelf te doen (optioneel):** Supabase → Authentication → wachtwoorden uit datalekken weigeren.
 
 ## Antwoorden en openstaande vragen

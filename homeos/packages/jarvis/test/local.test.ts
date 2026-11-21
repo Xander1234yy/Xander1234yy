@@ -208,6 +208,49 @@ describe("lokale Jarvis: tv", () => {
   });
 });
 
+describe("lokale Jarvis: Ziggo-box (zenders)", () => {
+  const ziggo = (o: Partial<Device> = {}) =>
+    dev({
+      id: "ziggo:box1", name: "Ziggo woonkamer", kind: "media", roomId: "woonkamer", integration: "ziggo", demo: false,
+      capabilities: ["media_power", "media_playback", "remote_control", "source_select"],
+      state: { media: { power: "on", playback: "unknown", title: "1. NPO 1", source: "NL_1", sources: [
+        { id: "NL_1", label: "1. NPO 1", type: "channel" }, { id: "NL_4", label: "4. RTL 4", type: "channel" },
+        { id: "NL_7", label: "7. RTL 7", type: "channel" }, { id: "NL_15", label: "15. NPO 1 Extra", type: "channel" },
+        { id: "NL_14", label: "14. Ziggo Sport", type: "channel" },
+      ] } },
+      ...o,
+    });
+  const withBoxes = (both = false) => {
+    const s = snapshot();
+    if (both) s.devices.push(dev({ id: "tv1", name: "LG OLED48CX6LB", kind: "media", roomId: "woonkamer", integration: "lg_webos", demo: false, capabilities: ["media_power", "volume", "remote_control", "source_select"], state: { media: { power: "on", playback: "unknown", sources: [{ id: "app:netflix", label: "Netflix", type: "app" }] } } }));
+    s.devices.push(ziggo());
+    return { ...ctx(), snapshot: s };
+  };
+  const cmd = (m: string, c = withBoxes()) => respondLocal(m, c).actions.flatMap((a) => (a.kind === "command" ? [{ device: a.deviceId, ...a.command }] : []));
+
+  it("zender op naam en nummer, ook met de LG-tv erbij", () => {
+    const c = withBoxes(true);
+    expect(cmd("zet rtl 4 op", c)).toEqual([{ device: "ziggo:box1", type: "select_source", sourceId: "NL_4" }]);
+    expect(cmd("zet de tv op rtl vier", c)).toEqual([{ device: "ziggo:box1", type: "select_source", sourceId: "NL_4" }]);
+    expect(cmd("zender 7", c)).toEqual([{ device: "ziggo:box1", type: "select_source", sourceId: "NL_7" }]);
+    expect(cmd("ziggo naar npo 1 extra", c)).toEqual([{ device: "ziggo:box1", type: "select_source", sourceId: "NL_15" }]);
+    expect(cmd("kijk ziggo sport", c)).toEqual([{ device: "ziggo:box1", type: "select_source", sourceId: "NL_14" }]);
+    // Netflix blijft op de tv.
+    expect(cmd("zet netflix op de tv", c)).toEqual([{ device: "tv1", type: "select_source", sourceId: "app:netflix" }]);
+    // Onbekend zendernummer op de box: geen gok met een verkeerde zender.
+    expect(cmd("zender 99", withBoxes()).every((x) => x.type !== "select_source")).toBe(true);
+  });
+  it("aan/uit, volgende zender en status", () => {
+    expect(cmd("ziggo uit")).toEqual([{ device: "ziggo:box1", type: "media_power", on: false }]);
+    expect(cmd("volgende zender")).toEqual([{ device: "ziggo:box1", type: "remote_button", button: "CHANNELUP" }]);
+    expect(respondLocal("wat staat er op de ziggo?", withBoxes()).text).toContain("1. NPO 1");
+  });
+  it("lampen met een zendernaam-achtig woord blijven lampen", () => {
+    const c = withBoxes();
+    expect(respondLocal("welke lampen staan aan?", c).intent).not.toMatch(/tv|command/);
+  });
+});
+
 describe("lokale Jarvis: camera's", () => {
   it("meldt beweging, maar bedient geen camera's", () => {
     const s = snapshot();
