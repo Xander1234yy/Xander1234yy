@@ -62,7 +62,7 @@ try {
 
   console.log("→ Geplande taak (elke minuut)…");
   await client.query("create extension if not exists pg_cron");
-  await client.query("create extension if not exists pg_net");
+  await client.query("create extension if not exists pg_net with schema extensions");
   await client.query("select cron.unschedule(jobid) from cron.job where jobname = 'homeos-tick'");
   if (!/^[\w-]+$/.test(cronSecret)) fail("Ongeldig cron-geheim");
   const body = `select net.http_post(url := '${appUrl}/api/cloud/tick', headers := jsonb_build_object('authorization', 'Bearer ${cronSecret}', 'content-type', 'application/json'), body := '{}'::jsonb, timeout_milliseconds := 55000)`;
