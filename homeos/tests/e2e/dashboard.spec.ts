@@ -120,6 +120,22 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(page.getByText(/lokale IP-adres van de tv/).first()).toBeVisible();
   });
 
+  test("Apple Woning: knop aanmaken en op het dashboard als shortcuts://-link tonen", async ({ page }) => {
+    await page.goto("/instellingen");
+    const card = page.getByTestId("shortcuts-settings-card");
+    await expect(card).toBeVisible();
+    // Alle schermformaten gebruiken dezelfde DEMO-connector: zelfde knoppen opslaan is idempotent.
+    while ((await card.getByLabel(/^Knopnaam/).count()) > 0) await card.getByRole("button", { name: /verwijderen$/ }).first().click();
+    await card.getByRole("button", { name: "Knop toevoegen" }).click();
+    await card.getByLabel("Knopnaam 1").fill("TV aan");
+    await card.getByLabel("Opdracht 1").fill("TV aan & Ziggo");
+    await card.getByRole("button", { name: "Opslaan" }).click();
+    await expect(page.getByText("Knoppen opgeslagen")).toBeVisible();
+    await page.goto("/");
+    const link = page.getByTestId("shortcuts-card").getByRole("link", { name: "TV aan" });
+    await expect(link).toHaveAttribute("href", "shortcuts://run-shortcut?name=TV%20aan%20%26%20Ziggo");
+  });
+
   test("Zonneplan-kaart is duidelijk als niet-officieel gemarkeerd", async ({ page }) => {
     await page.goto("/instellingen");
     const card = page.getByTestId("zonneplan-card");

@@ -86,6 +86,7 @@ export async function importToCloud(o: {
     cloud.state.huecloud = s.huecloud;
     cloud.state.googlehome = s.googlehome;
     cloud.state.icloud = s.icloud;
+    cloud.state.shortcuts = s.shortcuts;
     await cloud.save();
 
     const cloudState = await StateStore.open(prefix);

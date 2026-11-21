@@ -85,6 +85,15 @@ Alleen-lezen via CalDAV, de open standaard die Apple voor agenda-apps van derden
 3. Kies welke agenda's je wilt zien. Afspraken (ook herhalingen) staan bij Familie → Agenda, gemarkeerd met "Apple",
    en worden hooguit elke 10 minuten opgehaald. Ontkoppelen wist de gegevens; trek het wachtwoord ook in bij Apple.
 
+### Apple Woning (tv) via Opdrachten
+
+Apple heeft geen API voor Apple Woning vanuit de cloud. Wel officieel: knoppen die een opdracht uit de app
+**Opdrachten** starten (`shortcuts://run-shortcut?name=…`). Maak bijv. "TV aan" (tv aan + HDMI-ingang van de Ziggo-box)
+en voeg bij Instellingen → Apple Woning een knop toe; die staat dan op het dashboard. Werkt alleen op je eigen
+iPhone/iPad/Mac (buiten de deur met een woningshub), niet in automatiseringen, en HomeOS ziet de uitkomst niet.
+Ziggo-box: zet HDMI-CEC aan op tv (SimpLink) en box, dan gaat de box mee aan/uit met de tv. Zenders wisselen kan niet
+officieel (Ziggo heeft geen openbare API).
+
 ## Variabelen
 
 | Variabele | Waarvoor |

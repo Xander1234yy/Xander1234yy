@@ -19,6 +19,7 @@ import { createZonneplanService } from "./zonneplan-service";
 import { createHueCloudService } from "./huecloud-service";
 import { createGoogleHomeService } from "./googlehome-service";
 import { createIcloudCalendarService } from "./icloud-calendar-service";
+import { createShortcutsService } from "./shortcuts-service";
 import { createPushService, type PushSender } from "./push-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
@@ -115,6 +116,7 @@ export async function createConnector(
     huecloud,
     googlehome,
     icloud,
+    shortcuts: createShortcutsService({ store: integrations }),
     push,
     automations,
   });

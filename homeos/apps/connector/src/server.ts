@@ -27,6 +27,7 @@ import type { ZonneplanService } from "./zonneplan-service";
 import type { HueCloudService } from "./huecloud-service";
 import type { GoogleHomeService } from "./googlehome-service";
 import type { IcloudCalendarService } from "./icloud-calendar-service";
+import type { ShortcutsService } from "./shortcuts-service";
 import type { PushService } from "./push-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
@@ -51,6 +52,7 @@ export interface ServerOptions {
   huecloud: HueCloudService;
   googlehome: GoogleHomeService;
   icloud: IcloudCalendarService;
+  shortcuts: ShortcutsService;
   push: PushService;
   automations: AutomationService;
 }
@@ -150,7 +152,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), icloud: o.icloud.list(), mode: o.cloudMode ? "cloud" : "local" }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), icloud: o.icloud.list(), shortcuts: o.shortcuts.list(), mode: o.cloudMode ? "cloud" : "local" }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -304,6 +306,15 @@ export function createConnectorServer(o: ServerOptions) {
     },
     { method: "DELETE", pattern: /^\/v1\/integrations\/icloud$/, handler: async () => setup(() => o.icloud.remove()) },
     { method: "GET", pattern: /^\/v1\/calendar\/events$/, handler: async () => o.icloud.events() },
+    // ───── Apple-opdrachten (Shortcuts) als knoppen ─────
+    {
+      method: "PUT",
+      pattern: /^\/v1\/integrations\/shortcuts$/,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ items: z.array(z.object({ label: z.string().max(60), shortcut: z.string().max(120) })).max(30) }), await body());
+        return setup(() => o.shortcuts.save(b.items));
+      },
+    },
     // ───── pushmeldingen ─────
     { method: "GET", pattern: /^\/v1\/push$/, handler: async () => o.push.info() },
     {

@@ -173,6 +173,9 @@
   Daglimiet 450 opdrachten. Kanttekening: Google vervangt Assistent door Gemini; deze route kan ooit stoppen.
 - **Apple-agenda** (op verzoek): iCloud via CalDAV met een app-specifiek wachtwoord, alleen-lezen. Herhalingen,
   uitzonderingen en tijdzones via ical.js; afspraken bij Familie → Agenda (gemarkeerd "Apple", niet te verwijderen).
+- **Apple Woning via Opdrachten** (op verzoek, voor de LG-tv in Apple Woning): knoppen die een Apple-opdracht starten
+  via de officiële `shortcuts://`-link. Alleen handmatig op een Apple-apparaat; HomeOS ziet de uitkomst niet.
+  Ziggo Next Mini: mee aan/uit via HDMI-CEC; zenders alleen via de Ziggo GO-app (geen officiële API).
 - Onderzocht en afgevallen: geen cloud-API voor de LG-tv (ThinQ Connect ondersteunt geen tv's) of live camerabeeld;
   IKEA DIRIGERA heeft alleen een lokale (niet-officiële) API. Daarvoor blijft een kastje thuis nodig (optioneel, later).
 

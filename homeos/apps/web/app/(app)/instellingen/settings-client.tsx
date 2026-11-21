@@ -11,6 +11,7 @@ import { HueCard } from "@/components/settings/hue-card";
 import { HueCloudCard } from "@/components/settings/hue-cloud-card";
 import { GoogleHomeCard } from "@/components/settings/google-home-card";
 import { AppleCalendarCard } from "@/components/settings/apple-calendar-card";
+import { ShortcutsSettingsCard } from "@/components/settings/shortcuts-settings-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
 import { ZonneplanCard } from "@/components/settings/zonneplan-card";
@@ -109,6 +110,7 @@ export function SettingsClient({ cloudSection, cloudRuntime = false }: { cloudSe
         <TuyaCard />
         <GoogleHomeCard />
         <AppleCalendarCard />
+        <ShortcutsSettingsCard />
         {!cloudRuntime && (
           <>
             <MatterCard />
