@@ -52,6 +52,11 @@ describe("rollen en rechten", () => {
     expect(permissionForConnectorRoute("POST", "v1/integrations/tapo")).toBe("manage_devices");
     expect(permissionForConnectorRoute("GET", "v1/integrations/tapo")).toBeNull();
     expect(permissionForConnectorRoute("POST", "v1/integrations/webos/pair")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("POST", "v1/integrations/googlehome/start")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("PUT", "v1/integrations/googlehome/devices")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("DELETE", "v1/integrations/googlehome")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("GET", "v1/integrations/googlehome/devices")).toBeNull();
+    expect(permissionForConnectorRoute("PUT", "v1/integrations/googlehome")).toBeNull();
   });
 });
 

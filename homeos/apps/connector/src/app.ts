@@ -1,4 +1,4 @@
-import { createDemoAdapters, type DeviceAdapter, type Logger } from "@homeos/integrations";
+import { createDemoAdapters, type AssistantTransport, type DeviceAdapter, type Logger } from "@homeos/integrations";
 import type { DeviceEvent } from "@homeos/shared";
 import { CONNECTOR_VERSION, type ConnectorConfig } from "./config";
 import { ensureDir, joinPath, readFileOrNull, writeFileAtomic } from "./fs-utils";
@@ -17,6 +17,7 @@ import { createWebOsService, realWebOsDeps, type WebOsDeps } from "./webos-servi
 import { createCameraService, type CameraDeps } from "./camera-service";
 import { createZonneplanService } from "./zonneplan-service";
 import { createHueCloudService } from "./huecloud-service";
+import { createGoogleHomeService } from "./googlehome-service";
 import { createPushService, type PushSender } from "./push-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
@@ -30,6 +31,7 @@ export async function createConnector(
   webosDeps: WebOsDeps = realWebOsDeps,
   cameraDeps: CameraDeps = {},
   pushSender?: PushSender,
+  assistantTransport?: AssistantTransport,
 ) {
   await ensureDir(config.dataDir);
   await ensureDir(joinPath(config.dataDir, "logs"));
@@ -84,6 +86,8 @@ export async function createConnector(
   adapters.push(...zonneplan.adapters());
   const huecloud = createHueCloudService({ registry, secrets, store: integrations, fetchImpl });
   adapters.push(...huecloud.adapters());
+  const googlehome = createGoogleHomeService({ registry, secrets, store: integrations, fetchImpl, ...(assistantTransport ? { transport: assistantTransport } : {}) });
+  adapters.push(...googlehome.adapters());
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger, serverless });
   const push = createPushService({ secrets, logger, ...(pushSender ? { sender: pushSender } : {}) });
@@ -107,6 +111,7 @@ export async function createConnector(
     cameras,
     zonneplan,
     huecloud,
+    googlehome,
     push,
     automations,
   });

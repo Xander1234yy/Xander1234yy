@@ -9,6 +9,7 @@ import { useHome, useLive } from "@/lib/home-context";
 import { useCan } from "@/components/session-context";
 import { HueCard } from "@/components/settings/hue-card";
 import { HueCloudCard } from "@/components/settings/hue-cloud-card";
+import { GoogleHomeCard } from "@/components/settings/google-home-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
 import { ZonneplanCard } from "@/components/settings/zonneplan-card";
@@ -105,6 +106,7 @@ export function SettingsClient({ cloudSection, cloudRuntime = false }: { cloudSe
         <ZonneplanCard />
         <DaikinCard />
         <TuyaCard />
+        <GoogleHomeCard />
         {!cloudRuntime && (
           <>
             <MatterCard />

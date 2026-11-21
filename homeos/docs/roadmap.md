@@ -166,6 +166,13 @@
 - Lokale integraties (Hue-bridge, LG-tv, Tapo-camera, Matter) zijn in de cloudmodus uitgeschakeld en verborgen.
 - `npm run cloud:setup` richt de database in en schrijft de Vercel-waarden naar een privébestand. Zie docs/cloud.md.
 - Tests: unit/integratie inclusief serverless-modus en Hue-cloud, E2E van de cloudmodus zonder connector-proces.
+- **Google Home** (op verzoek, voor de IKEA GRILLPLATS die in Google Home staat): via de officiële Google Assistant SDK
+  (Embedded Assistant v1alpha2, gRPC over HTTP/2, zonder extra pakketten). Alleen aan/uit als tekstopdracht
+  ("zet <naam> aan"); Google meldt de werkelijke toestand niet, dus de status blijft "onbekend" en de app toont losse
+  Aan/Uit-knoppen in plaats van een schakelaar. De gebruiker kiest zelf welke apparaten (naam zoals in Google Home).
+  Daglimiet 450 opdrachten. Kanttekening: Google vervangt Assistent door Gemini; deze route kan ooit stoppen.
+- Onderzocht en afgevallen: geen cloud-API voor de LG-tv (ThinQ Connect ondersteunt geen tv's) of live camerabeeld;
+  IKEA DIRIGERA heeft alleen een lokale (niet-officiële) API. Daarvoor blijft een kastje thuis nodig (optioneel, later).
 
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).

@@ -9,3 +9,4 @@ export * from "./matter/index";
 export * from "./webos/index";
 export * from "./tapo/index";
 export * from "./zonneplan/index";
+export * from "./googlehome/index";

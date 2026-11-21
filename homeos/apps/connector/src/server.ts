@@ -25,6 +25,7 @@ import type { WebOsService } from "./webos-service";
 import type { CameraService } from "./camera-service";
 import type { ZonneplanService } from "./zonneplan-service";
 import type { HueCloudService } from "./huecloud-service";
+import type { GoogleHomeService } from "./googlehome-service";
 import type { PushService } from "./push-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
@@ -47,6 +48,7 @@ export interface ServerOptions {
   cameras: CameraService;
   zonneplan: ZonneplanService;
   huecloud: HueCloudService;
+  googlehome: GoogleHomeService;
   push: PushService;
   automations: AutomationService;
 }
@@ -146,7 +148,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), mode: o.cloudMode ? "cloud" : "local" }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), mode: o.cloudMode ? "cloud" : "local" }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -250,6 +252,35 @@ export function createConnectorServer(o: ServerOptions) {
       },
     },
     { method: "DELETE", pattern: /^\/v1\/integrations\/huecloud$/, handler: async () => setup(() => o.huecloud.remove()) },
+    // ───── Google Home via de Google Assistant SDK ─────
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/googlehome\/start$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ clientId: z.string().trim().max(200), clientSecret: z.string().trim().max(200), redirectUri: z.string().trim().max(300) }), await body());
+        return setup(() => o.googlehome.start(b.clientId, b.clientSecret, b.redirectUri));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/googlehome\/complete$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ code: z.string().trim().min(1).max(1000), state: z.string().trim().min(1).max(200) }), await body());
+        return setup(() => o.googlehome.complete(b.code, b.state));
+      },
+    },
+    {
+      method: "PUT",
+      pattern: /^\/v1\/integrations\/googlehome\/devices$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ names: z.array(z.string().max(80)).max(30) }), await body());
+        return setup(() => o.googlehome.setDevices(b.names));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/googlehome$/, handler: async () => setup(() => o.googlehome.remove()) },
     // ───── pushmeldingen ─────
     { method: "GET", pattern: /^\/v1\/push$/, handler: async () => o.push.info() },
     {

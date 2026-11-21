@@ -45,6 +45,15 @@ const Schema = z.object({
   webos: z.array(WebOsTvSchema).default([]),
   tapo: z.array(TapoCameraSchema).default([]),
   huecloud: z.object({ clientId: z.string().max(100), addedAt: z.string() }).nullable().default(null),
+  googlehome: z
+    .object({
+      clientId: z.string().max(200),
+      languageCode: z.string().regex(/^[a-z]{2}-[A-Z]{2}$/).default("nl-NL"),
+      devices: z.array(z.object({ id: z.string().regex(/^[0-9a-f]{16}$/), name: z.string().min(1).max(60) })).max(30).default([]),
+      addedAt: z.string(),
+    })
+    .nullable()
+    .default(null),
   zonneplan: z.object({ connectionUuid: z.string().regex(/^[0-9a-f-]{36}$/i), label: z.string().max(80), addedAt: z.string() }).nullable().default(null),
 });
 export type TapoCameraRecord = z.infer<typeof TapoCameraSchema>;
@@ -61,7 +70,7 @@ export class IntegrationsStore {
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
     const file = dataDir ? joinPath(dataDir, "integrations.json") : null;
-    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null, huecloud: null };
+    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null, huecloud: null, googlehome: null };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {
       const p = Schema.safeParse(JSON.parse(raw));

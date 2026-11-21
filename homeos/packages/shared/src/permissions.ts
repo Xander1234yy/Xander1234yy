@@ -64,6 +64,10 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
     return /^v1\/push\/(subscriptions|unsubscribe|test)$/.test(path) ? "control" : null;
   }
   if (/^v1\/integrations\/huecloud(\/(start|complete))?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
+  if (/^v1\/integrations\/googlehome(\/|$)/.test(path)) {
+    const ok = (path === "v1/integrations/googlehome" && m === "DELETE") || (/\/(start|complete)$/.test(path) && m === "POST") || (path.endsWith("/devices") && m === "PUT");
+    return ok && /^v1\/integrations\/googlehome(\/(start|complete|devices))?$/.test(path) ? "manage_devices" : null;
+  }
   if (/^v1\/integrations\/zonneplan(\/(start|complete))?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
   if (/^v1\/integrations\/tapo(\/[0-9a-f]{16})?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
   if (m === "GET") {

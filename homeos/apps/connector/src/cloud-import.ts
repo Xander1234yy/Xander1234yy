@@ -15,7 +15,7 @@ import { SecretStore } from "./secret-store";
 import { StateStore } from "./state-store";
 
 /** Sleutelgroepen (scopes) en adapter-id's die in de cloud werken. */
-const CLOUD_SCOPE = /^(solaredge-\d+|daikin-onecta|tuya|zonneplan-[0-9a-f]{6}|huecloud)$/;
+const CLOUD_SCOPE = /^(solaredge-\d+|daikin-onecta|tuya|zonneplan-[0-9a-f]{6}|huecloud|googlehome)$/;
 const deviceAdapter = (deviceId: string) => deviceId.split(":")[0] ?? "";
 
 export interface ImportSummary {
@@ -51,6 +51,7 @@ export async function importToCloud(o: {
   if (s.tuya) integrations.push("Smart Life/Tuya");
   if (s.zonneplan) integrations.push("Zonneplan Connect");
   if (s.huecloud) integrations.push("Hue-cloud");
+  if (s.googlehome) integrations.push("Google Home");
   if (s.hue.length) skipped.push("Philips Hue-bridge (lokaal; koppel opnieuw via Hue-cloud)");
   if (s.webos.length) skipped.push("LG-tv (alleen thuis)");
   if (s.tapo.length) skipped.push("Tapo-camera (alleen thuis)");
@@ -82,6 +83,7 @@ export async function importToCloud(o: {
     cloud.state.tuya = s.tuya;
     cloud.state.zonneplan = s.zonneplan;
     cloud.state.huecloud = s.huecloud;
+    cloud.state.googlehome = s.googlehome;
     await cloud.save();
 
     const cloudState = await StateStore.open(prefix);

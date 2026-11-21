@@ -20,6 +20,18 @@ function useControl(device: Device) {
 export function PowerSwitch({ device }: { device: Device }) {
   const { sendCommand, busy, usable } = useControl(device);
   if (!supportsCommand(device, "set_power")) return null;
+  // Toestand onbekend (bijv. via Google Assistent): geen schakelaar die een stand suggereert, maar losse knoppen.
+  if (device.state.on === undefined && device.status === "ONLINE")
+    return (
+      <div className="flex gap-1" role="group" aria-label={`${device.name} bedienen (status onbekend)`}>
+        <Button size="sm" variant="secondary" disabled={!usable || busy} onClick={() => void sendCommand(device, { type: "set_power", on: true })} aria-label={`${device.name} aanzetten`}>
+          Aan
+        </Button>
+        <Button size="sm" variant="secondary" disabled={!usable || busy} onClick={() => void sendCommand(device, { type: "set_power", on: false })} aria-label={`${device.name} uitzetten`}>
+          Uit
+        </Button>
+      </div>
+    );
   return (
     <Switch
       checked={!!device.state.on}

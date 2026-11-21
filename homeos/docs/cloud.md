@@ -9,7 +9,8 @@ Beide hebben een gratis abonnement dat voor één huishouden ruim voldoende is.
 | --- | --- |
 | Daikin-airco (Onecta), Smart Life/Tuya-stekkers, SolarEdge, Zonneplan Connect (niet-officieel) | LG-tv en afstandsbediening |
 | Philips Hue via de **Hue-cloud** (officiële Remote API) | Tapo-camera (C500) |
-| Automatiseringen, meldingen, pushmeldingen, Jarvis, familie, onderhoud | IKEA GRILLPLATS (Matter), Hue zonder cloud |
+| Automatiseringen, meldingen, pushmeldingen, Jarvis, familie, onderhoud | Hue zonder cloud, live camerabeeld |
+| Apparaten uit **Google Home** (bijv. IKEA GRILLPLATS), alleen aan/uit en zonder statusterugmelding | |
 
 Wil je de tv en camera later terug, dan kan er naast de cloud een klein kastje thuis bij (zie roadmap).
 
@@ -59,6 +60,20 @@ Wil je de tv en camera later terug, dan kan er naast de cloud een klein kastje t
 3. Vul in HomeOS de ClientId en ClientSecret in en klik *Inloggen bij Philips Hue*. Je logt in bij Philips en komt
    terug in HomeOS; HomeOS maakt dan zelf een sleutel aan via de Hue-cloud. De Hue Bridge moet online zijn
    (gekoppeld aan je Hue-account, zoals in de Hue-app).
+
+### Google Home (bijv. IKEA-stekkers)
+
+Via de officiële **Google Assistant SDK**: HomeOS stuurt "zet <naam> aan/uit" naar je Google-account, alsof je het
+tegen Google zegt. Google meldt niet terug of het apparaat werkelijk schakelde; HomeOS toont de status daarom als
+onbekend (losse Aan/Uit-knoppen).
+
+1. console.cloud.google.com → nieuw project → *APIs & Services → Library* → **Google Assistant API** aanzetten.
+2. *OAuth consent screen*: **External**, naam en e-mail invullen, daarna **Publish app** (anders verloopt de koppeling
+   na 7 dagen). De melding "niet geverifieerd" bij het inloggen is normaal voor je eigen app.
+3. *Credentials → OAuth client ID → Web application*, redirect URI:
+   `https://<jouw-vercel-adres>/api/integrations/googlehome/callback` (staat ook in de instelkaart).
+4. In HomeOS bij Instellingen → Google Home: client-ID en secret invullen, inloggen met het Google-account van je
+   Google Home, en daarna de apparaatnamen precies zoals in Google Home invullen (één per regel).
 
 ## Variabelen
 
