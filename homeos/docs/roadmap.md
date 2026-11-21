@@ -179,6 +179,19 @@
 - Onderzocht en afgevallen: geen cloud-API voor de LG-tv (ThinQ Connect ondersteunt geen tv's) of live camerabeeld;
   IKEA DIRIGERA heeft alleen een lokale (niet-officiële) API. Daarvoor blijft een kastje thuis nodig (optioneel, later).
 
+## Fase 8: opgeleverd (beveiliging, tests, optimalisatie, documentatie)
+
+- **Beveiligingsaudit:** `npm audit` 0 kwetsbaarheden; Supabase-advies doorgelopen (migratie 7: interne functies dicht;
+  `pg_net` naar schema `extensions`; bewuste `SECURITY DEFINER`-functies gedocumenteerd); Content-Security-Policy op alle
+  pagina's; metadata-adressen van cloudservers geweigerd als apparaatadres; geen geheimen in Git. Zie docs/security.md.
+- **Tests:** 254 unit-/integratietests (dekking ±81% van de connector en pakketten), 50 E2E-tests op desktop, iPhone en
+  iPad tegen een productiebuild (incl. CSP). De cloud-E2E (`playwright.cloudruntime.config.ts`) vraagt Docker; de
+  serverless-modus is daarnaast gedekt met unit-tests en live gecontroleerd (geplande taak 200 OK).
+- **Optimalisatie:** cloudopslag leest alle documenten in één query per aanvraag en schrijft alleen gewijzigde
+  documenten; 17 indexen op foreign keys (migratie 8).
+- **Nieuw op verzoek tijdens fase 8:** Google Home, "Alles uit", Apple-agenda, Apple Woning via Opdrachten, privacypagina.
+- **Zelf te doen (optioneel):** Supabase → Authentication → wachtwoorden uit datalekken weigeren.
+
 ## Antwoorden en openstaande vragen
 - Stekkers: Smart Life / Tuya → Tuya Cloud OpenAPI (fase 4).
 - Omvormer: SolarEdge → Monitoring API; geen energiemeter en geen P1 → alleen opwek.
