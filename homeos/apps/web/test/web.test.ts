@@ -215,3 +215,23 @@ describe("cloudmodus: pooler-adres", () => {
     expect(alternatePoolerUrl("postgresql://u:pw@db.example.com:5432/postgres")).toBeNull();
   });
 });
+
+describe("cloudmodus: documentopslag met één leesronde", () => {
+  it("leest alle documenten in één keer en schrijft alleen gewijzigde documenten", async () => {
+    const { cachedDocs } = await import("../lib/cloud/doc-cache");
+    let loads = 0;
+    const writes: string[] = [];
+    const docs = cachedDocs({
+      loadAll: async () => (loads++, [{ key: "registry.json", data: "{\"a\":1}" }]),
+      write: async (k, d) => void writes.push(`${k}=${d}`),
+    });
+    const [a, b] = await Promise.all([docs.read("registry.json"), docs.read("nope.json")]);
+    expect([a, b]).toEqual(["{\"a\":1}", null]);
+    await docs.write("registry.json", "{\"a\":1}"); // ongewijzigd: niet schrijven
+    await docs.write("registry.json", "{\"a\":2}");
+    await docs.write("registry.json", "{\"a\":2}");
+    expect(await docs.read("registry.json")).toBe("{\"a\":2}");
+    expect(loads).toBe(1);
+    expect(writes).toEqual(["registry.json={\"a\":2}"]);
+  });
+});

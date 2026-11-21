@@ -155,5 +155,9 @@ export function isPrivateLanHost(host: string): boolean {
   if (!m) return false;
   const [a, b] = [Number(m[1]), Number(m[2])];
   if ([m[1], m[2], m[3], m[4]].some((p) => Number(p) > 255)) return false;
+  // Metadata-adressen van cloudservers (AWS/GCP/Azure, ECS) nooit, ook al vallen ze in 169.254.0.0/16.
+  if (host === "169.254.169.254" || host === "169.254.170.2" || host === "169.254.169.253") return false;
+  // Netwerk- en broadcastadres zijn geen apparaat.
+  if (Number(m[4]) === 0 || Number(m[4]) === 255) return false;
   return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
 }

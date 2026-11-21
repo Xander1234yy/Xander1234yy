@@ -42,6 +42,12 @@ describe("Hue netwerk-beveiliging", () => {
     expect(isPrivateLanHost("127.0.0.1")).toBe(false);
     expect(isPrivateLanHost("bridge.example.com")).toBe(false);
     expect(isPrivateLanHost("192.168.1.300")).toBe(false);
+    expect(isPrivateLanHost("169.254.12.7")).toBe(true);
+    expect(isPrivateLanHost("169.254.169.254")).toBe(false); // metadata-adres van cloudservers
+    expect(isPrivateLanHost("169.254.170.2")).toBe(false);
+    expect(isPrivateLanHost("192.168.1.255")).toBe(false);
+    expect(isPrivateLanHost("172.32.0.1")).toBe(false);
+    expect(isPrivateLanHost("::1")).toBe(false);
   });
 
   it("pint het certificaat: verkeerde vingerafdruk → geen verzoek en geen key verstuurd", async () => {

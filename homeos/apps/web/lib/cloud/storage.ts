@@ -1,21 +1,26 @@
 import "server-only";
 import type { StorageBackend } from "@homeos/connector/cloud";
 import { workerSql } from "./db";
+import { cachedDocs } from "./doc-cache";
 
 const MAX_DOC = 5_000_000;
 const MAX_LINE = 20_000;
 
 /** Connector-opslag per huishouden in Supabase (documenten + logregels). Al versleutelde geheimen blijven versleuteld. */
 export function pgStorage(householdId: string, sql = workerSql()): StorageBackend {
-  return {
-    async read(key) {
-      const rows = await sql<{ data: string }[]>`select data from public.cloud_documents where household_id = ${householdId} and key = ${key}`;
-      return rows[0]?.data ?? null;
-    },
-    async write(key, data) {
-      if (data.length > MAX_DOC) throw new Error(`Document te groot: ${key}`);
+  // Eén query voor alle documenten per aanvraag; ongewijzigde documenten worden niet opnieuw geschreven (fase 8).
+  const docs = cachedDocs({
+    loadAll: () => sql<{ key: string; data: string }[]>`select key, data from public.cloud_documents where household_id = ${householdId}`,
+    write: async (key, data) => {
       await sql`insert into public.cloud_documents (household_id, key, data) values (${householdId}, ${key}, ${data})
                 on conflict (household_id, key) do update set data = excluded.data, updated_at = now()`;
+    },
+  });
+  return {
+    read: (key) => docs.read(key),
+    async write(key, data) {
+      if (data.length > MAX_DOC) throw new Error(`Document te groot: ${key}`);
+      await docs.write(key, data);
     },
     async append(key, line) {
       await sql`insert into public.cloud_logs (household_id, key, line) values (${householdId}, ${key}, ${line.slice(0, MAX_LINE)})`;
