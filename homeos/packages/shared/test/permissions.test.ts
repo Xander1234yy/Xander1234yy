@@ -64,6 +64,8 @@ describe("rollen en rechten", () => {
     expect(permissionForConnectorRoute("POST", "v1/calendar/events")).toBeNull();
     expect(permissionForConnectorRoute("PUT", "v1/integrations/shortcuts")).toBe("manage_devices");
     expect(permissionForConnectorRoute("DELETE", "v1/integrations/shortcuts")).toBeNull();
+    expect(permissionForConnectorRoute("POST", "v1/integrations/ziggo")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("GET", "v1/integrations/ziggo")).toBeNull();
   });
 });
 

@@ -14,8 +14,9 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
 1. **Geen nep-integraties.** Gesimuleerde apparaten bestaan alleen als DEMO-adapter (`demo: true`) en worden in de UI
    altijd zo gemarkeerd. Echte adapters alleen op basis van officiële documentatie. Ontbreekt die, maak dan een duidelijk
    gemarkeerde stub die `not_configured` of een fout teruggeeft. Meld nooit een verbinding als geslaagd als dat niet zo is.
-   **Enige uitzondering (expliciet gevraagd door de gebruiker):** Zonneplan Connect via de niet-officiële app-API,
-   alleen-lezen en overal gemarkeerd als niet-officieel. Voeg geen andere niet-officiële koppelingen toe zonder expliciet verzoek.
+   **Uitzonderingen (expliciet gevraagd door de gebruiker):** Zonneplan Connect via de niet-officiële app-API
+   (alleen-lezen) en de Ziggo Mediabox via de niet-officiële Ziggo GO-webdiensten (zenders, aan/stand-by, knoppen), beide
+   overal gemarkeerd als niet-officieel. Voeg geen andere niet-officiële koppelingen toe zonder expliciet verzoek.
 2. **Secrets.** Geen tokens in frontendcode, `NEXT_PUBLIC_*` of localStorage. Integratietokens alleen via
    `SecretStore` (AES-256-GCM) in de connector. Het connector-token alleen server-side.
 3. **Opdrachten.** Alles gaat via `DeviceRegistry.executeCommand` → `checkCommand()` (capability, status, noodstop,
@@ -67,6 +68,8 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   lokale HTTP/2-server, nooit Google zelf.
 - Apple-agenda: `packages/integrations/src/caldav` (CalDAV + ical.js), `apps/connector/src/icloud-calendar-service.ts`.
   Alleen-lezen, alleen iCloud-hosts. Tests via `packages/integrations/test/fake-icloud.ts`, nooit Apple zelf.
+- Ziggo (niet-officieel): `packages/integrations/src/ziggo` (REST + eigen MQTT-over-wss-client, korte sessies). Alleen
+  Ziggo-hosts. Tests via `packages/integrations/test/fake-ziggo.ts` en een lokale WebSocket-testserver, nooit Ziggo zelf.
 - Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 

@@ -39,6 +39,8 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: /^v1\/integrations\/icloud$/ },
   { method: "GET", pattern: /^v1\/calendar\/events$/ },
   { method: "PUT", pattern: /^v1\/integrations\/shortcuts$/ },
+  { method: "POST", pattern: /^v1\/integrations\/ziggo$/ },
+  { method: "DELETE", pattern: /^v1\/integrations\/ziggo$/ },
   { method: "POST", pattern: /^v1\/push\/(subscriptions|unsubscribe|test)$/ },
   { method: "POST", pattern: /^v1\/integrations\/zonneplan\/(start|complete)$/ },
   { method: "DELETE", pattern: /^v1\/integrations\/zonneplan$/ },

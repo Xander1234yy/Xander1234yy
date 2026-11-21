@@ -1,4 +1,4 @@
-import { createDemoAdapters, type AssistantTransport, type DeviceAdapter, type Logger } from "@homeos/integrations";
+import { createDemoAdapters, type AssistantTransport, type MqttConnect, type DeviceAdapter, type Logger } from "@homeos/integrations";
 import type { DeviceEvent } from "@homeos/shared";
 import { CONNECTOR_VERSION, type ConnectorConfig } from "./config";
 import { ensureDir, joinPath, readFileOrNull, writeFileAtomic } from "./fs-utils";
@@ -20,6 +20,7 @@ import { createHueCloudService } from "./huecloud-service";
 import { createGoogleHomeService } from "./googlehome-service";
 import { createIcloudCalendarService } from "./icloud-calendar-service";
 import { createShortcutsService } from "./shortcuts-service";
+import { createZiggoService } from "./ziggo-service";
 import { createPushService, type PushSender } from "./push-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
@@ -34,6 +35,7 @@ export async function createConnector(
   cameraDeps: CameraDeps = {},
   pushSender?: PushSender,
   assistantTransport?: AssistantTransport,
+  ziggoMqtt?: MqttConnect,
 ) {
   await ensureDir(config.dataDir);
   await ensureDir(joinPath(config.dataDir, "logs"));
@@ -90,6 +92,8 @@ export async function createConnector(
   adapters.push(...huecloud.adapters());
   const googlehome = createGoogleHomeService({ registry, secrets, store: integrations, fetchImpl, ...(assistantTransport ? { transport: assistantTransport } : {}) });
   adapters.push(...googlehome.adapters());
+  const ziggo = createZiggoService({ registry, secrets, store: integrations, fetchImpl, ...(ziggoMqtt ? { mqttConnect: ziggoMqtt } : {}) });
+  adapters.push(...ziggo.adapters());
   const icloud = createIcloudCalendarService({ store: integrations, secrets, dataDir: config.dataDir, serverless, fetchImpl });
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger, serverless });
@@ -116,6 +120,7 @@ export async function createConnector(
     huecloud,
     googlehome,
     icloud,
+    ziggo,
     shortcuts: createShortcutsService({ store: integrations }),
     push,
     automations,

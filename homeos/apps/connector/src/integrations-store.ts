@@ -68,6 +68,14 @@ const Schema = z.object({
     .array(z.object({ id: z.string().regex(/^[0-9a-f]{12}$/), label: z.string().min(1).max(40), shortcut: z.string().min(1).max(100) }))
     .max(30)
     .default([]),
+  ziggo: z
+    .object({
+      addedAt: z.string(),
+      cityId: z.string().max(40).nullable(),
+      boxes: z.array(z.object({ deviceId: z.string().regex(/^[\w.:-]{3,100}$/), name: z.string().max(80), platform: z.string().max(20) })).max(5),
+    })
+    .nullable()
+    .default(null),
   zonneplan: z.object({ connectionUuid: z.string().regex(/^[0-9a-f-]{36}$/i), label: z.string().max(80), addedAt: z.string() }).nullable().default(null),
 });
 export type TapoCameraRecord = z.infer<typeof TapoCameraSchema>;
@@ -84,7 +92,7 @@ export class IntegrationsStore {
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
     const file = dataDir ? joinPath(dataDir, "integrations.json") : null;
-    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null, huecloud: null, googlehome: null, icloud: null, shortcuts: [] };
+    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null, huecloud: null, googlehome: null, icloud: null, shortcuts: [], ziggo: null };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {
       const p = Schema.safeParse(JSON.parse(raw));

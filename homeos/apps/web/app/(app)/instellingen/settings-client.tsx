@@ -12,6 +12,7 @@ import { HueCloudCard } from "@/components/settings/hue-cloud-card";
 import { GoogleHomeCard } from "@/components/settings/google-home-card";
 import { AppleCalendarCard } from "@/components/settings/apple-calendar-card";
 import { ShortcutsSettingsCard } from "@/components/settings/shortcuts-settings-card";
+import { ZiggoCard } from "@/components/settings/ziggo-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
 import { ZonneplanCard } from "@/components/settings/zonneplan-card";
@@ -111,6 +112,7 @@ export function SettingsClient({ cloudSection, cloudRuntime = false }: { cloudSe
         <GoogleHomeCard />
         <AppleCalendarCard />
         <ShortcutsSettingsCard />
+        <ZiggoCard />
         {!cloudRuntime && (
           <>
             <MatterCard />

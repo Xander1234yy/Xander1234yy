@@ -70,6 +70,7 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
   }
   if (path === "v1/calendar/events") return m === "GET" ? "view" : null;
   if (path === "v1/integrations/shortcuts") return m === "PUT" ? "manage_devices" : null;
+  if (path === "v1/integrations/ziggo") return m === "POST" || m === "DELETE" ? "manage_devices" : null;
   if (/^v1\/integrations\/googlehome(\/|$)/.test(path)) {
     const ok = (path === "v1/integrations/googlehome" && m === "DELETE") || (/\/(start|complete)$/.test(path) && m === "POST") || (path.endsWith("/devices") && m === "PUT");
     return ok && /^v1\/integrations\/googlehome(\/(start|complete|devices))?$/.test(path) ? "manage_devices" : null;

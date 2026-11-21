@@ -35,7 +35,7 @@ export const CAPABILITIES = [
 export const CapabilitySchema = z.enum(CAPABILITIES);
 export type Capability = z.infer<typeof CapabilitySchema>;
 
-export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate", "lg_webos", "tapo_camera", "zonneplan"] as const;
+export const INTEGRATION_TYPES = ["demo", "philips_hue", "smart_plug", "apple_tv", "solar", "doorbell", "climate", "lg_webos", "tapo_camera", "zonneplan", "ziggo"] as const;
 export const IntegrationTypeSchema = z.enum(INTEGRATION_TYPES);
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
 
@@ -58,7 +58,7 @@ export const MediaStateSchema = z.object({
   /** Huidige ingang of app (id uit `sources`). */
   source: z.string().max(200).optional(),
   sources: z
-    .array(z.object({ id: z.string().max(200), label: z.string().max(120), type: z.enum(["input", "app"]) }))
+    .array(z.object({ id: z.string().max(200), label: z.string().max(120), type: z.enum(["input", "app", "channel"]) }))
     .max(80)
     .optional(),
 });

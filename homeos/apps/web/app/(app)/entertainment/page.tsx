@@ -18,7 +18,7 @@ export default function EntertainmentPage() {
       <PageHeader title="Entertainment" description="Mediaspelers, verbindingsstatus en beschikbare bediening." />
       {media.length === 0 ? (
         <EmptyState icon={Tv} title="Geen mediaspelers">
-          Koppel een LG-tv (webOS) bij Instellingen → LG-tv. Apple TV wordt niet ondersteund: er is geen officiële koppeling.
+          Koppel een LG-tv (webOS) of je Ziggo-box (niet-officieel) bij Instellingen. Apple TV wordt niet ondersteund: er is geen officiële koppeling.
         </EmptyState>
       ) : (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -48,7 +48,10 @@ export default function EntertainmentPage() {
               <div className="mt-5">
                 <TvRemote device={tv} />
               </div>
-              {tv.capabilities.includes("remote_control") && (
+              {tv.integration === "ziggo" && (
+                <p className="mt-3 text-center text-[11px] text-warning">Niet-officiële Ziggo-koppeling: kan zonder aankondiging stoppen.</p>
+              )}
+              {tv.capabilities.includes("remote_control") && tv.integration !== "ziggo" && (
                 <p className="mt-3 text-center text-[11px] text-muted">
                   Kastje op HDMI (zoals Ziggo)? Zet SIMPLINK (HDMI-CEC) aan op de tv en het kastje; dan gaan de knoppen door naar het kastje.
                 </p>

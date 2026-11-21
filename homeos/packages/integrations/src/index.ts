@@ -11,3 +11,4 @@ export * from "./tapo/index";
 export * from "./zonneplan/index";
 export * from "./googlehome/index";
 export * from "./caldav/index";
+export * from "./ziggo/index";

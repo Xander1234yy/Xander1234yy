@@ -190,6 +190,9 @@
 - **Optimalisatie:** cloudopslag leest alle documenten in één query per aanvraag en schrijft alleen gewijzigde
   documenten; 17 indexen op foreign keys (migratie 8).
 - **Nieuw op verzoek tijdens fase 8:** Google Home, "Alles uit", Apple-agenda, Apple Woning via Opdrachten, privacypagina.
+- **Ziggo Mediabox** (op uitdrukkelijk verzoek, niet-officieel): zenders kiezen (lijst bij Entertainment), aan/stand-by
+  met statuscontrole, afspelen/pauzeren en afstandsbedieningsknoppen. Eigen MQTT-client over wss, korte sessies (werkt
+  in de cloudmodus).
 - **Zelf te doen (optioneel):** Supabase → Authentication → wachtwoorden uit datalekken weigeren.
 
 ## Antwoorden en openstaande vragen

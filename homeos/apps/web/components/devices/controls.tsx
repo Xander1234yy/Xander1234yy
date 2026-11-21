@@ -173,6 +173,7 @@ export function TvControls({ device }: { device: Device }) {
   const on = m?.power === "on";
   const hasVolume = supportsCommand(device, "set_volume") && on;
   const sources = m?.sources ?? [];
+  const channels = sources.filter((s) => s.type === "channel");
   const hasSources = supportsCommand(device, "select_source") && on && sources.length > 0;
   if (!hasVolume && !hasSources) return null;
   const disabled = !usable || busy;
@@ -210,19 +211,28 @@ export function TvControls({ device }: { device: Device }) {
           value={m?.source ?? ""}
           disabled={disabled}
           onChange={(e) => e.target.value && void sendCommand(device, { type: "select_source", sourceId: e.target.value })}
-          aria-label={`Ingang of app op ${device.name}`}
+          aria-label={channels.length ? `Zender op ${device.name}` : `Ingang of app op ${device.name}`}
         >
-          {!m?.source && <option value="">Kies ingang of app…</option>}
-          <optgroup label="Ingangen">
+          {!m?.source && <option value="">{channels.length ? "Kies een zender…" : "Kies ingang of app…"}</option>}
+          {channels.length > 0 && (
+            <optgroup label="Zenders">
+              {channels.map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </optgroup>
+          )}
+          {sources.some((s) => s.type === "input") && <optgroup label="Ingangen">
             {sources.filter((s) => s.type === "input").map((s) => (
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
-          </optgroup>
-          <optgroup label="Apps">
-            {sources.filter((s) => s.type === "app").map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
-            ))}
-          </optgroup>
+          </optgroup>}
+          {sources.some((s) => s.type === "app") && (
+            <optgroup label="Apps">
+              {sources.filter((s) => s.type === "app").map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
       )}
     </div>

@@ -12,6 +12,7 @@ Beide hebben een gratis abonnement dat voor één huishouden ruim voldoende is.
 | Automatiseringen, meldingen, pushmeldingen, Jarvis, familie, onderhoud | Hue zonder cloud, live camerabeeld |
 | Apparaten uit **Google Home** (bijv. IKEA GRILLPLATS), alleen aan/uit en zonder statusterugmelding | |
 | **Apple-agenda** (iCloud, alleen-lezen) | |
+| **Ziggo Mediabox** (niet-officieel): zenders, aan/stand-by, knoppen | |
 
 Wil je de tv en camera later terug, dan kan er naast de cloud een klein kastje thuis bij (zie roadmap).
 
@@ -93,6 +94,13 @@ en voeg bij Instellingen → Apple Woning een knop toe; die staat dan op het das
 iPhone/iPad/Mac (buiten de deur met een woningshub), niet in automatiseringen, en HomeOS ziet de uitkomst niet.
 Ziggo-box: zet HDMI-CEC aan op tv (SimpLink) en box, dan gaat de box mee aan/uit met de tv. Zenders wisselen kan niet
 officieel (Ziggo heeft geen openbare API).
+
+### Ziggo Mediabox (niet-officieel, op verzoek)
+
+Ziggo heeft geen openbare API. Op uitdrukkelijk verzoek doet HomeOS hetzelfde als de Ziggo GO-webapp: inloggen met je
+Ziggo-account en via Ziggo's berichtendienst zenders kiezen, aan/stand-by zetten en afstandsbedieningsknoppen sturen.
+Overal gemarkeerd als niet-officieel; kan zonder aankondiging stoppen. Instellingen → Ziggo Mediabox: e-mailadres en
+wachtwoord van Mijn Ziggo (versleuteld bewaard). De box staat daarna bij Entertainment. Status hooguit elke 5 minuten.
 
 ## Variabelen
 
