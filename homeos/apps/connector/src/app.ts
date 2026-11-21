@@ -18,6 +18,7 @@ import { createCameraService, type CameraDeps } from "./camera-service";
 import { createZonneplanService } from "./zonneplan-service";
 import { createHueCloudService } from "./huecloud-service";
 import { createGoogleHomeService } from "./googlehome-service";
+import { createIcloudCalendarService } from "./icloud-calendar-service";
 import { createPushService, type PushSender } from "./push-service";
 
 /** Bouwt de volledige connector op. Gescheiden van index.ts zodat tests hem kunnen starten. */
@@ -88,6 +89,7 @@ export async function createConnector(
   adapters.push(...huecloud.adapters());
   const googlehome = createGoogleHomeService({ registry, secrets, store: integrations, fetchImpl, ...(assistantTransport ? { transport: assistantTransport } : {}) });
   adapters.push(...googlehome.adapters());
+  const icloud = createIcloudCalendarService({ store: integrations, secrets, dataDir: config.dataDir, serverless, fetchImpl });
 
   const automations = await createAutomationService({ registry, dataDir: config.dataDir, logger, serverless });
   const push = createPushService({ secrets, logger, ...(pushSender ? { sender: pushSender } : {}) });
@@ -112,6 +114,7 @@ export async function createConnector(
     zonneplan,
     huecloud,
     googlehome,
+    icloud,
     push,
     automations,
   });

@@ -65,6 +65,8 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
 - Google Home: `packages/integrations/src/googlehome` (Google Assistant SDK, gRPC met de hand gecodeerd). Alleen
   opdrachten; laat `state.on` leeg (status niet terug te lezen). Tests via een geïnjecteerde `AssistantTransport` of een
   lokale HTTP/2-server, nooit Google zelf.
+- Apple-agenda: `packages/integrations/src/caldav` (CalDAV + ical.js), `apps/connector/src/icloud-calendar-service.ts`.
+  Alleen-lezen, alleen iCloud-hosts. Tests via `packages/integrations/test/fake-icloud.ts`, nooit Apple zelf.
 - Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 

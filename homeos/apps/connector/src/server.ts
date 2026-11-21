@@ -26,6 +26,7 @@ import type { CameraService } from "./camera-service";
 import type { ZonneplanService } from "./zonneplan-service";
 import type { HueCloudService } from "./huecloud-service";
 import type { GoogleHomeService } from "./googlehome-service";
+import type { IcloudCalendarService } from "./icloud-calendar-service";
 import type { PushService } from "./push-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
@@ -49,6 +50,7 @@ export interface ServerOptions {
   zonneplan: ZonneplanService;
   huecloud: HueCloudService;
   googlehome: GoogleHomeService;
+  icloud: IcloudCalendarService;
   push: PushService;
   automations: AutomationService;
 }
@@ -148,7 +150,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), mode: o.cloudMode ? "cloud" : "local" }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), icloud: o.icloud.list(), mode: o.cloudMode ? "cloud" : "local" }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -281,6 +283,27 @@ export function createConnectorServer(o: ServerOptions) {
       },
     },
     { method: "DELETE", pattern: /^\/v1\/integrations\/googlehome$/, handler: async () => setup(() => o.googlehome.remove()) },
+    // ───── Apple iCloud-agenda (alleen-lezen) ─────
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/icloud$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ appleId: z.string().trim().max(254), appPassword: z.string().trim().max(40) }), await body());
+        return setup(() => o.icloud.connect(b.appleId, b.appPassword));
+      },
+    },
+    {
+      method: "PUT",
+      pattern: /^\/v1\/integrations\/icloud\/calendars$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ enabled: z.array(z.string().max(500)).max(50) }), await body());
+        return setup(() => o.icloud.setCalendars(b.enabled));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/icloud$/, handler: async () => setup(() => o.icloud.remove()) },
+    { method: "GET", pattern: /^\/v1\/calendar\/events$/, handler: async () => o.icloud.events() },
     // ───── pushmeldingen ─────
     { method: "GET", pattern: /^\/v1\/push$/, handler: async () => o.push.info() },
     {

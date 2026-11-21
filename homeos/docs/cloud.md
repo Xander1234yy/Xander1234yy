@@ -11,6 +11,7 @@ Beide hebben een gratis abonnement dat voor één huishouden ruim voldoende is.
 | Philips Hue via de **Hue-cloud** (officiële Remote API) | Tapo-camera (C500) |
 | Automatiseringen, meldingen, pushmeldingen, Jarvis, familie, onderhoud | Hue zonder cloud, live camerabeeld |
 | Apparaten uit **Google Home** (bijv. IKEA GRILLPLATS), alleen aan/uit en zonder statusterugmelding | |
+| **Apple-agenda** (iCloud, alleen-lezen) | |
 
 Wil je de tv en camera later terug, dan kan er naast de cloud een klein kastje thuis bij (zie roadmap).
 
@@ -74,6 +75,15 @@ onbekend (losse Aan/Uit-knoppen).
    `https://<jouw-vercel-adres>/api/integrations/googlehome/callback` (staat ook in de instelkaart).
 4. In HomeOS bij Instellingen → Google Home: client-ID en secret invullen, inloggen met het Google-account van je
    Google Home, en daarna de apparaatnamen precies zoals in Google Home invullen (één per regel).
+
+### Apple-agenda (iCloud)
+
+Alleen-lezen via CalDAV, de open standaard die Apple voor agenda-apps van derden ondersteunt.
+
+1. appleid.apple.com → *Inloggen en beveiliging* → **App-specifieke wachtwoorden** → maak er een ("HomeOS").
+2. HomeOS → Instellingen → Apple-agenda: Apple ID en dat wachtwoord invullen (nooit je gewone wachtwoord).
+3. Kies welke agenda's je wilt zien. Afspraken (ook herhalingen) staan bij Familie → Agenda, gemarkeerd met "Apple",
+   en worden hooguit elke 10 minuten opgehaald. Ontkoppelen wist de gegevens; trek het wachtwoord ook in bij Apple.
 
 ## Variabelen
 

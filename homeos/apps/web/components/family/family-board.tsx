@@ -17,6 +17,23 @@ const TABS: { id: Tab; label: string; icon: typeof ListTodo }[] = [
   { id: "notities", label: "Notities", icon: StickyNote },
 ];
 
+export interface AppleEvent {
+  id: string;
+  calendar: string;
+  title: string;
+  location: string;
+  startsAt: string;
+  endsAt: string | null;
+  allDay: boolean;
+}
+export interface AppleCalendar {
+  events: AppleEvent[];
+  fetchedAt: string | null;
+  error: string | null;
+}
+/** Eén rij in de agenda: eigen afspraak (Supabase) of Apple (alleen-lezen). */
+type AgendaItem = { key: string; id: string; title: string; location: string; startsAt: string; allDay: boolean; apple: string | null };
+
 const select = "h-10 rounded-xl border border-white/[0.08] bg-navy-850 px-3 text-sm text-fg";
 
 function dayLabel(iso: string) {
@@ -28,10 +45,22 @@ function dayLabel(iso: string) {
   return d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
 }
 
-export function FamilyBoard(props: { tasks: FamilyTaskRow[]; shopping: ShoppingItemRow[]; events: CalendarEventRow[]; notes: NoteRow[]; members: MemberRow[] }) {
+export function FamilyBoard(props: { tasks: FamilyTaskRow[]; shopping: ShoppingItemRow[]; events: CalendarEventRow[]; notes: NoteRow[]; members: MemberRow[]; apple?: AppleCalendar | null }) {
+  const since = Date.now() - 86_400_000;
+  const agenda = useMemo<AgendaItem[]>(
+    () =>
+      [
+        ...props.events.map((e) => ({ key: `h:${e.id}`, id: e.id, title: e.title, location: e.location, startsAt: e.starts_at, allDay: e.all_day, apple: null })),
+        ...(props.apple?.events ?? [])
+          .filter((e) => new Date(e.endsAt ?? e.startsAt).getTime() >= since)
+          .map((e) => ({ key: `a:${e.id}`, id: e.id, title: e.title, location: e.location, startsAt: e.startsAt, allDay: e.allDay, apple: e.calendar })),
+      ].sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `since` is alleen een ondergrens bij het renderen
+    [props.events, props.apple],
+  );
   const [tab, setTab] = useState<Tab>("agenda");
   const counts: Record<Tab, number> = {
-    agenda: props.events.length,
+    agenda: agenda.length,
     taken: props.tasks.filter((t) => !t.completed_at).length,
     boodschappen: props.shopping.filter((s) => !s.checked).length,
     notities: props.notes.length,
@@ -52,7 +81,7 @@ export function FamilyBoard(props: { tasks: FamilyTaskRow[]; shopping: ShoppingI
           </button>
         ))}
       </div>
-      {tab === "agenda" && <Agenda events={props.events} />}
+      {tab === "agenda" && <Agenda items={agenda} apple={props.apple ?? null} />}
       {tab === "taken" && <Tasks tasks={props.tasks} members={props.members} />}
       {tab === "boodschappen" && <Shopping items={props.shopping} />}
       {tab === "notities" && <Notes notes={props.notes} />}
@@ -60,7 +89,7 @@ export function FamilyBoard(props: { tasks: FamilyTaskRow[]; shopping: ShoppingI
   );
 }
 
-function Agenda({ events }: { events: CalendarEventRow[] }) {
+function Agenda({ items, apple }: { items: AgendaItem[]; apple: AppleCalendar | null }) {
   const write = useCan("family_write");
   const { pending, run } = useServerAction();
   const [title, setTitle] = useState("");
@@ -68,13 +97,13 @@ function Agenda({ events }: { events: CalendarEventRow[] }) {
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
   const groups = useMemo(() => {
-    const m = new Map<string, CalendarEventRow[]>();
-    for (const e of events) {
-      const k = new Date(e.starts_at).toDateString();
+    const m = new Map<string, AgendaItem[]>();
+    for (const e of items) {
+      const k = new Date(e.startsAt).toDateString();
       m.set(k, [...(m.get(k) ?? []), e]);
     }
     return [...m.values()];
-  }, [events]);
+  }, [items]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-12">
@@ -107,22 +136,31 @@ function Agenda({ events }: { events: CalendarEventRow[] }) {
         </Card>
       )}
       <div className={cn("space-y-5", write ? "lg:col-span-8" : "lg:col-span-12")}>
+        {apple && (
+          <p className={cn("text-[11px]", apple.error ? "text-warning" : "text-muted")} data-testid="apple-calendar-status">
+            Apple-agenda (alleen-lezen){apple.fetchedAt ? ` · bijgewerkt ${new Date(apple.fetchedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}` : ""}
+            {apple.error ? ` · ${apple.error}` : ""}
+          </p>
+        )}
         {groups.length === 0 && <EmptyState icon={CalendarDays} title="Geen komende afspraken" />}
         {groups.map((g) => (
-          <section key={g[0]!.id}>
-            <h3 className="mb-2 text-sm font-semibold capitalize text-muted">{dayLabel(g[0]!.starts_at)}</h3>
+          <section key={g[0]!.key}>
+            <h3 className="mb-2 text-sm font-semibold capitalize text-muted">{dayLabel(g[0]!.startsAt)}</h3>
             <ul className="space-y-2">
               {g.map((e) => (
-                <li key={e.id}>
+                <li key={e.key}>
                   <Card className="flex items-center gap-4 p-4">
                     <div className="w-14 shrink-0 text-center">
-                      <p className="text-sm font-semibold tabular">{e.all_day ? "Hele dag" : new Date(e.starts_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</p>
+                      <p className="text-sm font-semibold tabular">{e.allDay ? "Hele dag" : new Date(e.startsAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</p>
                     </div>
                     <div className="min-w-0 flex-1 border-l border-white/[0.06] pl-4">
                       <p className="truncate text-sm font-medium">{e.title}</p>
-                      {e.location && <p className="truncate text-xs text-muted">{e.location}</p>}
+                      <p className="truncate text-xs text-muted">
+                        {e.apple && <span className="mr-1.5 rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] text-fg">Apple · {e.apple}</span>}
+                        {e.location}
+                      </p>
                     </div>
-                    {write && (
+                    {write && !e.apple && (
                       <Button size="icon-sm" variant="ghost" aria-label={`${e.title} verwijderen`} onClick={() => void run(() => deleteFamilyItem("event", e.id))}>
                         <Trash2 />
                       </Button>

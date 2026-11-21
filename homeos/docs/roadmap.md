@@ -171,6 +171,8 @@
   ("turn on <naam>"; de SDK accepteert geen nl-NL, dus Engels); Google meldt de werkelijke toestand niet, dus de status blijft "onbekend" en de app toont losse
   Aan/Uit-knoppen in plaats van een schakelaar. De gebruiker kiest zelf welke apparaten (naam zoals in Google Home).
   Daglimiet 450 opdrachten. Kanttekening: Google vervangt Assistent door Gemini; deze route kan ooit stoppen.
+- **Apple-agenda** (op verzoek): iCloud via CalDAV met een app-specifiek wachtwoord, alleen-lezen. Herhalingen,
+  uitzonderingen en tijdzones via ical.js; afspraken bij Familie → Agenda (gemarkeerd "Apple", niet te verwijderen).
 - Onderzocht en afgevallen: geen cloud-API voor de LG-tv (ThinQ Connect ondersteunt geen tv's) of live camerabeeld;
   IKEA DIRIGERA heeft alleen een lokale (niet-officiële) API. Daarvoor blijft een kastje thuis nodig (optioneel, later).
 

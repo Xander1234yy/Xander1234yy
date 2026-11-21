@@ -64,6 +64,11 @@ export function permissionForConnectorRoute(method: string, path: string): Permi
     return /^v1\/push\/(subscriptions|unsubscribe|test)$/.test(path) ? "control" : null;
   }
   if (/^v1\/integrations\/huecloud(\/(start|complete))?$/.test(path)) return m === "POST" || m === "DELETE" ? "manage_devices" : null;
+  if (/^v1\/integrations\/icloud(\/|$)/.test(path)) {
+    const ok = (path === "v1/integrations/icloud" && (m === "POST" || m === "DELETE")) || (path === "v1/integrations/icloud/calendars" && m === "PUT");
+    return ok ? "manage_devices" : null;
+  }
+  if (path === "v1/calendar/events") return m === "GET" ? "view" : null;
   if (/^v1\/integrations\/googlehome(\/|$)/.test(path)) {
     const ok = (path === "v1/integrations/googlehome" && m === "DELETE") || (/\/(start|complete)$/.test(path) && m === "POST") || (path.endsWith("/devices") && m === "PUT");
     return ok && /^v1\/integrations\/googlehome(\/(start|complete|devices))?$/.test(path) ? "manage_devices" : null;

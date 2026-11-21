@@ -57,6 +57,11 @@ describe("rollen en rechten", () => {
     expect(permissionForConnectorRoute("DELETE", "v1/integrations/googlehome")).toBe("manage_devices");
     expect(permissionForConnectorRoute("GET", "v1/integrations/googlehome/devices")).toBeNull();
     expect(permissionForConnectorRoute("PUT", "v1/integrations/googlehome")).toBeNull();
+    expect(permissionForConnectorRoute("POST", "v1/integrations/icloud")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("PUT", "v1/integrations/icloud/calendars")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("GET", "v1/integrations/icloud")).toBeNull();
+    expect(permissionForConnectorRoute("GET", "v1/calendar/events")).toBe("view");
+    expect(permissionForConnectorRoute("POST", "v1/calendar/events")).toBeNull();
   });
 });
 
