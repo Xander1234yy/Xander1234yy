@@ -73,3 +73,15 @@
 ```bash
 npm run token -w @homeos/connector -- rotate   # daarna connector en webapp herstarten
 ```
+
+## Beveiligingsaudit (fase 8)
+
+| Controle | Uitkomst |
+| --- | --- |
+| `npm audit` (alle pakketten) | 0 kwetsbaarheden |
+| Supabase-advies: interne triggerfuncties via `/rest/v1/rpc` aanroepbaar | Opgelost (migratie 7, live) |
+| Supabase-advies: `pg_net` in schema `public` | Opgelost: verplaatst naar `extensions`; geplande taak gecontroleerd |
+| Supabase-advies: 9 `SECURITY DEFINER`-functies aanroepbaar voor ingelogde gebruikers | Bewust: `is_household_member`, `has_household_role`, `household_role`, `shares_household_with` zijn nodig voor de RLS-policies; `create_household`, `add/remove_household_member`, `set_household_member_role`, `household_member_list` controleren zelf de rol van `auth.uid()` (getest in `packages/database/test/rls.test.ts`) |
+| Supabase-advies: wachtwoorden uit datalekken weigeren | Instelling in Supabase (Authentication → Email); inloggen is daarnaast gelimiteerd |
+| Supabase-prestatieadvies: foreign keys zonder index | Opgelost (migratie 8, 17 indexen) |
+| Geheimen in Git | Geen: `.homeos-cloud.env`, tokens en sleutels staan alleen in Vercel/SecretStore |
