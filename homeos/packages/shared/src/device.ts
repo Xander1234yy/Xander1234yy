@@ -31,6 +31,8 @@ export const CAPABILITIES = [
   "ptz",
   /** Afstandsbedieningsknoppen (tv; via HDMI-CEC ook een aangesloten kastje). */
   "remote_control",
+  /** Live beeld als MPEG-TS via een cloudrelais (Tapo-cloud, niet-officieel). */
+  "cloud_stream",
 ] as const;
 export const CapabilitySchema = z.enum(CAPABILITIES);
 export type Capability = z.infer<typeof CapabilitySchema>;

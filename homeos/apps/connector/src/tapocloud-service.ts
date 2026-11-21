@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { TapoCloudAdapter, TapoCloudClient, TapoCloudError, type DeviceAdapter, type TapoHttp } from "@homeos/integrations";
+import { TapoCloudAdapter, TapoCloudClient, TapoCloudError, type DeviceAdapter, type RelaySocket, type TapoHttp } from "@homeos/integrations";
 import type { DeviceRegistry } from "./registry";
 import type { SecretStore } from "./secret-store";
 import type { IntegrationsStore } from "./integrations-store";
@@ -14,7 +14,7 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,}$/i;
  * (om zonder verificatiecode opnieuw aan te melden); een vaste terminal-ID per huishouden zodat TP-Link HomeOS na de
  * verificatiecode herkent. Verificatiecode-pogingen versleuteld in "pending", nooit in het geheugen (serverless).
  */
-export function createTapoCloudService(o: { registry: DeviceRegistry; secrets: SecretStore; store: IntegrationsStore; http?: TapoHttp }) {
+export function createTapoCloudService(o: { registry: DeviceRegistry; secrets: SecretStore; store: IntegrationsStore; http?: TapoHttp; relaySocket?: RelaySocket }) {
   const scope = o.secrets.scoped(ADAPTER_ID);
   const pending = o.secrets.scoped("pending");
   const make = () => new TapoCloudAdapter({ cameras: o.store.state.tapocloud!.cameras }, o.http);
@@ -79,6 +79,19 @@ export function createTapoCloudService(o: { registry: DeviceRegistry; secrets: S
         return await finish(client, p.email, p.password, s);
       } catch (e) {
         return fail(e);
+      }
+    },
+    /** Live beeld (MPEG-TS) van een camera via het TP-Link-relais; geeft de stroom terug of gooit een duidelijke fout. */
+    async live(deviceId: string, signal?: AbortSignal) {
+      const t = o.store.state.tapocloud;
+      if (!t || !t.cameras.some((c) => c.deviceId === deviceId && c.type === "camera")) throw new SetupError(404, "NOT_FOUND", "Camera niet gevonden");
+      const a = new TapoCloudAdapter({ cameras: t.cameras }, o.http, Date.now, o.relaySocket);
+      await a.prepare(scope);
+      try {
+        return await a.openLive(deviceId, { ...(signal ? { signal } : {}), maxMs: 240_000 });
+      } catch (e) {
+        const err = e as TapoCloudError;
+        throw new SetupError(err.code === "UNAUTHORIZED" || err.code === "EXPIRED" ? 401 : err.code === "UNAVAILABLE" ? 503 : 502, "TAPO_LIVE", err.message);
       }
     },
     async remove() {

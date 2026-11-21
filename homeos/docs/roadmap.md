@@ -196,7 +196,8 @@
 - **Jarvis en Ziggo:** "zet RTL 4 op", "zender 7", "ziggo naar NPO 1 Extra", "wat staat er op de ziggo?" (zenders op naam of nummer, langste naam wint; Netflix blijft op de tv).
 - **Tapo-camera's via de TP-Link-cloud** (op uitdrukkelijk verzoek, niet-officieel): meldingen (beweging/persoon/
   aanbellen), privacymodus en draaien zonder apparaat thuis; inloggen met verificatiecode (MFA). Live beeld via TP-Links
-  videorelais is de volgende stap.
+  videorelais: MPEG-TS (H.264) ongewijzigd doorgegeven naar de browser (mpegts.js), max. 4 minuten, alleen leden,
+  in de auditlog, niets opgeslagen.
 - **Zelf te doen (optioneel):** Supabase → Authentication → wachtwoorden uit datalekken weigeren.
 
 ## Antwoorden en openstaande vragen

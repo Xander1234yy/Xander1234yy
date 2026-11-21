@@ -1,5 +1,7 @@
 import { createHash, createHmac } from "node:crypto";
+import { Duplex } from "node:stream";
 import type { TapoHttp } from "../src/tapocloud/client";
+import type { RelaySocket } from "../src/tapocloud/relay";
 
 /**
  * Nagebootste TP-Link-cloud (alleen voor tests, nooit het netwerk). Controleert de handtekening van iedere
@@ -10,6 +12,7 @@ export function fakeTapoCloud(opts: { mfa?: boolean } = {}) {
   const password = "tapo-wachtwoord";
   const BASE = "https://n-euw1-wap.i.tplinkcloud.com";
   const IOT = "https://euw1-app-server.iot.i.tplinknbu.com";
+  const CIPC = "https://euw1-cipc.i.tplinkcloud.com";
   const CAM = "802C3A5B9E1F4D6A8B7C0D1E2F3A4B5C6D7E8F90";
   const BELL = "802C3A5B9E1F4D6A8B7C0D1E2F3A4B5C6D7E8F91";
   const SK = "6ed7d97f3e73467f8a5bab90b577ba4c";
@@ -24,6 +27,9 @@ export function fakeTapoCloud(opts: { mfa?: boolean } = {}) {
     notifications: [] as Record<string, unknown>[],
     badSignatures: 0,
     calls: [] as string[],
+    relayRequests: [] as { auth: string; body: Record<string, unknown> }[],
+    relayWrites: [] as string[],
+    relayStatus: 200,
   };
   const ok = (result: unknown) => ({ status: 200, text: JSON.stringify({ error_code: 0, result }) });
   const err = (code: number, msg = "") => ({ status: 200, text: JSON.stringify({ error_code: code, msg }) });
@@ -76,7 +82,7 @@ export function fakeTapoCloud(opts: { mfa?: boolean } = {}) {
           });
         case "/api/v2/common/getAppServiceUrl":
           if (!authed) return err(-20651);
-          return ok({ serviceUrls: { "nbu.iot-app-server.app": IOT } });
+          return ok({ serviceUrls: { "nbu.iot-app-server.app": IOT, "cipc.api.cloud": CIPC } });
         case "/api/v2/common/getAppNotificationByPage": {
           if (!authed) return err(-20651);
           const since = Number(b.indexTime);
@@ -101,7 +107,39 @@ export function fakeTapoCloud(opts: { mfa?: boolean } = {}) {
       }
       return reply({}, -40101);
     }
+    if (u.host === new URL(CIPC).host && u.pathname === "/v2/relay/request") {
+      state.relayRequests.push({ auth: init.headers.authorization ?? "", body: JSON.parse(init.body ?? "{}") });
+      if (init.headers.authorization !== state.token) return { status: 200, text: JSON.stringify({ errorCode: -20651, msg: "token expired" }) };
+      return { status: 200, text: JSON.stringify({ errorCode: 0, result: { relayUrl: "https://euw1-relay-5.i.tplinkcloud.com:443/relayservice?deviceid=CAM&type=video&resolution=HD", relayToken: "relay-tok", elbCookie: "AWSELB=x" } }) };
+    }
     return { status: 404, text: "{}" };
   };
-  return { state, http, user, password, CAM, BELL };
+
+  /** Nagebootst videorelais: controleert de kop, wacht op de previewaanvraag en stuurt TS-delen + een JSON-melding. */
+  const relaySocket: RelaySocket = async (host, port) => {
+    const ts = (n: number) => Buffer.concat([Buffer.from([0x47, 0x40, 0x44, 0x10]), Buffer.alloc(184, n)]); // één TS-pakket
+    let got = "";
+    let sentVideo = false;
+    const sock: Duplex = new Duplex({
+      read() {},
+      write(chunk: Buffer, _enc, cb) {
+        got += chunk.toString("latin1");
+        state.relayWrites.push(chunk.toString("latin1"));
+        if (got.includes("\r\n\r\n") && !got.includes("HTTP/1.1 200") && state.relayWrites.length === 1) {
+          const okHead = host.endsWith(".i.tplinkcloud.com") && port === 443 && got.includes("X-token: relay-tok") && got.includes("Cookie: AWSELB=x");
+          sock.push(`HTTP/1.1 ${okHead ? state.relayStatus : 403} OK\r\nContent-Type: multipart/mixed;boundary=--device-stream-boundary--\r\n\r\n`);
+        }
+        if (!sentVideo && got.includes('"preview"')) {
+          sentVideo = true;
+          const part = (headers: string, body: Buffer) => Buffer.concat([Buffer.from(`----device-stream-boundary--\r\n${headers}Content-Length: ${body.length}\r\n\r\n`), body, Buffer.from("\r\n")]);
+          sock.push(part("Content-Type: application/json\r\n", Buffer.from(JSON.stringify({ type: "notification", params: { session_id: "sess-9" } }))));
+          for (let i = 1; i <= 26; i++) sock.push(part(`Content-Type: video/mp2t\r\nX-Session-Id: sess-9\r\nX-Data-Sequence: ${i}\r\n`, ts(i)));
+          sock.push("----device-stream-boundary----\r\n");
+        }
+        cb();
+      },
+    });
+    return sock;
+  };
+  return { state, http, relaySocket, user, password, CAM, BELL };
 }

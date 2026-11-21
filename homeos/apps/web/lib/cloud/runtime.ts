@@ -49,7 +49,7 @@ export async function withCloudConnector<T>(
       fetch(`http://127.0.0.1:${addr.port}${path}`, {
         ...init,
         headers: { ...(init.headers ?? {}), authorization: `Bearer ${c.identity.apiToken}`, "content-type": "application/json" },
-        signal: AbortSignal.timeout(55_000),
+        signal: init.signal ?? AbortSignal.timeout(55_000),
       });
     return await fn(c, call);
   } finally {
@@ -69,5 +69,29 @@ export async function cloudConnectorFetch(householdId: string, path: string, ini
     const res = await call(path, init);
     const body = await res.arrayBuffer();
     return new Response(body, { status: res.status, headers: { "content-type": res.headers.get("content-type") ?? "application/json" } });
+  });
+}
+
+/**
+ * Een doorlopende stroom (bijv. live camerabeeld) van de connector van dit huishouden. De connector blijft draaien
+ * tot de stroom eindigt of de kijker afhaakt (`signal`); het antwoord begint zodra de connector een status geeft.
+ */
+export function cloudConnectorStream(householdId: string, path: string, signal: AbortSignal): Promise<Response> {
+  return new Promise<Response>((resolve, reject) => {
+    let started = false;
+    void withCloudConnector(householdId, async (_c, call) => {
+      const res = await call(path, { signal });
+      if (!res.ok || !res.body) {
+        started = true;
+        resolve(new Response(await res.arrayBuffer(), { status: res.status, headers: { "content-type": res.headers.get("content-type") ?? "application/json" } }));
+        return;
+      }
+      const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+      started = true;
+      resolve(new Response(readable, { status: 200, headers: { "content-type": res.headers.get("content-type") ?? "application/octet-stream" } }));
+      await res.body.pipeTo(writable, { signal }).catch(() => undefined);
+    }).catch((e) => {
+      if (!started) reject(e);
+    });
   });
 }

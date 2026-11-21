@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/devices/status-badge";
 import { useCan } from "@/components/session-context";
 import { useHome, useLive } from "@/lib/home-context";
 import { formatDateTime } from "@/lib/format";
+import { CloudLiveVideo } from "./cloud-live-video";
 
 const LIVE_LIMIT_MS = 5 * 60_000;
 const SNAPSHOT_MS = 15_000;
@@ -27,6 +28,7 @@ export function CameraCard({ device }: { device: Device }) {
   const online = device.status === "ONLINE" && connectorLive;
   // Camera's via de TP-Link-cloud (niet-officieel) hebben (nog) geen beeld: alleen meldingen, privacymodus en draaien.
   const hasStream = device.capabilities.includes("camera_stream");
+  const cloudStream = device.capabilities.includes("cloud_stream");
   const privacyOn = device.state.on === false;
   const enc = encodeURIComponent(device.id);
 
@@ -40,9 +42,9 @@ export function CameraCard({ device }: { device: Device }) {
 
   useEffect(() => {
     if (!live) return;
-    const t = setTimeout(() => setLive(false), LIVE_LIMIT_MS);
+    const t = setTimeout(() => setLive(false), cloudStream ? 4 * 60_000 : LIVE_LIMIT_MS);
     return () => clearTimeout(t);
-  }, [live]);
+  }, [live, cloudStream]);
 
   const src = live ? `/api/cameras/${enc}/stream?s=${tick}` : `/api/cameras/${enc}/snapshot?t=${tick}`;
   const busy = pending.has(device.id);
@@ -55,10 +57,23 @@ export function CameraCard({ device }: { device: Device }) {
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted">
             <Lock className="size-5" /> Camerabeelden zijn alleen zichtbaar voor leden van het huishouden.
           </div>
+        ) : cloudStream && live && !privacyOn ? (
+          <CloudLiveVideo
+            src={`/api/cameras/live/${enc}?s=${tick}`}
+            label={`Live beeld van ${device.name}`}
+            onError={(m) => {
+              setError(m);
+              setLive(false);
+            }}
+          />
         ) : !hasStream ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted">
             {privacyOn ? <EyeOff className="size-5" /> : <Camera className="size-5" />}
-            {privacyOn ? "Privacymodus staat aan: de camera kijkt niet." : "Geen live beeld via de TP-Link-cloud. Meldingen, privacymodus en draaien werken wel."}
+            {privacyOn
+              ? "Privacymodus staat aan: de camera kijkt niet."
+              : cloudStream
+                ? "Druk op Live bekijken voor beeld via de TP-Link-cloud (max. 4 minuten per keer)."
+                : "Geen live beeld via de TP-Link-cloud. Meldingen, privacymodus en draaien werken wel."}
           </div>
         ) : !online ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted">
@@ -103,7 +118,7 @@ export function CameraCard({ device }: { device: Device }) {
                 {privacyOn ? <Eye /> : <EyeOff />} {privacyOn ? "Camera aan" : "Privacymodus"}
               </Button>
             )}
-            {hasStream && (
+            {(hasStream || (cloudStream && !privacyOn)) && (
             <Button
               size="sm"
               variant={live ? "danger" : "primary"}

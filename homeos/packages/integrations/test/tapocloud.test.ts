@@ -124,3 +124,51 @@ describe("TapoCloudAdapter", () => {
     expect(f.state.badSignatures).toBe(0);
   });
 });
+
+describe("TP-Link-videorelais (live beeld)", () => {
+  it("delen splitsen, ook als ze over meerdere TCP-stukken binnenkomen", async () => {
+    const { splitDeviceParts, multipartPart } = await import("../src/tapocloud/relay");
+    const part = Buffer.from("----device-stream-boundary--\r\nContent-Type: video/mp2t\r\nContent-Length: 4\r\n\r\nABCD\r\n");
+    const a = splitDeviceParts(part.subarray(0, 30));
+    expect(a.parts).toHaveLength(0);
+    const b = splitDeviceParts(Buffer.concat([a.rest, part.subarray(30), Buffer.from("----device-stream-boundary----")]));
+    expect(b.parts.map((p) => [p.headers["content-type"], p.body.toString()])).toEqual([["video/mp2t", "ABCD"]]);
+    expect(b.end).toBe(true);
+    expect(multipartPart("{}", { "X-A": "1" }).toString()).toBe("----client-stream-boundary--\r\nContent-Type: application/json\r\nContent-Length: 2\r\nX-A: 1\r\n\r\n{}\r\n");
+  });
+
+  it("vraagt het relais aan met het ruwe token, opent het, vraagt preview en levert TS met ontvangstbevestiging", async () => {
+    const f = fakeTapoCloud();
+    const c = new TapoCloudClient("term-1", f.http);
+    const r = await c.login(f.user, f.password);
+    if (r.kind !== "ok") throw new Error("mfa");
+    const cameras = await c.cameras(r.base, r.token);
+    const secrets: Record<string, string> = { terminalUUID: "term-1", credentials: JSON.stringify({ email: f.user, password: f.password }), session: JSON.stringify({ base: r.base, token: r.token, refreshToken: r.refreshToken }) };
+    const a = new TapoCloudAdapter({ cameras }, f.http, Date.now, f.relaySocket);
+    await a.prepare(ctxWith(secrets).secrets);
+    const chunks: Buffer[] = [];
+    for await (const ch of await a.openLive(f.CAM, { maxMs: 5000 })) chunks.push(ch);
+    expect(chunks).toHaveLength(26);
+    expect(chunks.every((ch) => ch[0] === 0x47 && ch.length === 188)).toBe(true);
+    expect(f.state.relayRequests[0]).toMatchObject({ auth: "tok-1", body: { deviceId: f.CAM, playerId: "term-1", cloudType: 2, resolution: "HD", streamType: 0 } });
+    const written = f.state.relayWrites.join("");
+    expect(written).toContain("POST /relayservice?deviceid=CAM&type=video&resolution=HD HTTP/1.1");
+    expect(written).toContain('"method":"get","preview":{"channels":[0],"resolutions":["HD"]');
+    expect(written).toContain("X-Data-Received: 25");
+    expect(written).toContain("X-Session-Id: sess-9");
+    expect(JSON.parse(secrets.session!).cipcBase).toBe("https://euw1-cipc.i.tplinkcloud.com");
+  });
+
+  it("geeft een duidelijke fout als het relais weigert", async () => {
+    const f = fakeTapoCloud();
+    f.state.relayStatus = 403;
+    const c = new TapoCloudClient("term-1", f.http);
+    const r = await c.login(f.user, f.password);
+    if (r.kind !== "ok") throw new Error("mfa");
+    const secrets: Record<string, string> = { terminalUUID: "term-1", session: JSON.stringify({ base: r.base, token: r.token, refreshToken: r.refreshToken }) };
+    const a = new TapoCloudAdapter({ cameras: await c.cameras(r.base, r.token) }, f.http, Date.now, f.relaySocket);
+    await a.prepare(ctxWith(secrets).secrets);
+    const it = await a.openLive(f.CAM, { maxMs: 3000 });
+    await expect(it.next()).rejects.toMatchObject({ code: "EXPIRED" });
+  });
+});

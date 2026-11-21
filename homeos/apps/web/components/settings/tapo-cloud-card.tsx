@@ -88,7 +88,7 @@ export function TapoCloudCard() {
     <SectionCard title="Tapo-camera's (cloud)" description="Meldingen, privacymodus en draaien via de TP-Link-cloud" icon={Camera} testId="tapo-cloud-card">
       <p className="mb-3 rounded-xl bg-warning/10 px-3 py-2 text-xs text-warning">
         Niet-officiële koppeling: TP-Link heeft geen openbare camera-API. HomeOS doet hetzelfde als de Tapo-app. Dit kan zonder
-        aankondiging stoppen met werken. Nog geen live beeld via deze weg.
+        aankondiging stoppen met werken. Live beeld via het videorelais van TP-Link (max. 4 minuten per keer).
       </p>
       {info?.connected ? (
         <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">

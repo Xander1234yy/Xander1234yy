@@ -341,6 +341,33 @@ export function createConnectorServer(o: ServerOptions) {
       },
     },
     { method: "DELETE", pattern: /^\/v1\/integrations\/tapocloud$/, handler: async () => setup(() => o.tapocloud.remove()) },
+    {
+      method: "GET",
+      pattern: /^\/v1\/cameras\/tapocloud\/([0-9A-Za-z]{8,80})\/live$/,
+      handler: async ({ params, req }) => {
+        const deviceId = params[0]!;
+        const abort = new AbortController();
+        req.on("close", () => abort.abort());
+        // Relais openen vóór het antwoord begint, zodat een fout als nette JSON-fout terugkomt.
+        const stream = await setup(() => o.tapocloud.live(deviceId, abort.signal));
+        registry.recordAudit("camera.view", `tapocloud:${deviceId}`, true, { via: "tplink-relay" });
+        return new RawResponse(async (_req, res) => {
+          res.writeHead(200, { "content-type": "video/mp2t", "cache-control": "no-store", "x-content-type-options": "nosniff", connection: "close" });
+          try {
+            for await (const chunk of stream) {
+              if (res.destroyed) break;
+              if (res.writableLength > 4_000_000) continue; // trage kijker: stukken overslaan
+              res.write(chunk);
+            }
+          } catch {
+            /* relais gestopt: stroom netjes beëindigen */
+          } finally {
+            abort.abort();
+            if (!res.writableEnded) res.end();
+          }
+        });
+      },
+    },
     // ───── Apple-opdrachten (Shortcuts) als knoppen ─────
     {
       method: "PUT",
@@ -602,7 +629,7 @@ export function createConnectorServer(o: ServerOptions) {
       const ip = req.socket.remoteAddress ?? "unknown";
       if (!general.take(ip)) throw new HttpError(429, "RATE_LIMITED", "Te veel verzoeken");
       if (!authorized(req)) throw new HttpError(401, "UNAUTHORIZED", "Ongeldig of ontbrekend connector-token");
-      if (o.cloudMode && /^\/v1\/(integrations\/(hue|webos|tapo|matter)|cameras)(\/|$)/.test(url.pathname)) {
+      if (o.cloudMode && /^\/v1\/(integrations\/(hue|webos|tapo|matter)|cameras)(\/|$)/.test(url.pathname) && !url.pathname.startsWith("/v1/cameras/tapocloud/")) {
         throw new HttpError(409, "LOCAL_ONLY", "Niet beschikbaar in de cloudmodus: dit apparaat is alleen bereikbaar via je eigen netwerk.");
       }
 

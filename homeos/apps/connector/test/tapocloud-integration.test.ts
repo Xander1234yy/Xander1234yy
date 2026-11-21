@@ -10,7 +10,7 @@ afterEach(() => unregisterStorage(PREFIX));
 const config: ConnectorConfig = { host: "127.0.0.1", port: 0, dataDir: PREFIX, demo: false, masterSecret: "een-lange-geheime-sleutel-voor-de-test-1234567890", pollIntervalMs: 60_000, rateLimitPerMin: 1000, commandLimitPerMin: 1000, production: false, serverless: true };
 
 async function request<T>(f: ReturnType<typeof fakeTapoCloud>, fn: (call: (p: string, init?: RequestInit) => Promise<Response>) => Promise<T>): Promise<T> {
-  const c = await createConnector(config, silent, [], undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, f.http);
+  const c = await createConnector(config, silent, [], undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, f.http, f.relaySocket);
   const addr = await c.start();
   const call = (p: string, init: RequestInit = {}) => fetch(`http://127.0.0.1:${addr.port}${p}`, { ...init, headers: { authorization: `Bearer ${c.identity.apiToken}`, "content-type": "application/json" } });
   try {
@@ -48,7 +48,7 @@ describe("Tapo-camera's via TP-Link-cloud (niet-officieel, cloudmodus)", () => {
       const list = await (await call("/v1/integrations")).json();
       expect(list.tapocloud).toMatchObject({ connected: true, unofficial: true, cameras: ["Tuin C500", "Voordeur"] });
       const snap = await (await call("/v1/snapshot")).json();
-      expect(snap.devices.find((d: { id: string }) => d.id === cam)).toMatchObject({ kind: "camera", integration: "tapo_camera", capabilities: ["motion", "onoff", "ptz"] });
+      expect(snap.devices.find((d: { id: string }) => d.id === cam)).toMatchObject({ kind: "camera", integration: "tapo_camera", capabilities: ["motion", "onoff", "ptz", "cloud_stream"] });
       expect(snap.devices.find((d: { id: string }) => d.id === bell)).toMatchObject({ kind: "doorbell" });
       const off = await call(`/v1/devices/${encodeURIComponent(cam)}/commands`, { method: "POST", body: JSON.stringify({ command: { type: "set_power", on: false }, source: "user" }) });
       expect(off.status).toBe(200);
@@ -58,6 +58,19 @@ describe("Tapo-camera's via TP-Link-cloud (niet-officieel, cloudmodus)", () => {
     });
     expect(f.state.privacy).toBe("on");
     expect(f.state.badSignatures).toBe(0);
+
+    // Live beeld via het relais (cloudmodus), als MPEG-TS.
+    await request(f, async (call) => {
+      expect((await call(`/v1/cameras/tapocloud/${f.BELL}/live`)).status).toBe(404); // deurbel: geen live beeld
+      const live = await call(`/v1/cameras/tapocloud/${f.CAM}/live`);
+      expect(live.status).toBe(200);
+      expect(live.headers.get("content-type")).toBe("video/mp2t");
+      const bytes = Buffer.from(await live.arrayBuffer());
+      expect(bytes.length).toBe(26 * 188);
+      expect(bytes[0]).toBe(0x47);
+      const audit = await (await call("/v1/audit")).json();
+      expect(JSON.stringify(audit)).toContain("camera.view");
+    });
 
     await request(f, async (call) => {
       expect((await call("/v1/integrations/tapocloud", { method: "DELETE" })).status).toBe(200);

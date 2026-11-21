@@ -2,13 +2,15 @@ import type { AdapterHealth, Capability, DeviceCommand, DeviceState } from "@hom
 import type { AdapterContext, CommandResult, DeviceAdapter, DiscoveredDevice, StatusReport } from "../adapter";
 import { RequestBudget } from "../cloud/budget";
 import { TapoCloudClient, TapoCloudError, httpsTapo, type TapoCamera, type TapoHttp } from "./client";
+import { relayStream, requestRelay, type RelaySocket } from "./relay";
 
 /**
  * Tapo-camera's en -deurbel via de TP-Link-cloud — NIET-OFFICIEEL (expliciet gevraagd door de gebruiker).
  * - Meldingen (beweging, persoon, deurbel) uit de meldingengeschiedenis van de Tapo-app, hooguit elke minuut.
  * - Privacymodus aan/uit als "camera aan/uit" (aan = camera kijkt), met teruglezen.
  * - Draaien (pan/tilt) via de IoT-app-server.
- * Geen live beeld in deze stap. Verbindingen alleen met TP-Link-hosts.
+ * - Live beeld via het videorelais (zie relay.ts), alleen op verzoek van een lid en maximaal 4 minuten.
+ * Verbindingen alleen met TP-Link-hosts.
  */
 const POLL_MS = 60_000;
 const PRIVACY_MS = 10 * 60_000;
@@ -22,6 +24,7 @@ interface Session {
   token: string;
   refreshToken: string | null;
   iotBase?: string;
+  cipcBase?: string;
 }
 interface Cache {
   since?: number;
@@ -57,6 +60,7 @@ export class TapoCloudAdapter implements DeviceAdapter {
     readonly config: TapoCloudConfig,
     private readonly http: TapoHttp = httpsTapo,
     private readonly nowMs: () => number = Date.now,
+    private readonly relaySocket?: RelaySocket,
   ) {
     this.budget = new RequestBudget(3000, 300, nowMs);
   }
@@ -79,6 +83,35 @@ export class TapoCloudAdapter implements DeviceAdapter {
     await this.poll(true);
     this.timer = setInterval(() => void this.poll(false), POLL_MS);
     this.timer.unref?.();
+  }
+
+  /** Alleen de aanmelding laden (voor live beeld), zonder meldingen op te halen. */
+  async prepare(secrets: AdapterContext["secrets"]): Promise<void> {
+    this.ctx = { logger: { info() {}, warn() {}, error() {} }, now: () => new Date(this.nowMs()), emit() {}, secrets, serverless: true };
+    const terminal = await secrets.get("terminalUUID");
+    const creds = await secrets.get("credentials");
+    const session = await secrets.get("session");
+    this.creds = creds ? (JSON.parse(creds) as { email: string; password: string }) : null;
+    this.session = session ? (JSON.parse(session) as Session) : null;
+    if (terminal) this.client = new TapoCloudClient(terminal, this.http);
+  }
+
+  /**
+   * Live beeld (MPEG-TS met H.264) via het videorelais van de TP-Link-cloud. Een verlopen aanmelding wordt vóór het
+   * openen van het relais vernieuwd; daarna stroomt het beeld tot `signal` afbreekt of `maxMs` verstreken is.
+   */
+  async openLive(deviceId: string, o: { signal?: AbortSignal; maxMs?: number; resolution?: "HD" | "VGA" } = {}): Promise<AsyncGenerator<Buffer>> {
+    const cam = this.config.cameras.find((c) => c.deviceId === deviceId);
+    if (!cam || cam.type !== "camera") throw new TapoCloudError("Camera niet gevonden", "CAMERA");
+    const relay = await this.withSession("command", async (s) => {
+      if (!s.cipcBase) {
+        s.cipcBase = await this.client!.serviceUrl(s.base, s.token, "cipc.api.cloud");
+        this.session = s;
+        await this.ctx?.secrets.set("session", JSON.stringify(s));
+      }
+      return requestRelay({ cipc: s.cipcBase, token: s.token, deviceId, playerId: this.client!.terminalUUID, resolution: o.resolution ?? "HD", http: this.http });
+    });
+    return relayStream({ relay, resolution: o.resolution ?? "HD", ...(o.signal ? { signal: o.signal } : {}), maxMs: o.maxMs ?? 240_000, ...(this.relaySocket ? { socket: this.relaySocket } : {}) });
   }
 
   async disconnect(): Promise<void> {
@@ -195,7 +228,7 @@ export class TapoCloudAdapter implements DeviceAdapter {
   getCapabilities(externalId: string): Capability[] {
     const cam = this.config.cameras.find((c) => c.deviceId === externalId);
     if (!cam) return [];
-    return cam.type === "doorbell" ? ["motion", "doorbell"] : ["motion", "onoff", "ptz"];
+    return cam.type === "doorbell" ? ["motion", "doorbell"] : ["motion", "onoff", "ptz", "cloud_stream"];
   }
 
   async discover(): Promise<DiscoveredDevice[]> {
