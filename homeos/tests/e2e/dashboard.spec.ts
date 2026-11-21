@@ -25,6 +25,22 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(sw).toHaveAttribute("aria-checked", before ?? "false", { timeout: 5_000 });
   });
 
+  test("Alles uit vraagt eerst bevestiging met de lijst apparaten", async ({ page }) => {
+    await page.goto("/");
+    const btn = page.getByTestId("all-off");
+    await expect(btn).toBeEnabled();
+    await expect(btn).toContainText(/Alles uit \(\d+\)/);
+    let message = "";
+    page.once("dialog", (d) => {
+      message = d.message();
+      void d.dismiss(); // annuleren: er mag niets gebeuren (andere tests delen de DEMO-toestand)
+    });
+    await btn.click();
+    await expect.poll(() => message).toContain("Alles uitzetten?");
+    expect(message).not.toContain("Camera");
+    await expect(btn).toBeEnabled();
+  });
+
   test("offline DEMO-apparaat heeft uitgeschakelde bediening", async ({ page }) => {
     await page.goto("/apparaten");
     const card = page.locator('[data-device-id="demo-lights:tuin-wandlamp"]');

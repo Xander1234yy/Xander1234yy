@@ -104,3 +104,18 @@ export function checkCommand(
 export function supportsCommand(device: Pick<Device, "capabilities">, type: DeviceCommand["type"]): boolean {
   return device.capabilities.includes(COMMAND_CAPABILITY[type]);
 }
+
+/**
+ * "Alles uit": welke apparaten uitgezet worden. Alleen online apparaten die niet veiligheidskritisch zijn en die (voor
+ * zover bekend) aan staan; een onbekende toestand (bijv. via Google Assistent) telt mee. Camera's, deurbel, meters en
+ * bridges nooit.
+ */
+export function allOffCommands(devices: Pick<Device, "id" | "kind" | "status" | "capabilities" | "state">[]): { deviceId: string; command: DeviceCommand }[] {
+  const out: { deviceId: string; command: DeviceCommand }[] = [];
+  for (const d of devices) {
+    if (d.status !== "ONLINE" || SAFETY_CRITICAL_KINDS.has(d.kind)) continue;
+    if (d.capabilities.includes("onoff") && d.state.on !== false) out.push({ deviceId: d.id, command: { type: "set_power", on: false } });
+    else if (d.capabilities.includes("media_power") && d.state.media?.power === "on") out.push({ deviceId: d.id, command: { type: "media_power", on: false } });
+  }
+  return out;
+}
