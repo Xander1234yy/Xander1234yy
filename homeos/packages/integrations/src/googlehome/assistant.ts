@@ -40,16 +40,17 @@ const bytesField = (field: number, data: Uint8Array | number[]) => [...tag(field
 const stringField = (field: number, s: string) => bytesField(field, [...Buffer.from(s, "utf8")]);
 const intField = (field: number, n: number) => [...tag(field, 0), ...varint(n)];
 
-/** AssistRequest{ config: AssistConfig{ text_query, audio_out_config, device_config, dialog_state_in, screen_out_config } }. */
+/** AssistRequest{ config(1): AssistConfig{ audio_out_config(2), dialog_state_in(3), device_config(4), text_query(6), screen_out_config(8) } }. */
 export function encodeAssistRequest(text: string, languageCode: string, deviceModelId = "default", deviceId = "default"): Buffer {
-  const audioOut = [...intField(1, 2 /* MP3 */), ...intField(2, 16000), ...intField(3, 0)];
+  // Veldnummers volgens google/assistant/embedded/v1alpha2/embedded_assistant.proto (zoals Google's textinput-voorbeeld).
+  const audioOut = [...intField(1, 2 /* MP3 */), ...intField(2, 24000), ...intField(3, 100)];
   const device = [...stringField(1, deviceId), ...stringField(3, deviceModelId)];
   const dialog = [...stringField(2, languageCode), ...intField(7, 1 /* is_new_conversation */)];
   const screen = intField(1, 3 /* PLAYING */);
   const config = [
     ...bytesField(2, audioOut),
-    ...bytesField(3, device),
-    ...bytesField(4, dialog),
+    ...bytesField(3, dialog), // dialog_state_in = 3
+    ...bytesField(4, device), // device_config = 4
     ...stringField(6, text),
     ...bytesField(8, screen),
   ];

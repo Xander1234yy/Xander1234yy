@@ -40,21 +40,22 @@ function response(text: string): Buffer {
 }
 
 describe("Google Assistant SDK: protobuf en gRPC-kaders", () => {
-  it("codeert een tekstopdracht volgens AssistRequest/AssistConfig", () => {
+  it("codeert een tekstopdracht volgens embedded_assistant.proto (dialog_state_in=3, device_config=4)", () => {
     const msg = encodeAssistRequest("zet GRILLPLATS aan", "nl-NL");
     const [config] = decodeFields(msg);
     expect(config!.field).toBe(1);
     const fields = decodeFields(config!.value as Buffer);
     const byField = new Map(fields.map((f) => [f.field, f.value]));
     expect((byField.get(6) as Buffer).toString()).toBe("zet GRILLPLATS aan");
-    const dialog = decodeFields(byField.get(4) as Buffer);
+    const dialog = decodeFields(byField.get(3) as Buffer);
     expect((dialog.find((f) => f.field === 2)!.value as Buffer).toString()).toBe("nl-NL");
     expect(dialog.find((f) => f.field === 7)!.value).toBe(1);
     const audio = decodeFields(byField.get(2) as Buffer);
     expect(audio.find((f) => f.field === 1)!.value).toBe(2);
-    expect(audio.find((f) => f.field === 2)!.value).toBe(16000);
-    const device = decodeFields(byField.get(3) as Buffer);
+    expect(audio.find((f) => f.field === 2)!.value).toBe(24000);
+    const device = decodeFields(byField.get(4) as Buffer);
     expect(device.map((f) => f.field)).toEqual([1, 3]);
+    expect(device.map((f) => (f.value as Buffer).toString())).toEqual(["default", "default"]);
   });
 
   it("codeert lange en niet-ASCII tekst correct (varint-lengtes)", () => {
