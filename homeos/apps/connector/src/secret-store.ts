@@ -58,6 +58,16 @@ export class SecretStore {
     this.cache = values;
   }
 
+  /** Alleen voor het overzetten naar de cloud: alle sleutels (ontsleuteld, in het geheugen). */
+  async exportAll(): Promise<Record<string, string>> {
+    return { ...(await this.load()) };
+  }
+
+  /** Voegt sleutels toe (bestaande met dezelfde naam worden overschreven) en slaat versleuteld op. */
+  async importAll(values: Record<string, string>): Promise<void> {
+    await this.save({ ...(await this.load()), ...values });
+  }
+
   /** Afgeschermde toegang per adapter: een adapter ziet alleen de eigen sleutels. */
   scoped(namespace: string): SecretAccess {
     const k = (key: string) => `${namespace}:${key}`;

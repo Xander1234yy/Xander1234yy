@@ -27,6 +27,7 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:status": "node scripts/db-migrate.mjs --status",
     "cloud:setup": "node scripts/cloud-setup.mjs",
+    "cloud:import": "tsx apps/connector/src/cloud-import.ts",
     "test:e2e:cloud": "playwright test -c playwright.cloud.config.ts",
     "supabase:start": "npx supabase@3.2.0 start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor",
     "supabase:stop": "npx supabase@3.2.0 stop",

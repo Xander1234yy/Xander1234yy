@@ -16,3 +16,4 @@ apps/connector/.data/
 supabase/.branches/
 supabase/.temp/
 .homeos-cloud.env
+homeos-cloud-import.env
