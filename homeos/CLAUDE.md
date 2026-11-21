@@ -15,8 +15,8 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
    altijd zo gemarkeerd. Echte adapters alleen op basis van officiële documentatie. Ontbreekt die, maak dan een duidelijk
    gemarkeerde stub die `not_configured` of een fout teruggeeft. Meld nooit een verbinding als geslaagd als dat niet zo is.
    **Uitzonderingen (expliciet gevraagd door de gebruiker):** Zonneplan Connect via de niet-officiële app-API
-   (alleen-lezen) en de Ziggo Mediabox via de niet-officiële Ziggo GO-webdiensten (zenders, aan/stand-by, knoppen), beide
-   overal gemarkeerd als niet-officieel. Voeg geen andere niet-officiële koppelingen toe zonder expliciet verzoek.
+   (alleen-lezen), de Ziggo Mediabox via de niet-officiële Ziggo GO-webdiensten (zenders, aan/stand-by, knoppen) en Tapo-camera's via de
+   niet-officiële TP-Link-cloud (meldingen, privacymodus, draaien), alle overal gemarkeerd als niet-officieel. Voeg geen andere niet-officiële koppelingen toe zonder expliciet verzoek.
 2. **Secrets.** Geen tokens in frontendcode, `NEXT_PUBLIC_*` of localStorage. Integratietokens alleen via
    `SecretStore` (AES-256-GCM) in de connector. Het connector-token alleen server-side.
 3. **Opdrachten.** Alles gaat via `DeviceRegistry.executeCommand` → `checkCommand()` (capability, status, noodstop,
@@ -70,6 +70,8 @@ Next transpileert ze (`transpilePackages`), de connector draait via `tsx`.
   Alleen-lezen, alleen iCloud-hosts. Tests via `packages/integrations/test/fake-icloud.ts`, nooit Apple zelf.
 - Ziggo (niet-officieel): `packages/integrations/src/ziggo` (REST + eigen MQTT-over-wss-client, korte sessies). Alleen
   Ziggo-hosts. Tests via `packages/integrations/test/fake-ziggo.ts` en een lokale WebSocket-testserver, nooit Ziggo zelf.
+- Tapo-cloud (niet-officieel): `packages/integrations/src/tapocloud` (ondertekende v2-API + IoT services-sync, eigen
+  CA-keten van TP-Link). Tests via `packages/integrations/test/fake-tapocloud.ts` (controleert de handtekening), nooit TP-Link.
 - Nieuwe adapters: implementeer `DeviceAdapter`, sla secrets alleen op via `ctx.secrets`, lees de werkelijke status terug
   na iedere opdracht, en geef een niet-ondersteunde functie als `UNSUPPORTED` terug in plaats van te gokken.
 

@@ -85,7 +85,8 @@ test.describe("HomeOS dashboard (DEMO)", () => {
     await expect(volume).toBeVisible();
     const before = Number(await volume.textContent());
     await page.getByRole("button", { name: "Harder" }).first().click();
-    await expect(volume).toHaveText(String(Math.min(100, before + 1)));
+    // Alle schermformaten delen dezelfde DEMO-tv en drukken tegelijk: alleen controleren dat het volume omhoog ging.
+    await expect.poll(async () => Number(await volume.textContent())).toBeGreaterThan(Math.min(99, before));
     const mute = page.getByRole("button", { name: /Dempen|Geluid aan/ }).first();
     const pressed = await mute.getAttribute("aria-pressed");
     await mute.click();

@@ -15,7 +15,7 @@ import { SecretStore } from "./secret-store";
 import { StateStore } from "./state-store";
 
 /** Sleutelgroepen (scopes) en adapter-id's die in de cloud werken. */
-const CLOUD_SCOPE = /^(solaredge-\d+|daikin-onecta|tuya|zonneplan-[0-9a-f]{6}|huecloud|googlehome|icloud-calendar|ziggo)$/;
+const CLOUD_SCOPE = /^(solaredge-\d+|daikin-onecta|tuya|zonneplan-[0-9a-f]{6}|huecloud|googlehome|icloud-calendar|ziggo|tapocloud)$/;
 const deviceAdapter = (deviceId: string) => deviceId.split(":")[0] ?? "";
 
 export interface ImportSummary {
@@ -88,6 +88,7 @@ export async function importToCloud(o: {
     cloud.state.icloud = s.icloud;
     cloud.state.shortcuts = s.shortcuts;
     cloud.state.ziggo = s.ziggo;
+    cloud.state.tapocloud = s.tapocloud;
     await cloud.save();
 
     const cloudState = await StateStore.open(prefix);

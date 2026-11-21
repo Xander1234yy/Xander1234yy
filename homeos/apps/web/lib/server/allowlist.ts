@@ -40,6 +40,8 @@ export const CONNECTOR_ALLOWLIST: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^v1\/calendar\/events$/ },
   { method: "PUT", pattern: /^v1\/integrations\/shortcuts$/ },
   { method: "POST", pattern: /^v1\/integrations\/ziggo$/ },
+  { method: "POST", pattern: /^v1\/integrations\/tapocloud(\/verify)?$/ },
+  { method: "DELETE", pattern: /^v1\/integrations\/tapocloud$/ },
   { method: "DELETE", pattern: /^v1\/integrations\/ziggo$/ },
   { method: "POST", pattern: /^v1\/push\/(subscriptions|unsubscribe|test)$/ },
   { method: "POST", pattern: /^v1\/integrations\/zonneplan\/(start|complete)$/ },

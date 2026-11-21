@@ -52,6 +52,7 @@ export default function SecurityPage() {
           <SectionCard title="Privacy" icon={EyeOff}>
             <ul className="space-y-2 text-sm text-muted">
               <li>• Camerabeelden gaan alleen van de camera via je laptop naar de ingelogde webapp; nooit openbaar.</li>
+              <li>• Via de TP-Link-cloud (niet-officieel) leest HomeOS alleen meldingen en bedient het privacymodus en draaien; geen beelden.</li>
               <li>• HomeOS slaat geen beelden of video op. Opnames blijven op de SD-kaart in de camera.</li>
               <li>• Alleen leden van het huishouden zien beelden; gasten niet. Iedere live-weergave staat in de auditlog.</li>
               <li>• Jarvis en automatiseringen kunnen camera&apos;s niet bewegen of bekijken.</li>

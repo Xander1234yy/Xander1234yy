@@ -29,6 +29,7 @@ import type { GoogleHomeService } from "./googlehome-service";
 import type { IcloudCalendarService } from "./icloud-calendar-service";
 import type { ShortcutsService } from "./shortcuts-service";
 import type { ZiggoService } from "./ziggo-service";
+import type { TapoCloudService } from "./tapocloud-service";
 import type { PushService } from "./push-service";
 import type { AutomationService } from "./automation-service";
 import { NOTIFICATION_CATEGORIES } from "@homeos/automation";
@@ -55,6 +56,7 @@ export interface ServerOptions {
   icloud: IcloudCalendarService;
   shortcuts: ShortcutsService;
   ziggo: ZiggoService;
+  tapocloud: TapoCloudService;
   push: PushService;
   automations: AutomationService;
 }
@@ -154,7 +156,7 @@ export function createConnectorServer(o: ServerOptions) {
       command: true,
       handler: async ({ params, body }) => unwrap(await registry.activateScene(params[0]!, parse(SceneActivateSchema, (await body()) ?? {}).source)),
     },
-    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), icloud: o.icloud.list(), shortcuts: o.shortcuts.list(), ziggo: o.ziggo.list(), mode: o.cloudMode ? "cloud" : "local" }) },
+    { method: "GET", pattern: /^\/v1\/integrations$/, handler: async () => ({ hue: o.hue.list(), ...o.cloud.list(), matter: o.matter.list(), webos: o.webos.list(), tapo: o.cameras.list(), zonneplan: o.zonneplan.list(), huecloud: o.huecloud.list(), googlehome: o.googlehome.list(), icloud: o.icloud.list(), shortcuts: o.shortcuts.list(), ziggo: o.ziggo.list(), tapocloud: o.tapocloud.list(), mode: o.cloudMode ? "cloud" : "local" }) },
     {
       method: "POST",
       pattern: /^\/v1\/integrations\/matter\/commission$/,
@@ -319,6 +321,26 @@ export function createConnectorServer(o: ServerOptions) {
       },
     },
     { method: "DELETE", pattern: /^\/v1\/integrations\/ziggo$/, handler: async () => setup(() => o.ziggo.remove()) },
+    // ───── Tapo-camera's via de TP-Link-cloud (niet-officieel, op verzoek) ─────
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/tapocloud$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ email: z.string().trim().max(254), password: z.string().max(200) }), await body());
+        return setup(() => o.tapocloud.connect(b.email, b.password));
+      },
+    },
+    {
+      method: "POST",
+      pattern: /^\/v1\/integrations\/tapocloud\/verify$/,
+      command: true,
+      handler: async ({ body }) => {
+        const b = parse(z.object({ code: z.string().trim().max(12) }), await body());
+        return setup(() => o.tapocloud.verify(b.code));
+      },
+    },
+    { method: "DELETE", pattern: /^\/v1\/integrations\/tapocloud$/, handler: async () => setup(() => o.tapocloud.remove()) },
     // ───── Apple-opdrachten (Shortcuts) als knoppen ─────
     {
       method: "PUT",

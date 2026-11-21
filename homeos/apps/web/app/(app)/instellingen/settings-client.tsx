@@ -13,6 +13,7 @@ import { GoogleHomeCard } from "@/components/settings/google-home-card";
 import { AppleCalendarCard } from "@/components/settings/apple-calendar-card";
 import { ShortcutsSettingsCard } from "@/components/settings/shortcuts-settings-card";
 import { ZiggoCard } from "@/components/settings/ziggo-card";
+import { TapoCloudCard } from "@/components/settings/tapo-cloud-card";
 import { TvCard } from "@/components/settings/tv-card";
 import { TapoCard } from "@/components/settings/tapo-card";
 import { ZonneplanCard } from "@/components/settings/zonneplan-card";
@@ -113,6 +114,7 @@ export function SettingsClient({ cloudSection, cloudRuntime = false }: { cloudSe
         <AppleCalendarCard />
         <ShortcutsSettingsCard />
         <ZiggoCard />
+        <TapoCloudCard />
         {!cloudRuntime && (
           <>
             <MatterCard />

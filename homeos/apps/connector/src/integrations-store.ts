@@ -68,6 +68,15 @@ const Schema = z.object({
     .array(z.object({ id: z.string().regex(/^[0-9a-f]{12}$/), label: z.string().min(1).max(40), shortcut: z.string().min(1).max(100) }))
     .max(30)
     .default([]),
+  tapocloud: z
+    .object({
+      addedAt: z.string(),
+      cameras: z
+        .array(z.object({ deviceId: z.string().regex(/^[0-9A-Za-z]{8,80}$/), name: z.string().max(80), model: z.string().max(40), type: z.enum(["camera", "doorbell"]) }))
+        .max(20),
+    })
+    .nullable()
+    .default(null),
   ziggo: z
     .object({
       addedAt: z.string(),
@@ -92,7 +101,7 @@ export class IntegrationsStore {
 
   static async open(dataDir: string | null): Promise<IntegrationsStore> {
     const file = dataDir ? joinPath(dataDir, "integrations.json") : null;
-    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null, huecloud: null, googlehome: null, icloud: null, shortcuts: [], ziggo: null };
+    let state: State = { version: 1, hue: [], solaredge: [], daikin: null, tuya: null, matter: null, webos: [], tapo: [], zonneplan: null, huecloud: null, googlehome: null, icloud: null, shortcuts: [], ziggo: null, tapocloud: null };
     const raw = file ? await readFileOrNull(file) : null;
     if (raw) {
       const p = Schema.safeParse(JSON.parse(raw));

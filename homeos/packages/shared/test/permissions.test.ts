@@ -66,6 +66,8 @@ describe("rollen en rechten", () => {
     expect(permissionForConnectorRoute("DELETE", "v1/integrations/shortcuts")).toBeNull();
     expect(permissionForConnectorRoute("POST", "v1/integrations/ziggo")).toBe("manage_devices");
     expect(permissionForConnectorRoute("GET", "v1/integrations/ziggo")).toBeNull();
+    expect(permissionForConnectorRoute("POST", "v1/integrations/tapocloud/verify")).toBe("manage_devices");
+    expect(permissionForConnectorRoute("DELETE", "v1/integrations/tapocloud/verify")).toBeNull();
   });
 });
 

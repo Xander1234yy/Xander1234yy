@@ -102,6 +102,13 @@ Ziggo-account en via Ziggo's berichtendienst zenders kiezen, aan/stand-by zetten
 Overal gemarkeerd als niet-officieel; kan zonder aankondiging stoppen. Instellingen → Ziggo Mediabox: e-mailadres en
 wachtwoord van Mijn Ziggo (versleuteld bewaard). De box staat daarna bij Entertainment. Status hooguit elke 5 minuten.
 
+### Tapo-camera's via de TP-Link-cloud (niet-officieel, op verzoek)
+
+Zonder apparaat thuis: HomeOS doet hetzelfde als de Tapo-app. Meldingen (beweging, persoon, aanbellen) uit de
+meldingengeschiedenis van de app, hooguit elke minuut, als pushmelding en voor automatiseringen; privacymodus aan/uit
+("camera aan/uit") en draaien. Geen live beeld in deze versie. Instellingen → Tapo-camera's (cloud): e-mailadres en
+wachtwoord van je Tapo-account; TP-Link kan een verificatiecode sturen (Tapo-app of e-mail).
+
 ## Variabelen
 
 | Variabele | Waarvoor |
