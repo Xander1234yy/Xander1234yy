@@ -4,7 +4,7 @@ import { getSupabaseConfig, localModeAllowed, SESSION_COOKIE_OPTIONS } from "@/l
 import { ACCESS_COOKIE, accessCode, isLoopbackRequest, validAccessCookie } from "@/lib/server/local-access";
 
 // /api/cloud/tick heeft een eigen geheim (geplande taak), geen gebruikerssessie.
-const PUBLIC_PATHS = ["/login", "/registreren", "/wachtwoord-vergeten", "/auth/", "/setup", "/api/cloud/tick"];
+const PUBLIC_PATHS = ["/privacy", "/login", "/registreren", "/wachtwoord-vergeten", "/auth/", "/setup", "/api/cloud/tick"];
 
 /**
  * Draait vóór iedere pagina en API-route:
