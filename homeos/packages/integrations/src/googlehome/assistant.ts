@@ -1,6 +1,6 @@
 /**
  * Google Assistant SDK (officiële Google API, Embedded Assistant v1alpha2) — alleen tekstopdrachten.
- * HomeOS stuurt een zin zoals "zet GRILLPLATS aan" naar het Google-account van de gebruiker, alsof die het tegen
+ * HomeOS stuurt een zin zoals "turn on GRILLPLATS" naar het Google-account van de gebruiker, alsof die het tegen
  * Google zegt. Google meldt níet terug of het apparaat werkelijk schakelde; dat tonen we ook zo.
  *
  * gRPC zonder extra pakketten: één AssistRequest (protobuf, met de hand gecodeerd) via HTTP/2, antwoorden decoderen

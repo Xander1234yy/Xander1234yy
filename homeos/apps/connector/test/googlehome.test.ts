@@ -101,7 +101,7 @@ describe("Google Home via de Google Assistant SDK (cloudmodus)", () => {
       const audit = await (await call("/v1/audit")).json();
       expect(JSON.stringify(audit)).toContain(id);
     });
-    expect(sent).toEqual([{ token: "acc-google-1", text: "zet GRILLPLATS aan", lang: "nl-NL" }]);
+    expect(sent).toEqual([{ token: "acc-google-1", text: "turn on GRILLPLATS", lang: "en-US" }]);
 
     await request(google.fetchImpl, transport, async (call) => {
       expect((await call("/v1/integrations/googlehome", { method: "DELETE" })).status).toBe(200);

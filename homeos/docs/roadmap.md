@@ -168,7 +168,7 @@
 - Tests: unit/integratie inclusief serverless-modus en Hue-cloud, E2E van de cloudmodus zonder connector-proces.
 - **Google Home** (op verzoek, voor de IKEA GRILLPLATS die in Google Home staat): via de officiële Google Assistant SDK
   (Embedded Assistant v1alpha2, gRPC over HTTP/2, zonder extra pakketten). Alleen aan/uit als tekstopdracht
-  ("zet <naam> aan"); Google meldt de werkelijke toestand niet, dus de status blijft "onbekend" en de app toont losse
+  ("turn on <naam>"; de SDK accepteert geen nl-NL, dus Engels); Google meldt de werkelijke toestand niet, dus de status blijft "onbekend" en de app toont losse
   Aan/Uit-knoppen in plaats van een schakelaar. De gebruiker kiest zelf welke apparaten (naam zoals in Google Home).
   Daglimiet 450 opdrachten. Kanttekening: Google vervangt Assistent door Gemini; deze route kan ooit stoppen.
 - Onderzocht en afgevallen: geen cloud-API voor de LG-tv (ThinQ Connect ondersteunt geen tv's) of live camerabeeld;

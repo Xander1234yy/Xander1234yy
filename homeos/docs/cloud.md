@@ -63,7 +63,7 @@ Wil je de tv en camera later terug, dan kan er naast de cloud een klein kastje t
 
 ### Google Home (bijv. IKEA-stekkers)
 
-Via de officiële **Google Assistant SDK**: HomeOS stuurt "zet <naam> aan/uit" naar je Google-account, alsof je het
+Via de officiële **Google Assistant SDK**: HomeOS stuurt "turn on/off <naam>" naar je Google-account (Google Assistent ondersteunt via deze API geen Nederlands; namen blijven zoals in Google Home), alsof je het
 tegen Google zegt. Google meldt niet terug of het apparaat werkelijk schakelde; HomeOS toont de status daarom als
 onbekend (losse Aan/Uit-knoppen).
 

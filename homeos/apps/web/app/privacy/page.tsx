@@ -23,7 +23,7 @@ export default function PrivacyPage() {
       <h2 className="pt-2 text-base font-medium text-fg">Google</h2>
       <p>
         Met je toestemming gebruikt HomeOS de Google Assistant API alleen om de opdrachten te sturen die jij in HomeOS
-        geeft (bijvoorbeeld &quot;zet GRILLPLATS aan&quot;). HomeOS leest geen andere Google-gegevens, deelt niets met derden en
+        geeft (bijvoorbeeld &quot;turn on GRILLPLATS&quot;). HomeOS leest geen andere Google-gegevens, deelt niets met derden en
         verkoopt niets. Je kunt de toegang altijd intrekken in HomeOS (Instellingen → Google Home → ontkoppelen) of op
         myaccount.google.com/permissions.
       </p>

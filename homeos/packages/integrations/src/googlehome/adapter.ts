@@ -5,7 +5,7 @@ import { GoogleAssistantError, http2AssistantTransport, refreshGoogleTokens, typ
 
 /**
  * Apparaten uit Google Home (bijv. IKEA Matter-stekkers) via de officiële Google Assistant SDK.
- * - Alleen aan/uit, als tekstopdracht ("zet <naam> aan"). De gebruiker kiest zelf welke apparaten (naam zoals in
+ * - Alleen aan/uit, als tekstopdracht ("turn on <naam>"; Nederlands wordt door de SDK niet ondersteund). De gebruiker kiest zelf welke apparaten (naam zoals in
  *   Google Home) HomeOS mag bedienen; we raden niets.
  * - Google meldt níet terug of het apparaat werkelijk schakelde. De toestand blijft daarom "onbekend" (geen `on`),
  *   en een geslaagde opdracht betekent alleen "Google heeft de opdracht aangenomen".
@@ -30,7 +30,17 @@ interface Cache {
   lastReply?: string | null;
 }
 
+/**
+ * Talen die de Google Assistant SDK accepteert (Nederlands hoort er niet bij: Google geeft dan "unsupported
+ * language_code"). Andere talen vallen terug op Engels; apparaatnamen blijven zoals in Google Home.
+ */
+export const ASSISTANT_LANGUAGES = new Set(["en-US", "en-GB", "en-AU", "en-CA", "en-IN", "de-DE", "fr-FR", "fr-CA", "it-IT", "ja-JP", "es-ES", "es-MX", "ko-KR", "pt-BR"]);
+export function assistantLanguage(code: string): string {
+  return ASSISTANT_LANGUAGES.has(code) ? code : "en-US";
+}
+
 export function commandText(name: string, on: boolean, languageCode: string): string {
+  if (languageCode.toLowerCase().startsWith("de")) return `schalte ${name} ${on ? "ein" : "aus"}`;
   if (languageCode.toLowerCase().startsWith("nl")) return `zet ${name} ${on ? "aan" : "uit"}`;
   return `turn ${on ? "on" : "off"} ${name}`;
 }
@@ -128,7 +138,8 @@ export class GoogleHomeAdapter implements DeviceAdapter {
     try {
       const token = await this.accessToken();
       this.budget.spend();
-      const r = await this.transport(token, commandText(d.name, command.on, this.config.languageCode), this.config.languageCode);
+      const lang = assistantLanguage(this.config.languageCode);
+      const r = await this.transport(token, commandText(d.name, command.on, lang), lang);
       this.lastOkAt = new Date(this.nowMs()).toISOString();
       this.lastError = null;
       this.lastReply = r.text;

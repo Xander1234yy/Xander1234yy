@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   GoogleHomeAdapter,
+  assistantLanguage,
   commandText,
   createHttp2AssistantTransport,
   decodeAssistResponse,
@@ -85,6 +86,12 @@ describe("Google Assistant SDK: protobuf en gRPC-kaders", () => {
     expect(commandText("GRILLPLATS", true, "nl-NL")).toBe("zet GRILLPLATS aan");
     expect(commandText("GRILLPLATS", false, "nl-NL")).toBe("zet GRILLPLATS uit");
     expect(commandText("Lamp", true, "en-US")).toBe("turn on Lamp");
+    expect(commandText("Lampe", false, "de-DE")).toBe("schalte Lampe aus");
+  });
+
+  it("valt terug op Engels voor talen die Google Assistent niet ondersteunt (zoals nl-NL)", () => {
+    expect(assistantLanguage("nl-NL")).toBe("en-US");
+    expect(assistantLanguage("de-DE")).toBe("de-DE");
   });
 });
 
@@ -164,12 +171,12 @@ describe("GoogleHomeAdapter", () => {
       expect(r.report.status).toBe("ONLINE");
       expect(r.report.state.on).toBeUndefined();
     }
-    expect(sent).toEqual([{ token: "nieuw", text: "zet GRILLPLATS aan" }]);
+    expect(sent).toEqual([{ token: "nieuw", text: "turn on GRILLPLATS" }]);
     expect(refreshes[0]).toContain("grant_type=refresh_token");
     expect(JSON.parse(secrets.tokens!)).toMatchObject({ accessToken: "nieuw", refreshToken: "ref" });
 
     await a.executeCommand("0123456789abcdef", { type: "set_power", on: false });
-    expect(sent[1]).toEqual({ token: "nieuw", text: "zet GRILLPLATS uit" });
+    expect(sent[1]).toEqual({ token: "nieuw", text: "turn off GRILLPLATS" });
     expect(refreshes).toHaveLength(1);
     expect(await a.executeCommand("0123456789abcdef", { type: "set_brightness", brightness: 50 })).toMatchObject({ ok: false, code: "UNSUPPORTED" });
     expect(await a.executeCommand("onbekend", { type: "set_power", on: true })).toMatchObject({ ok: false, code: "NOT_FOUND" });
