@@ -1,6 +1,7 @@
 import "server-only";
 import { createConnector, registerStorage, unregisterStorage, type StorageBackend } from "@homeos/connector/cloud";
 import { pgStorage } from "./storage";
+import { workerSqlChecked } from "./db";
 
 /**
  * Cloudmodus (Vercel + Supabase, zonder laptop): iedere aanvraag start de connector in dit proces, met opslag in
@@ -25,7 +26,7 @@ export async function withCloudConnector<T>(
   const secret = process.env.HOMEOS_CONNECTOR_SECRET;
   if (!secret || secret.length < 32) throw new Error("HOMEOS_CONNECTOR_SECRET ontbreekt of is te kort (min. 32 tekens)");
   const prefix = `db://${householdId}`;
-  registerStorage(prefix, storage ?? pgStorage(householdId));
+  registerStorage(prefix, storage ?? pgStorage(householdId, await workerSqlChecked()));
   refs.set(prefix, (refs.get(prefix) ?? 0) + 1);
   const c = await createConnector(
     {

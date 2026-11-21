@@ -206,3 +206,12 @@ describe("toegang van buitenaf (lokale modus)", () => {
     delete process.env.HOMEOS_ALLOWED_ORIGINS;
   });
 });
+
+describe("cloudmodus: pooler-adres", () => {
+  it("wisselt tussen aws-0 en aws-1, alleen bij Supabase-poolers", async () => {
+    const { alternatePoolerUrl } = await import("../lib/cloud/pooler");
+    expect(alternatePoolerUrl("postgresql://u.ref:pw@aws-0-eu-central-1.pooler.supabase.com:6543/postgres")).toBe("postgresql://u.ref:pw@aws-1-eu-central-1.pooler.supabase.com:6543/postgres");
+    expect(alternatePoolerUrl("postgresql://u.ref:pw@aws-1-eu-central-1.pooler.supabase.com:6543/postgres")).toContain("@aws-0-eu-central-1.");
+    expect(alternatePoolerUrl("postgresql://u:pw@db.example.com:5432/postgres")).toBeNull();
+  });
+});

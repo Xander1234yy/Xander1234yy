@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { cloudRuntimeEnabled, withCloudConnector } from "@/lib/cloud/runtime";
 import { cloudHouseholds, pruneLogs } from "@/lib/cloud/storage";
+import { workerSqlChecked } from "@/lib/cloud/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,13 +23,13 @@ export async function POST(req: Request) {
   }
   const started = Date.now();
   const results: { household: string; ok: boolean; error?: string }[] = [];
-  for (const household of await cloudHouseholds()) {
+  for (const household of await cloudHouseholds(await workerSqlChecked())) {
     if (Date.now() - started > 45_000) break; // binnen de tijdslimiet blijven; volgende minuut verder
     try {
       await withCloudConnector(household, async (c) => {
         await c.automations.tick();
       });
-      if (new Date().getMinutes() === 0) await pruneLogs(household);
+      if (new Date().getMinutes() === 0) await pruneLogs(household, await workerSqlChecked());
       results.push({ household, ok: true });
     } catch (err) {
       results.push({ household, ok: false, error: err instanceof Error ? err.message.slice(0, 200) : "fout" });
