@@ -19,7 +19,7 @@ export function fakeZiggo(opts: { user?: string; password?: string; startState?:
   const fetchImpl = (async (input: string | URL, init: RequestInit = {}) => {
     const url = new URL(String(input));
     const h = new Headers(init.headers);
-    if (url.href === "https://prod.spark.ziggogo.tv/nl/en/config-service/conf/web/backoffice.json") {
+    if (url.href === "https://spark-prod-nl.gnp.cloud.ziggogo.tv/nl/en/config-service/conf/web/backoffice.json") {
       return json({
         authorizationService: { URL: `${BASE}/auth-service` },
         personalizationService: { URL: `${BASE}/personalization-service` },
@@ -29,7 +29,7 @@ export function fakeZiggo(opts: { user?: string; password?: string; startState?:
     }
     if (url.pathname === "/auth-service/v1/authorization" && init.method === "POST") {
       const b = JSON.parse(String(init.body));
-      if (b.username !== user || b.password !== password) return json({ error: "bad" }, 401);
+      if (b.username !== user || b.password !== password) return json({ error: "bad" }, 400); // zoals de echte dienst
       state.logins++;
       state.accessToken = `acc-${state.logins}`;
       return json({ householdId: "HH123", accessToken: state.accessToken, refreshToken: "ref-1", username: user });
@@ -50,6 +50,7 @@ export function fakeZiggo(opts: { user?: string; password?: string; startState?:
       return json({ token: "mqtt-token-1" });
     }
     if (url.pathname === "/linear-service/v2/channels") {
+      if (!url.searchParams.get("cityId")) return json({ errors: ["query param cityId must not be blank"] }, 400);
       return json([
         { id: "NL_000001_019401", name: "NPO 1", logicalChannelNumber: 1 },
         { id: "NL_000002_019402", name: "NPO 2", logicalChannelNumber: 2 },

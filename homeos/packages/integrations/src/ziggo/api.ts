@@ -3,12 +3,16 @@
  * Ziggo heeft geen openbare API; dit volgt de webversie van Ziggo GO (zoals de community-projecten lghorizon en
  * homey-ziggo-next). Kan zonder aankondiging stoppen. Alleen https/wss naar Ziggo-hosts.
  */
-export const ZIGGO_CONFIG_URL = "https://prod.spark.ziggogo.tv/nl/en/config-service/conf/web/backoffice.json";
+// prod.spark.ziggogo.tv verwijst (302) hierheen; direct opvragen omdat HomeOS geen redirects volgt.
+export const ZIGGO_CONFIG_URL = "https://spark-prod-nl.gnp.cloud.ziggogo.tv/nl/en/config-service/conf/web/backoffice.json";
+/** Ziggo eist een cityId bij de zenderlijst; 65535 is de landelijke standaard (zelfde lijst als de Ziggo GO-webapp). */
+export const ZIGGO_DEFAULT_CITY = "65535";
 
 export class ZiggoError extends Error {
   constructor(
     message: string,
     readonly code: "UNAUTHORIZED" | "UNAVAILABLE" | "INVALID" | "FAILED",
+    readonly status?: number,
   ) {
     super(message);
   }
@@ -61,7 +65,7 @@ export class ZiggoApi {
     }
     if (res.status === 401 || res.status === 403) throw new ZiggoError("Ziggo weigert de aanmelding: controleer je e-mailadres en wachtwoord", "UNAUTHORIZED");
     if (res.status === 429 || res.status >= 500) throw new ZiggoError(`Ziggo is tijdelijk niet beschikbaar (${res.status})`, "UNAVAILABLE");
-    if (!res.ok) throw new ZiggoError(`Onverwacht antwoord van Ziggo (${res.status})`, "FAILED");
+    if (!res.ok) throw new ZiggoError(`Onverwacht antwoord van Ziggo (${res.status})`, "FAILED", res.status);
     return (await res.json()) as T;
   }
 
@@ -76,10 +80,14 @@ export class ZiggoApi {
   }
 
   async login(s: ZiggoServices, username: string, password: string): Promise<ZiggoSession> {
+    // Ziggo antwoordt op een fout wachtwoord met 400 (gecontroleerd tegen de echte dienst).
     const r = await this.json<{ householdId?: string; accessToken?: string; refreshToken?: string; username?: string }>(`${s.auth}/v1/authorization`, {
       method: "POST",
       headers: { accept: "*/*", "content-type": "application/json; charset=utf-8", "x-device-code": "web" },
       body: JSON.stringify({ username, password, stayLoggedIn: false }),
+    }).catch((e: unknown) => {
+      if (e instanceof ZiggoError && e.status === 400) throw new ZiggoError("Ziggo weigert de aanmelding: controleer je e-mailadres en wachtwoord", "UNAUTHORIZED", 400);
+      throw e;
     });
     if (!r.householdId || !r.accessToken || !r.refreshToken) throw new ZiggoError("Ziggo gaf geen geldige aanmelding terug", "FAILED");
     return { householdId: r.householdId, accessToken: r.accessToken, refreshToken: r.refreshToken, username: r.username ?? username };
@@ -112,7 +120,7 @@ export class ZiggoApi {
 
   async channels(s: ZiggoServices, cityId: string | null): Promise<ZiggoChannel[]> {
     const q = new URLSearchParams({ language: "nl", productClass: "Orion-DASH" });
-    if (cityId) q.set("cityId", cityId);
+    q.set("cityId", cityId && /^\d{1,10}$/.test(cityId) ? cityId : ZIGGO_DEFAULT_CITY);
     const r = await this.json<{ id?: string; name?: string; logicalChannelNumber?: number }[]>(`${s.linear}/v2/channels?${q}`);
     const byNumber = new Map<number, ZiggoChannel>();
     for (const c of Array.isArray(r) ? r : []) {
