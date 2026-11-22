@@ -49,3 +49,7 @@ js/app.js           video, camera, MediaPipe, tekenen, UI
 js/analyzer.js      slagherkenning en scoring (los testbaar)
 tests/              unit tests met gesimuleerde bewegingen (npm test)
 ```
+
+---
+
+> Ook in deze repo: **[HomeOS](homeos/README.md)**, een zelfstandig smart-homeplatform (map `homeos/`).

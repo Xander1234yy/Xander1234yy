@@ -1,0 +1,35 @@
+{
+  "name": "@homeos/connector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HomeOS Device Connector \u2014 draait lokaal op je laptop en praat met je apparaten.",
+  "type": "module",
+  "bin": {
+    "homeos-connector": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "start": "tsx src/index.ts",
+    "token": "tsx src/cli.ts token",
+    "typecheck": "tsc -p ../../tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@homeos/automation": "^0.1.0",
+    "@homeos/integrations": "0.1.0",
+    "@homeos/shared": "0.1.0",
+    "@matter/main": "^0.18.0",
+    "@matter/nodejs": "^0.18.0",
+    "@project-chip/matter.js": "^0.18.0",
+    "tsx": "4.23.15",
+    "web-push": "3.6.7",
+    "ws": "8.23.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/web-push": "3.6.4",
+    "@types/ws": "8.18.2"
+  },
+  "exports": {
+    "./cloud": "./src/cloud.ts"
+  }
+}

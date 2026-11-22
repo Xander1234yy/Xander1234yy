@@ -1,0 +1,276 @@
+import { describe, expect, it } from "vitest";
+import type { Device, Snapshot } from "@homeos/shared";
+import { isAllowed, isSameOrigin } from "../lib/server/allowlist";
+import { respondLocal as handleLocal } from "@homeos/jarvis";
+
+describe("connector-allowlist", () => {
+  it("staat alleen bekende endpoints toe", () => {
+    expect(isAllowed("GET", "v1/snapshot")).toBe(true);
+    expect(isAllowed("POST", "v1/devices/demo-lights%3Aspots/commands")).toBe(true);
+    expect(isAllowed("DELETE", "v1/snapshot")).toBe(false);
+    expect(isAllowed("GET", "v1/../../etc/passwd")).toBe(false);
+    expect(isAllowed("GET", "admin")).toBe(false);
+    expect(isAllowed("POST", "v1/devices/a/b/commands")).toBe(false);
+  });
+
+  it("controleert same-origin voor wijzigingen (CSRF)", () => {
+    expect(isSameOrigin(new Headers({ origin: "http://127.0.0.1:3000", host: "127.0.0.1:3000" }))).toBe(true);
+    expect(isSameOrigin(new Headers({ origin: "https://evil.example", host: "127.0.0.1:3000" }))).toBe(false);
+    expect(isSameOrigin(new Headers({ host: "127.0.0.1:3000" }))).toBe(false);
+  });
+});
+
+const now = new Date().toISOString();
+const dev = (o: Partial<Device>): Device => ({
+  id: "x",
+  name: "X",
+  brand: "HomeOS Demo",
+  model: "m",
+  kind: "light",
+  roomId: null,
+  integration: "demo",
+  adapterId: "demo-lights",
+  status: "ONLINE",
+  lastSeen: now,
+  stateUpdatedAt: now,
+  capabilities: ["onoff", "brightness"],
+  state: { on: false },
+  error: null,
+  demo: true,
+  ...o,
+});
+
+const snapshot = (emergencyStop = false): Snapshot => ({
+  generatedAt: now,
+  connector: { connectorId: "c", version: "0.1.0", startedAt: now, demoMode: true, emergencyStop, adapters: [] },
+  rooms: [
+    { id: "keuken", name: "Keuken", icon: "", order: 0 },
+    { id: "woonkamer", name: "Woonkamer", icon: "", order: 1 },
+  ],
+  scenes: [{ id: "demo-lights:avond", name: "Avond", roomId: null, adapterId: "demo-lights", demo: true }],
+  devices: [
+    dev({ id: "l1", name: "Spots", roomId: "keuken", state: { on: true } }),
+    dev({ id: "l2", name: "Staande lamp", roomId: "woonkamer" }),
+    dev({ id: "l3", name: "Wandlamp tuin", status: "OFFLINE" }),
+    dev({ id: "b1", name: "Deurbel voordeur", kind: "doorbell", capabilities: ["doorbell"] }),
+  ],
+});
+
+const ctx = (s = snapshot()) => ({ snapshot: s, energy: null, connectorOnline: true });
+
+describe("Jarvis lokale fallback", () => {
+  it("beantwoordt welke lampen aan staan", () => {
+    const r = handleLocal("Welke lampen staan nog aan?", ctx());
+    expect(r.text).toContain("Spots");
+    expect(r.actions).toEqual([]);
+  });
+
+  it("doet een voorstel (geen uitvoering) voor een opdracht", () => {
+    const r = handleLocal("Zet de staande lamp aan", ctx());
+    expect(r.actions).toEqual([expect.objectContaining({ kind: "command", deviceId: "l2", command: { type: "set_power", on: true } })]);
+  });
+
+  it("dimt met percentage", () => {
+    const r = handleLocal("dim de spots naar 30%", ctx());
+    expect(r.actions[0]).toMatchObject({ command: { type: "set_brightness", brightness: 30 } });
+  });
+
+  it("weigert offline apparaten en meldt dat", () => {
+    const r = handleLocal("zet wandlamp tuin aan", ctx());
+    expect(r.actions).toEqual([]);
+    expect(r.intent).toBe("command_denied");
+  });
+
+  it("doet niets bij noodstop of offline connector", () => {
+    expect(handleLocal("zet de staande lamp aan", ctx(snapshot(true))).actions).toEqual([]);
+    expect(handleLocal("zet de staande lamp aan", { ...ctx(), connectorOnline: false }).actions).toEqual([]);
+  });
+
+  it("stelt alle lampen uit voor, alleen bereikbare lampen die aan staan", () => {
+    const r = handleLocal("alle lampen uit", ctx());
+    expect(r.actions.map((a) => a.kind === "command" && a.deviceId)).toEqual(["l1"]);
+  });
+
+  it("activeert scènes alleen als voorstel", () => {
+    const r = handleLocal("activeer scène avond", ctx());
+    expect(r.actions).toEqual([expect.objectContaining({ kind: "scene", sceneId: "demo-lights:avond" })]);
+  });
+
+  it("verzint geen energiegegevens", () => {
+    expect(handleLocal("wat is de opbrengst van de zonnepanelen?", ctx()).text).toContain("geen energiebron");
+  });
+});
+
+describe("Jarvis familie-intenties", () => {
+  const family = { shopping: [{ name: "Melk", quantity: "2" }], openTasks: 3, upcoming: [{ title: "Tandarts", starts_at: "2026-11-21T09:00:00Z", all_day: false }], canWrite: true };
+
+  it("zonder account: duidelijke melding, geen verzonnen gegevens", () => {
+    expect(handleLocal("wat moeten we nog kopen?", ctx()).text).toContain("HomeOS-account");
+  });
+  it("leest de boodschappenlijst", () => {
+    expect(handleLocal("Wat moeten we nog kopen?", { ...ctx(), family }).text).toContain("Melk (2)");
+  });
+  it("stelt een boodschap voor (geen directe wijziging)", () => {
+    const r = handleLocal("zet appels op de boodschappenlijst", { ...ctx(), family });
+    expect(r.actions).toEqual([expect.objectContaining({ kind: "shopping_add", name: "appels" })]);
+  });
+  it("gasten kunnen geen boodschappen toevoegen", () => {
+    expect(handleLocal("zet appels op de boodschappenlijst", { ...ctx(), family: { ...family, canWrite: false } }).actions).toEqual([]);
+  });
+  it("toont de agenda", () => {
+    expect(handleLocal("wat staat er in de agenda?", { ...ctx(), family }).text).toContain("Tandarts");
+  });
+});
+
+describe("veilige redirects", () => {
+  it("staat alleen interne paden toe", async () => {
+    const { safeNext } = await import("../lib/safe-redirect");
+    expect(safeNext("/familie")).toBe("/familie");
+    expect(safeNext("//evil.example")).toBe("/");
+    expect(safeNext("https://evil.example")).toBe("/");
+    expect(safeNext("/\\evil")).toBe("/");
+    expect(safeNext(null)).toBe("/");
+  });
+});
+
+describe("Jarvis airco", () => {
+  const climate = (on: boolean) =>
+    dev({
+      id: "ac",
+      name: "Woonkamer airco",
+      kind: "climate",
+      capabilities: ["onoff", "climate"],
+      state: { on, climate: { mode: "heating", modes: ["heating", "cooling"], targetTempC: 21, minTempC: 10, maxTempC: 30, stepC: 0.5, roomTempC: 19.5, outdoorTempC: 6 } },
+    });
+  const withAc = (on = true) => ({ ...ctx(), snapshot: { ...snapshot(), devices: [...snapshot().devices, climate(on)] } });
+
+  it("beantwoordt temperatuurvragen", () => {
+    expect(handleLocal("hoe warm is het binnen?", withAc()).text).toContain("19,5");
+  });
+  it("stelt een temperatuur voor met bevestiging", () => {
+    const r = handleLocal("zet de airco op 22,5 graden", withAc());
+    expect(r.actions[0]).toMatchObject({ deviceId: "ac", command: { type: "set_target_temperature", temperatureC: 22.5 } });
+  });
+  it("zet de airco uit als voorstel", () => {
+    expect(handleLocal("airco uit", withAc()).actions[0]).toMatchObject({ command: { type: "set_power", on: false } });
+  });
+});
+
+describe("Jarvis automatiseringen", () => {
+  it("stelt een avondautomatisering voor die na bevestiging wordt aangemaakt", () => {
+    const r = handleLocal("Stel een avondautomatisering voor", ctx());
+    expect(r.actions).toEqual([expect.objectContaining({ kind: "create_automation", template: "evening" })]);
+    expect(r.text).toContain("Avondmodus");
+  });
+  it("kent ook energie- en offline-sjablonen", () => {
+    expect(handleLocal("maak een automatisering voor hoge zonne-opwek", ctx()).actions[0]).toMatchObject({ template: "energy" });
+    expect(handleLocal("stel een automatisering voor als iets offline gaat", ctx()).actions[0]).toMatchObject({ template: "offline" });
+  });
+});
+
+describe("toegang van buitenaf (lokale modus)", () => {
+  it("alleen een direct verzoek op de laptop telt als lokaal", async () => {
+    const { isLoopbackRequest } = await import("../lib/server/local-access");
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000" }))).toBe(true);
+    expect(isLoopbackRequest(new Headers({ host: "localhost:3000" }))).toBe(true);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "127.0.0.1", "x-forwarded-host": "127.0.0.1:3000" }))).toBe(true); // Next.js zelf
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "::1" }))).toBe(true);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "100.64.0.2" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-for": "100.64.0.2, 127.0.0.1" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "x-forwarded-host": "mijn-mac.tailnet.ts.net" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "127.0.0.1:3000", "tailscale-user-login": "ik@example.test" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "mijn-mac.tailnet.ts.net" }))).toBe(false);
+    expect(isLoopbackRequest(new Headers({ host: "192.168.68.10:3000" }))).toBe(false);
+  });
+
+  it("toegangscode: minimaal 8 tekens, cookie bevat nooit de code zelf", async () => {
+    const m = await import("../lib/server/local-access");
+    process.env.HOMEOS_ACCESS_CODE = "kort";
+    expect(m.accessCode()).toBeNull();
+    process.env.HOMEOS_ACCESS_CODE = "geheime-code-123";
+    expect(m.codeMatches("geheime-code-123")).toBe(true);
+    expect(m.codeMatches("fout")).toBe(false);
+    const token = m.accessToken("geheime-code-123");
+    expect(token).not.toContain("geheime");
+    expect(m.validAccessCookie(token)).toBe(true);
+    expect(m.validAccessCookie("x")).toBe(false);
+    delete process.env.HOMEOS_ACCESS_CODE;
+    expect(m.validAccessCookie(token)).toBe(false);
+  });
+
+  it("CSRF: extra adressen alleen exact en via https", () => {
+    process.env.HOMEOS_ALLOWED_ORIGINS = "mijn-mac.tailnet.ts.net";
+    expect(isSameOrigin(new Headers({ origin: "https://mijn-mac.tailnet.ts.net", host: "127.0.0.1:3000" }))).toBe(true);
+    expect(isSameOrigin(new Headers({ origin: "http://mijn-mac.tailnet.ts.net", host: "127.0.0.1:3000" }))).toBe(false);
+    expect(isSameOrigin(new Headers({ origin: "https://andere.tailnet.ts.net", host: "127.0.0.1:3000" }))).toBe(false);
+    delete process.env.HOMEOS_ALLOWED_ORIGINS;
+  });
+});
+
+describe("cloudmodus: pooler-adres", () => {
+  it("wisselt tussen aws-0 en aws-1, alleen bij Supabase-poolers", async () => {
+    const { alternatePoolerUrl } = await import("../lib/cloud/pooler");
+    expect(alternatePoolerUrl("postgresql://u.ref:pw@aws-0-eu-central-1.pooler.supabase.com:6543/postgres")).toBe("postgresql://u.ref:pw@aws-1-eu-central-1.pooler.supabase.com:6543/postgres");
+    expect(alternatePoolerUrl("postgresql://u.ref:pw@aws-1-eu-central-1.pooler.supabase.com:6543/postgres")).toContain("@aws-0-eu-central-1.");
+    expect(alternatePoolerUrl("postgresql://u:pw@db.example.com:5432/postgres")).toBeNull();
+  });
+});
+
+describe("cloudmodus: documentopslag met één leesronde", () => {
+  it("leest alle documenten in één keer en schrijft alleen gewijzigde documenten", async () => {
+    const { cachedDocs } = await import("../lib/cloud/doc-cache");
+    let loads = 0;
+    const writes: string[] = [];
+    const docs = cachedDocs({
+      loadAll: async () => (loads++, [{ key: "registry.json", data: "{\"a\":1}" }]),
+      write: async (k, d) => void writes.push(`${k}=${d}`),
+    });
+    const [a, b] = await Promise.all([docs.read("registry.json"), docs.read("nope.json")]);
+    expect([a, b]).toEqual(["{\"a\":1}", null]);
+    await docs.write("registry.json", "{\"a\":1}"); // ongewijzigd: niet schrijven
+    await docs.write("registry.json", "{\"a\":2}");
+    await docs.write("registry.json", "{\"a\":2}");
+    expect(await docs.read("registry.json")).toBe("{\"a\":2}");
+    expect(loads).toBe(1);
+    expect(writes).toEqual(["registry.json={\"a\":2}"]);
+  });
+});
+
+describe("camerageluid (G.711 uit MPEG-TS)", () => {
+  it("decodeert A-law en µ-law volgens de standaard (ITU-T G.711)", async () => {
+    const { alawToPcm, mulawToPcm } = await import("../lib/g711-audio");
+    // Referentiewaarden uit de G.711-tabellen.
+    expect(alawToPcm(0xd5)).toBe(8);
+    expect(alawToPcm(0x55)).toBe(-8);
+    expect(alawToPcm(0xaa)).toBe(32256);
+    expect(alawToPcm(0x2a)).toBe(-32256);
+    expect(mulawToPcm(0xff)).toBe(0);
+    expect(mulawToPcm(0x80)).toBe(32124);
+    expect(mulawToPcm(0x00)).toBe(-32124);
+  });
+
+  it("haalt het audiospoor uit TS-pakketten, ook over stukken verdeeld, en negeert video", async () => {
+    const { TsAudioDemuxer } = await import("../lib/g711-audio");
+    const pkt = (pid: number, start: boolean, body: number[]) => {
+      const p = new Uint8Array(188).fill(0xff);
+      p[0] = 0x47;
+      p[1] = (start ? 0x40 : 0) | ((pid >> 8) & 0x1f);
+      p[2] = pid & 0xff;
+      p[3] = 0x10; // alleen inhoud
+      p.set(body, 4);
+      return p;
+    };
+    const pesHead = (streamId: number) => [0, 0, 1, streamId, 0, 0, 0x80, 0x80, 5, 0x21, 0, 1, 0, 1];
+    const audio = [...pesHead(0xc0), ...Array(170).fill(0xd5)];
+    const video = [...pesHead(0xe0), ...Array(170).fill(0x11)];
+    const out: Uint8Array[] = [];
+    const d = new TsAudioDemuxer((p) => out.push(p));
+    const all = new Uint8Array([...pkt(0x44, true, video), ...pkt(0x45, true, audio), ...pkt(0x45, true, audio)]);
+    d.push(all.subarray(0, 100));
+    d.push(all.subarray(100));
+    d.flush();
+    expect(out).toHaveLength(2);
+    expect(out[0]!.length).toBe(188 - 4 - 14);
+    expect(out[0]!.every((b) => b === 0xd5 || b === 0xff)).toBe(true);
+  });
+});

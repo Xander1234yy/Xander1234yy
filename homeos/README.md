@@ -1,0 +1,98 @@
+# HomeOS
+
+**Your home. One intelligent system.**
+
+HomeOS is een zelfstandig smart-homeplatform, zonder Home Assistant. De webapp draait in de browser
+(iPhone, iPad, laptop) en een lichte **Device Connector** draait op je eigen laptop en praat lokaal met je apparaten.
+
+> **Status: alle 8 fasen afgerond (v0.9.0).** HomeOS draait volledig in de cloud (Vercel + Supabase, zonder laptop)
+> of lokaal met de Device Connector. Integraties: Philips Hue (lokaal én Hue-cloud), Daikin Onecta, Smart Life/Tuya,
+> SolarEdge, Zonneplan Connect (niet-officieel, op verzoek), Google Home (Google Assistant SDK, o.a. IKEA), Apple-agenda
+> (iCloud, alleen-lezen), Apple Woning via Opdrachten, en lokaal ook LG-tv, Tapo-camera's en Matter. Verder:
+> automatiseringen, (push)meldingen, Jarvis (lokaal), familie, onderhoud, PWA, accounts met rollen en RLS.
+> DEMO-apparaten zijn overal gemarkeerd. Zie [docs/roadmap.md](docs/roadmap.md), [docs/cloud.md](docs/cloud.md) en
+> [docs/security.md](docs/security.md).
+
+## Snel starten
+
+Vereist: Node.js 20.9 of nieuwer. Docker of extra hardware is niet nodig.
+
+```bash
+cd homeos
+npm install
+npm run dev
+```
+
+Open daarna **http://127.0.0.1:3000**.
+
+`npm run dev` start twee processen:
+
+| Proces | Adres | Wat het doet |
+| --- | --- | --- |
+| Device Connector | `127.0.0.1:8787` (alleen lokaal) | Apparaten, statuscache, opdrachten, auditlog |
+| Webapp (Next.js) | `127.0.0.1:3000` | Dashboard en alle pagina's, plus een veilige server-side proxy naar de connector |
+
+Zonder verdere configuratie draait HomeOS in de **lokale modus** (geen accounts, alleen op deze laptop).
+Voor accounts, huishoudens, familie en onderhoud koppel je Supabase: zie [docs/supabase.md](docs/supabase.md).
+
+Bij de eerste start maakt de connector een unieke identiteit en een toegangstoken aan in
+`apps/connector/.data/` (bestandsrechten 0600, nooit in git). De webapp leest dat token server-side.
+
+## Connector automatisch starten op je Mac
+
+```bash
+npm run connector:install:macos             # zonder DEMO-apparaten
+npm run connector:install:macos -- --demo   # met DEMO-apparaten
+npm run connector:uninstall:macos
+```
+
+De connector start dan bij het inloggen en herstart na een crash. Logboeken staan in `~/Library/Logs/HomeOS/`.
+Sta "Lokaal netwerk" toe als macOS daarom vraagt; dat is nodig voor de Hue Bridge. Koppel daarna je bridge via
+**Instellingen → Philips Hue**.
+
+## Scripts
+
+| Script | Doel |
+| --- | --- |
+| `npm run dev` | Connector en webapp samen starten |
+| `npm run dev:web` / `npm run dev:connector` | Eén van de twee starten |
+| `npm run start:connector` | Connector zonder watch-modus (voor dagelijks gebruik op de laptop) |
+| `npm run build` / `npm start` | Productiebuild van de webapp maken en starten |
+| `npm test` | Unit- en integratietests (Vitest) |
+| `npm run test:e2e` | Browsertests op desktop, iPhone en iPad (Playwright, alleen DEMO-apparaten) |
+| `npm run typecheck` / `npm run lint` | TypeScript strict en ESLint |
+| `npm run check` | Typecheck, lint en tests samen |
+| `npm run test:e2e:cloud` | Browsertests van accounts en rollen tegen een echte Supabase |
+| `npm run db:migrate` / `npm run db:status` | Migraties toepassen op Supabase (`SUPABASE_DB_URL`) |
+| `npm run supabase:start` / `supabase:stop` | Lokale Supabase (vereist Docker) |
+
+## Structuur
+
+```
+homeos/
+  apps/
+    web/            Next.js App Router: UI + server-side API (proxy, SSE-stream, Jarvis)
+    connector/      HomeOS Device Connector (standalone Node.js, los van Next.js)
+  packages/
+    shared/         Types, zod-schema's, opdrachtcontrole, versheid, energieberekening
+    integrations/   Adapterinterface, DEMO-adapters en echte adapters (Hue, Tuya, Matter, SolarEdge, Daikin, LG-tv)
+    ui/             Design system (shadcn/ui-stijl op Radix + Tailwind)
+    automation/     Automation Engine (triggers, voorwaarden, acties; draait in de connector)
+    jarvis/         Jarvis: provider-interface en lokale taalverwerking (geen AI-dienst nodig)
+    database/       Rijtypen, invoerschema's en RLS-tests
+  supabase/         Migraties, seed (DEMO) en config voor de Supabase CLI
+  docs/             Architectuur, beveiliging, integraties, roadmap
+  tests/e2e/        Playwright
+  scripts/          dev-launcher en hulpscripts
+```
+
+## Documentatie
+
+- [HomeOS in de cloud, zonder laptop (Vercel + Supabase)](docs/cloud.md)
+- [Toegang vanaf je telefoon met de laptop als server (Tailscale)](docs/remote-access.md)
+- [Architectuur](docs/architecture.md)
+- [Supabase, accounts en rechten](docs/supabase.md)
+- [Beveiliging](docs/security.md)
+- [Integraties en apparaatonderzoek](docs/integrations.md)
+- [Roadmap en implementatieplan](docs/roadmap.md)
+- [Connector-API](docs/connector-api.md)

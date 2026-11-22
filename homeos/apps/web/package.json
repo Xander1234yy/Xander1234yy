@@ -1,0 +1,41 @@
+{
+  "name": "@homeos/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 -p 3000",
+    "dev:lan": "next dev -H 0.0.0.0 -p 3000",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@homeos/automation": "^0.1.0",
+    "@homeos/connector": "0.1.0",
+    "@homeos/jarvis": "0.1.0",
+    "@homeos/shared": "0.1.0",
+    "@homeos/ui": "0.1.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.2",
+    "geist": "1.9.2",
+    "lucide-react": "1.77.0",
+    "mpegts.js": "1.8.0",
+    "next": "16.4.6",
+    "postgres": "3.4.9",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "^0.0.1",
+    "web-push": "3.6.7",
+    "ws": "8.23.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/web-push": "3.6.4",
+    "@types/ws": "8.18.2",
+    "tailwindcss": "4.3.5"
+  }
+}
