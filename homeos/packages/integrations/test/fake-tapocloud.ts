@@ -120,12 +120,14 @@ export function fakeTapoCloud(opts: { mfa?: boolean } = {}) {
     const ts = (n: number) => Buffer.concat([Buffer.from([0x47, 0x40, 0x44, 0x10]), Buffer.alloc(184, n)]); // één TS-pakket
     let got = "";
     let sentVideo = false;
+    let headSent = false;
     const sock: Duplex = new Duplex({
       read() {},
       write(chunk: Buffer, _enc, cb) {
         got += chunk.toString("latin1");
         state.relayWrites.push(chunk.toString("latin1"));
-        if (got.includes("\r\n\r\n") && !got.includes("HTTP/1.1 200") && state.relayWrites.length === 1) {
+        if (got.includes("\r\n\r\n") && !headSent) {
+          headSent = true;
           const okHead = host.endsWith(".i.tplinkcloud.com") && port === 443 && got.includes("X-token: relay-tok") && got.includes("Cookie: AWSELB=x");
           sock.push(`HTTP/1.1 ${okHead ? state.relayStatus : 403} OK\r\nContent-Type: multipart/mixed;boundary=--device-stream-boundary--\r\n\r\n`);
         }

@@ -36,6 +36,8 @@ interface Cache {
   lastPrivacyPoll?: number;
   lastError?: string | null;
   budget?: unknown;
+  /** Diagnose: type en sleutels van de laatste meldingen (geen inhoud, geen afbeeldingen). */
+  recentTypes?: { at: string; msgType: string; known: boolean; keys: string[] }[];
 }
 
 export interface TapoCloudConfig {
@@ -102,14 +104,14 @@ export class TapoCloudAdapter implements DeviceAdapter {
    */
   async openLive(deviceId: string, o: { signal?: AbortSignal; maxMs?: number; resolution?: "HD" | "VGA" } = {}): Promise<AsyncGenerator<Buffer>> {
     const cam = this.config.cameras.find((c) => c.deviceId === deviceId);
-    if (!cam || cam.type !== "camera") throw new TapoCloudError("Camera niet gevonden", "CAMERA");
+    if (!cam) throw new TapoCloudError("Camera niet gevonden", "CAMERA");
     const relay = await this.withSession("command", async (s) => {
       if (!s.cipcBase) {
         s.cipcBase = await this.client!.serviceUrl(s.base, s.token, "cipc.api.cloud");
         this.session = s;
         await this.ctx?.secrets.set("session", JSON.stringify(s));
       }
-      return requestRelay({ cipc: s.cipcBase, token: s.token, deviceId, playerId: this.client!.terminalUUID, resolution: o.resolution ?? "HD", http: this.http });
+      return requestRelay({ cipc: s.cipcBase, token: s.token, deviceId, playerId: this.client!.terminalUUID, resolution: o.resolution ?? "HD", deviceType: cam.type === "doorbell" ? "SMART.TAPODOORBELL" : "SMART.IPCAMERA", http: this.http });
     });
     return relayStream({ relay, resolution: o.resolution ?? "HD", ...(o.signal ? { signal: o.signal } : {}), maxMs: o.maxMs ?? 240_000, ...(this.relaySocket ? { socket: this.relaySocket } : {}) });
   }
@@ -175,11 +177,18 @@ export class TapoCloudAdapter implements DeviceAdapter {
     const first = this.c.since === undefined;
     const since = this.c.since ?? now - BASELINE_MS;
     try {
-      const list = await this.withSession("background", (s) => this.client!.notifications(s.base, s.token, since));
+      const list = await this.withSession("background", (s) => this.client!.notifications(s.base, s.token, since, 4, (raw) => {
+        const att = raw.attachments;
+        const keys = [...Object.keys(raw), ...(att && typeof att === "object" ? Object.keys(att as object).map((k) => `attachments.${k}`) : typeof att === "string" ? ["attachments(json)"] : [])].slice(0, 20);
+        this.c.recentTypes = [{ at: new Date(this.nowMs()).toISOString(), msgType: String(raw.msgType ?? "?").slice(0, 60), known: true, keys }, ...(this.c.recentTypes ?? [])].slice(0, 10);
+      }));
       const known = new Set(this.config.cameras.map((c) => c.deviceId));
       let newest = since;
       for (const n of list) {
-        if (!known.has(n.deviceId) || n.kind === "other") continue;
+        if (!known.has(n.deviceId) || n.kind === "other") {
+          if (this.c.recentTypes?.[0]) this.c.recentTypes[0].known = false;
+          continue;
+        }
         const t = Date.parse(n.at);
         if (t <= since) continue;
         newest = Math.max(newest, t);
@@ -228,7 +237,7 @@ export class TapoCloudAdapter implements DeviceAdapter {
   getCapabilities(externalId: string): Capability[] {
     const cam = this.config.cameras.find((c) => c.deviceId === externalId);
     if (!cam) return [];
-    return cam.type === "doorbell" ? ["motion", "doorbell"] : ["motion", "onoff", "ptz", "cloud_stream"];
+    return cam.type === "doorbell" ? ["motion", "doorbell", "cloud_stream"] : ["motion", "onoff", "ptz", "cloud_stream"];
   }
 
   async discover(): Promise<DiscoveredDevice[]> {

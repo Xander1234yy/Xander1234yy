@@ -84,7 +84,7 @@ export function createTapoCloudService(o: { registry: DeviceRegistry; secrets: S
     /** Live beeld (MPEG-TS) van een camera via het TP-Link-relais; geeft de stroom terug of gooit een duidelijke fout. */
     async live(deviceId: string, signal?: AbortSignal) {
       const t = o.store.state.tapocloud;
-      if (!t || !t.cameras.some((c) => c.deviceId === deviceId && c.type === "camera")) throw new SetupError(404, "NOT_FOUND", "Camera niet gevonden");
+      if (!t || !t.cameras.some((c) => c.deviceId === deviceId)) throw new SetupError(404, "NOT_FOUND", "Camera niet gevonden");
       const a = new TapoCloudAdapter({ cameras: t.cameras }, o.http, Date.now, o.relaySocket);
       await a.prepare(scope);
       try {

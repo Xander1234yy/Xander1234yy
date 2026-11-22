@@ -221,17 +221,20 @@ export class TapoCloudClient {
   }
 
   /** Meldingen uit de Tapo-app sinds `sinceMs` (oplopend; alleen wat de gebruiker in de app aan heeft staan). */
-  async notifications(base: string, token: string, sinceMs: number, maxPages = 4): Promise<TapoNotification[]> {
+  async notifications(base: string, token: string, sinceMs: number, maxPages = 4, onRaw?: (raw: Record<string, unknown>) => void): Promise<TapoNotification[]> {
     const out: TapoNotification[] = [];
     let index = 0;
     for (let page = 0; page < maxPages; page++) {
       const r = await this.signed<{ notifications?: Record<string, unknown>[]; hasNextPage?: boolean; currentIndex?: number }>(
         base,
         "/api/v2/common/getAppNotificationByPage",
-        { appType: APP_TYPE, terminalUUID: this.terminalUUID, mobileType: "ANDROID", deviceToken: "", locale: "nl_NL", direction: "asc", index, indexTime: sinceMs, limit: 50, contentVersion: 3 },
+        { appType: APP_TYPE, terminalUUID: this.terminalUUID, mobileType: "ANDROID", deviceToken: "", locale: "nl_NL", direction: "asc", index, indexTime: sinceMs, limit: 50, contentVersion: 3, msgTypes: NOTIFICATION_TYPES },
         token,
       );
-      for (const n of r.result.notifications ?? []) out.push(...parseNotification(n));
+      for (const n of r.result.notifications ?? []) {
+        onRaw?.(n);
+        out.push(...parseNotification(n));
+      }
       if (!r.result.hasNextPage) break;
       index = (r.result.currentIndex ?? index) + 1;
     }
@@ -276,6 +279,9 @@ export class TapoCloudClient {
   }
 }
 
+/** Meldingstypen die HomeOS opvraagt (zoals de Tapo-app ze noemt). */
+const NOTIFICATION_TYPES = ["Motion", "PersonDetected", "PersonEnhanced", "PetDetected", "VehicleDetected", "ringEvent", "missRingEvent", "deliverPackageDetected", "pickUpPackageDetected", "tapoCameraAreaIntrusionDetection", "tapoCameraLinecrossingDetection", "tapoCameraCameraTampering"];
+
 const KIND: Record<string, TapoNotification["kind"]> = {
   Motion: "motion",
   PersonDetected: "person",
@@ -286,6 +292,8 @@ const KIND: Record<string, TapoNotification["kind"]> = {
   VehicleDetected: "motion",
   tapoCameraAreaIntrusionDetection: "person",
   tapoCameraLinecrossingDetection: "person",
+  deliverPackageDetected: "person",
+  pickUpPackageDetected: "person",
 };
 
 /** Eén melding uit de app omzetten; `attachments` kan een object of een JSON-tekst zijn. */

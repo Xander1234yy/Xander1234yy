@@ -13,7 +13,8 @@ import { formatDateTime } from "@/lib/format";
 export default function SecurityPage() {
   const { snapshot, events } = useHome();
   const bells = (snapshot?.devices ?? []).filter((d) => d.kind === "doorbell");
-  const cameras = (snapshot?.devices ?? []).filter((d) => d.kind === "camera");
+  // Deurbellen met live beeld (Tapo-cloud) krijgen ook een camerakaart.
+  const cameras = (snapshot?.devices ?? []).filter((d) => d.kind === "camera" || (d.kind === "doorbell" && d.capabilities.includes("cloud_stream")));
   const ids = new Set([...bells, ...cameras].map((b) => b.id));
   const securityEvents = events.filter((e) => ids.has(e.deviceId) || e.type === "status_change");
   return (

@@ -38,9 +38,9 @@ export interface RelayInfo {
 }
 
 /** Vraagt een relais aan voor deze camera. */
-export async function requestRelay(o: { cipc: string; token: string; deviceId: string; playerId: string; resolution: "HD" | "VGA"; http?: TapoHttp }): Promise<RelayInfo> {
+export async function requestRelay(o: { cipc: string; token: string; deviceId: string; playerId: string; resolution: "HD" | "VGA"; deviceType?: "SMART.IPCAMERA" | "SMART.TAPODOORBELL"; http?: TapoHttp }): Promise<RelayInfo> {
   const http = o.http ?? httpsTapo;
-  const body = JSON.stringify({ deviceId: o.deviceId, playerId: o.playerId, cloudType: 2, deviceType: "SMART.IPCAMERA", rootCaVer: "1", preConnection: 0, resolution: o.resolution, streamType: 0, dataTimeoutCount: 0 });
+  const body = JSON.stringify({ deviceId: o.deviceId, playerId: o.playerId, cloudType: 2, deviceType: o.deviceType ?? "SMART.IPCAMERA", rootCaVer: "1", preConnection: 0, resolution: o.resolution, streamType: 0, dataTimeoutCount: 0 });
   const res = await http(`${o.cipc}/v2/relay/request`, {
     method: "POST",
     headers: {

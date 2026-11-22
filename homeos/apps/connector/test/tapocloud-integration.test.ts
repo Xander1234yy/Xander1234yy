@@ -49,7 +49,7 @@ describe("Tapo-camera's via TP-Link-cloud (niet-officieel, cloudmodus)", () => {
       expect(list.tapocloud).toMatchObject({ connected: true, unofficial: true, cameras: ["Tuin C500", "Voordeur"] });
       const snap = await (await call("/v1/snapshot")).json();
       expect(snap.devices.find((d: { id: string }) => d.id === cam)).toMatchObject({ kind: "camera", integration: "tapo_camera", capabilities: ["motion", "onoff", "ptz", "cloud_stream"] });
-      expect(snap.devices.find((d: { id: string }) => d.id === bell)).toMatchObject({ kind: "doorbell" });
+      expect(snap.devices.find((d: { id: string }) => d.id === bell)).toMatchObject({ kind: "doorbell", capabilities: ["motion", "doorbell", "cloud_stream"] });
       const off = await call(`/v1/devices/${encodeURIComponent(cam)}/commands`, { method: "POST", body: JSON.stringify({ command: { type: "set_power", on: false }, source: "user" }) });
       expect(off.status).toBe(200);
       // Automatiseringen en Jarvis mogen camera's niet bedienen (veiligheidskritisch).
@@ -61,7 +61,7 @@ describe("Tapo-camera's via TP-Link-cloud (niet-officieel, cloudmodus)", () => {
 
     // Live beeld via het relais (cloudmodus), als MPEG-TS.
     await request(f, async (call) => {
-      expect((await call(`/v1/cameras/tapocloud/${f.BELL}/live`)).status).toBe(404); // deurbel: geen live beeld
+      expect((await call(`/v1/cameras/tapocloud/0000000000000000/live`)).status).toBe(404); // onbekend
       const live = await call(`/v1/cameras/tapocloud/${f.CAM}/live`);
       expect(live.status).toBe(200);
       expect(live.headers.get("content-type")).toBe("video/mp2t");

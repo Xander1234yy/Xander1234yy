@@ -151,6 +151,9 @@ describe("TP-Link-videorelais (live beeld)", () => {
     expect(chunks).toHaveLength(26);
     expect(chunks.every((ch) => ch[0] === 0x47 && ch.length === 188)).toBe(true);
     expect(f.state.relayRequests[0]).toMatchObject({ auth: "tok-1", body: { deviceId: f.CAM, playerId: "term-1", cloudType: 2, resolution: "HD", streamType: 0 } });
+    // Deurbel (D235) krijgt ook live beeld, met het juiste apparaattype.
+    for await (const _ of await a.openLive(f.BELL, { maxMs: 5000 })) void _;
+    expect(f.state.relayRequests.at(-1)!.body).toMatchObject({ deviceId: f.BELL, deviceType: "SMART.TAPODOORBELL" });
     const written = f.state.relayWrites.join("");
     expect(written).toContain("POST /relayservice?deviceid=CAM&type=video&resolution=HD HTTP/1.1");
     expect(written).toContain('"method":"get","preview":{"channels":[0],"resolutions":["HD"]');
