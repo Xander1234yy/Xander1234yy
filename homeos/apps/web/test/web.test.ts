@@ -235,3 +235,42 @@ describe("cloudmodus: documentopslag met één leesronde", () => {
     expect(writes).toEqual(["registry.json={\"a\":2}"]);
   });
 });
+
+describe("camerageluid (G.711 uit MPEG-TS)", () => {
+  it("decodeert A-law en µ-law volgens de standaard (ITU-T G.711)", async () => {
+    const { alawToPcm, mulawToPcm } = await import("../lib/g711-audio");
+    // Referentiewaarden uit de G.711-tabellen.
+    expect(alawToPcm(0xd5)).toBe(8);
+    expect(alawToPcm(0x55)).toBe(-8);
+    expect(alawToPcm(0xaa)).toBe(32256);
+    expect(alawToPcm(0x2a)).toBe(-32256);
+    expect(mulawToPcm(0xff)).toBe(0);
+    expect(mulawToPcm(0x80)).toBe(32124);
+    expect(mulawToPcm(0x00)).toBe(-32124);
+  });
+
+  it("haalt het audiospoor uit TS-pakketten, ook over stukken verdeeld, en negeert video", async () => {
+    const { TsAudioDemuxer } = await import("../lib/g711-audio");
+    const pkt = (pid: number, start: boolean, body: number[]) => {
+      const p = new Uint8Array(188).fill(0xff);
+      p[0] = 0x47;
+      p[1] = (start ? 0x40 : 0) | ((pid >> 8) & 0x1f);
+      p[2] = pid & 0xff;
+      p[3] = 0x10; // alleen inhoud
+      p.set(body, 4);
+      return p;
+    };
+    const pesHead = (streamId: number) => [0, 0, 1, streamId, 0, 0, 0x80, 0x80, 5, 0x21, 0, 1, 0, 1];
+    const audio = [...pesHead(0xc0), ...Array(170).fill(0xd5)];
+    const video = [...pesHead(0xe0), ...Array(170).fill(0x11)];
+    const out: Uint8Array[] = [];
+    const d = new TsAudioDemuxer((p) => out.push(p));
+    const all = new Uint8Array([...pkt(0x44, true, video), ...pkt(0x45, true, audio), ...pkt(0x45, true, audio)]);
+    d.push(all.subarray(0, 100));
+    d.push(all.subarray(100));
+    d.flush();
+    expect(out).toHaveLength(2);
+    expect(out[0]!.length).toBe(188 - 4 - 14);
+    expect(out[0]!.every((b) => b === 0xd5 || b === 0xff)).toBe(true);
+  });
+});

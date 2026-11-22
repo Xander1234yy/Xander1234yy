@@ -48,6 +48,12 @@ describe("pushmeldingen", () => {
     expect(sent).toEqual([expect.objectContaining({ endpoint: iphone, urgency: "high", payload: expect.objectContaining({ url: "/beveiliging", title: "Er wordt aangebeld" }) })]);
     expect((await (await t.call("/v1/push")).json()).subscriptions).toBe(1); // verlopen Chrome-abonnement opgeruimd
 
+    // Melding over een deurbel/camera → aantikken opent het live beeld van dat apparaat.
+    sent.length = 0;
+    t.c.automations.events.emit("notification", { id: "n2", at: new Date().toISOString(), category: "security", title: "Er wordt aangebeld", body: "Voordeur", read: false, deviceId: "tapocloud:ABC123DEF456" });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(sent[0]!.payload).toMatchObject({ url: "/beveiliging?live=tapocloud%3AABC123DEF456", tag: "security:tapocloud:ABC123DEF456" });
+
     // Sleutels en abonnementen staan niet leesbaar op schijf.
     const files = await Promise.all(["secrets.enc", "integrations.json"].map((f) => readFile(path.join(t!.dataDir, f), "utf8").catch(() => "")));
     expect(files.join("")).not.toContain("web.push.apple.com");

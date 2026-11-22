@@ -198,6 +198,9 @@
   aanbellen), privacymodus en draaien zonder apparaat thuis; inloggen met verificatiecode (MFA). Live beeld via TP-Links
   videorelais: MPEG-TS (H.264) ongewijzigd doorgegeven naar de browser (mpegts.js), max. 4 minuten, alleen leden,
   in de auditlog, niets opgeslagen.
+- **Na fase 8 (op verzoek):** melding van deurbel/camera aantikken opent direct het live beeld (foto's in
+  pushmeldingen kan iPhone niet tonen en TP-Link stuurt ze niet mee); geluid bij live beeld (G.711 uit de MPEG-TS-stroom,
+  in de browser gedecodeerd, standaard uit); wekelijks energieverslag op zondag vanaf 18:00 als pushmelding.
 - **Zelf te doen (optioneel):** Supabase → Authentication → wachtwoorden uit datalekken weigeren.
 
 ## Antwoorden en openstaande vragen

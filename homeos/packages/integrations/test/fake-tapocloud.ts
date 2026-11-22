@@ -105,6 +105,7 @@ export function fakeTapoCloud(opts: { mfa?: boolean } = {}) {
         state.moves.push({ x: req.params.motor.move.x_coord, y: req.params.motor.move.y_coord });
         return reply({});
       }
+      if (req.method === "getAudioConfig") return reply({ audio_config: { microphone: { encode_type: "G711alaw", sampling_rate: "8", mute: "off" } } });
       return reply({}, -40101);
     }
     if (u.host === new URL(CIPC).host && u.pathname === "/v2/relay/request") {

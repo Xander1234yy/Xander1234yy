@@ -88,7 +88,12 @@ export function cloudConnectorStream(householdId: string, path: string, signal: 
       }
       const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
       started = true;
-      resolve(new Response(readable, { status: 200, headers: { "content-type": res.headers.get("content-type") ?? "application/octet-stream" } }));
+      const headers = new Headers({ "content-type": res.headers.get("content-type") ?? "application/octet-stream" });
+      for (const h of ["x-audio-codec", "x-audio-rate"]) {
+        const v = res.headers.get(h);
+        if (v) headers.set(h, v);
+      }
+      resolve(new Response(readable, { status: 200, headers }));
       await res.body.pipeTo(writable, { signal }).catch(() => undefined);
     }).catch((e) => {
       if (!started) reject(e);

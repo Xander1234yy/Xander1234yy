@@ -349,10 +349,16 @@ export function createConnectorServer(o: ServerOptions) {
         const abort = new AbortController();
         req.on("close", () => abort.abort());
         // Relais openen vóór het antwoord begint, zodat een fout als nette JSON-fout terugkomt.
-        const stream = await setup(() => o.tapocloud.live(deviceId, abort.signal));
+        const { stream, audio } = await setup(() => o.tapocloud.live(deviceId, abort.signal));
         registry.recordAudit("camera.view", `tapocloud:${deviceId}`, true, { via: "tplink-relay" });
         return new RawResponse(async (_req, res) => {
-          res.writeHead(200, { "content-type": "video/mp2t", "cache-control": "no-store", "x-content-type-options": "nosniff", connection: "close" });
+          res.writeHead(200, {
+            "content-type": "video/mp2t",
+            "cache-control": "no-store",
+            "x-content-type-options": "nosniff",
+            connection: "close",
+            ...(audio ? { "x-audio-codec": audio.codec, "x-audio-rate": String(audio.rate) } : {}),
+          });
           try {
             for await (const chunk of stream) {
               if (res.destroyed) break;

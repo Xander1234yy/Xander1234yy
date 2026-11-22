@@ -65,6 +65,8 @@ describe("Tapo-camera's via TP-Link-cloud (niet-officieel, cloudmodus)", () => {
       const live = await call(`/v1/cameras/tapocloud/${f.CAM}/live`);
       expect(live.status).toBe(200);
       expect(live.headers.get("content-type")).toBe("video/mp2t");
+      expect(live.headers.get("x-audio-codec")).toBe("alaw");
+      expect(live.headers.get("x-audio-rate")).toBe("8000");
       const bytes = Buffer.from(await live.arrayBuffer());
       expect(bytes.length).toBe(26 * 188);
       expect(bytes[0]).toBe(0x47);

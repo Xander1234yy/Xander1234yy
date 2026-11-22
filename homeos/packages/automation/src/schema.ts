@@ -79,6 +79,8 @@ export interface HomeNotification {
   title: string;
   body: string;
   read: boolean;
+  /** Apparaat waar de melding over gaat (bijv. deurbel/camera): aantikken opent dan het live beeld. */
+  deviceId?: string;
 }
 
 export const CATEGORY_LABEL: Record<NotificationCategory, string> = {

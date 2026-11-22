@@ -121,7 +121,9 @@ export function createPushService(o: { secrets: SecretStore; logger: Logger; sen
     async notify(n: HomeNotification) {
       const subs = await load();
       if (!subs.length) return { delivered: 0, removed: 0 };
-      return sendTo(subs, { title: n.title, body: n.body, url: URL_FOR[n.category] ?? "/", tag: n.category }, n.category === "security" ? "high" : "normal");
+      // Beveiliging met apparaat: aantikken opent direct het live beeld van die camera/deurbel.
+      const url = n.category === "security" && n.deviceId ? `/beveiliging?live=${encodeURIComponent(n.deviceId)}` : (URL_FOR[n.category] ?? "/");
+      return sendTo(subs, { title: n.title, body: n.body, url, tag: n.deviceId ? `security:${n.deviceId}` : n.category }, n.category === "security" ? "high" : "normal");
     },
   };
 }

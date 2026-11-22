@@ -88,7 +88,8 @@ export function createTapoCloudService(o: { registry: DeviceRegistry; secrets: S
       const a = new TapoCloudAdapter({ cameras: t.cameras }, o.http, Date.now, o.relaySocket);
       await a.prepare(scope);
       try {
-        return await a.openLive(deviceId, { ...(signal ? { signal } : {}), maxMs: 240_000 });
+        const audio = await a.audioInfo(deviceId);
+        return { stream: await a.openLive(deviceId, { ...(signal ? { signal } : {}), maxMs: 240_000 }), audio };
       } catch (e) {
         const err = e as TapoCloudError;
         throw new SetupError(err.code === "UNAUTHORIZED" || err.code === "EXPIRED" ? 401 : err.code === "UNAVAILABLE" ? 503 : 502, "TAPO_LIVE", err.message);

@@ -38,7 +38,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (!res.ok || !res.body) {
       return new Response(await res.text(), { status: res.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
     }
-    return new Response(res.body, { status: 200, headers: { "content-type": "video/mp2t", "cache-control": "no-store, private", "x-content-type-options": "nosniff" } });
+    const codec = res.headers.get("x-audio-codec");
+    const rate = res.headers.get("x-audio-rate");
+    return new Response(res.body, {
+      status: 200,
+      headers: {
+        "content-type": "video/mp2t",
+        "cache-control": "no-store, private",
+        "x-content-type-options": "nosniff",
+        ...(codec === "alaw" || codec === "mulaw" ? { "x-audio-codec": codec } : {}),
+        ...(rate && /^\d{4,5}$/.test(rate) ? { "x-audio-rate": rate } : {}),
+      },
+    });
   } catch (err) {
     if (err instanceof ConnectorUnavailableError) return jsonError(503, `CONNECTOR_${err.reason.toUpperCase()}`, err.message);
     return jsonError(500, "INTERNAL", "Interne fout");

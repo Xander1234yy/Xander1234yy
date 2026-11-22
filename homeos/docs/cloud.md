@@ -107,7 +107,8 @@ wachtwoord van Mijn Ziggo (versleuteld bewaard). De box staat daarna bij Enterta
 Zonder apparaat thuis: HomeOS doet hetzelfde als de Tapo-app. Meldingen (beweging, persoon, aanbellen) uit de
 meldingengeschiedenis van de app, hooguit elke minuut, als pushmelding en voor automatiseringen; privacymodus aan/uit
 ("camera aan/uit") en draaien, en **live beeld** via TP-Links videorelais (maximaal 4 minuten per keer, zonder geluid;
-op iPhone/iPad iOS 17.1 of nieuwer). Instellingen → Tapo-camera's (cloud): e-mailadres en
+op iPhone/iPad iOS 17.1 of nieuwer), met geluid via de knop "Geluid aan". Een melding van de deurbel of camera
+aantikken opent direct het live beeld. Instellingen → Tapo-camera's (cloud): e-mailadres en
 wachtwoord van je Tapo-account; TP-Link kan een verificatiecode sturen (Tapo-app of e-mail).
 
 ## Variabelen

@@ -13,7 +13,7 @@ import {
   type HomeNotification,
   type NotificationCategory,
 } from "@homeos/automation";
-import { SAFETY_CRITICAL_KINDS, type DeviceEvent } from "@homeos/shared";
+import { SAFETY_CRITICAL_KINDS, type DeviceEvent, type EnergyHistory } from "@homeos/shared";
 import type { Logger } from "@homeos/integrations";
 import { readFileOrNull, writeFileAtomic, joinPath } from "./fs-utils";
 import { Journal } from "./journal";
@@ -51,9 +51,9 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
   };
 
   const enabledCategory = (c: NotificationCategory) => store.preferences[c] !== false;
-  const notify = (n: { category: NotificationCategory; title: string; body: string }) => {
+  const notify = (n: { category: NotificationCategory; title: string; body: string; deviceId?: string }) => {
     if (!enabledCategory(n.category)) return;
-    const note: HomeNotification = { id: randomUUID(), at: now().toISOString(), category: n.category, title: n.title.slice(0, 120), body: n.body.slice(0, 1000), read: false };
+    const note: HomeNotification = { id: randomUUID(), at: now().toISOString(), category: n.category, title: n.title.slice(0, 120), body: n.body.slice(0, 1000), read: false, ...(n.deviceId ? { deviceId: n.deviceId } : {}) };
     notifications.append(note);
     emitter.emit("notification", note);
   };
@@ -84,12 +84,12 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
   // Deurbel en camerabeweging → beveiligingsmelding. Beweging maximaal eens per 5 minuten per camera.
   const lastMotionNotice = new Map<string, number>();
   o.registry.on("event", (e: DeviceEvent) => {
-    if (e.type === "doorbell_ring") notify({ category: "security", title: "Er wordt aangebeld", body: `${e.message}${e.demo ? " (DEMO)" : ""}` });
+    if (e.type === "doorbell_ring") notify({ category: "security", title: "Er wordt aangebeld", body: `${e.message}${e.demo ? " (DEMO)" : ""} · tik voor live beeld`, deviceId: e.deviceId });
     if (e.type === "motion") {
       const t = Date.parse(e.at) || Date.now();
       if (t - (lastMotionNotice.get(e.deviceId) ?? 0) < 5 * 60_000) return;
       lastMotionNotice.set(e.deviceId, t);
-      notify({ category: "security", title: "Beweging gezien", body: `${e.message}${e.demo ? " (DEMO)" : ""}` });
+      notify({ category: "security", title: "Beweging gezien", body: `${e.message}${e.demo ? " (DEMO)" : ""}`, deviceId: e.deviceId });
     }
   });
 
@@ -99,7 +99,25 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
     const s = await readFileOrNull(stateFile);
     if (s) engine.importState(JSON.parse(s));
   }
-  const timer = o.serverless ? null : setInterval(() => void engine.tick().catch((err) => o.logger.error("Automatisering-tick mislukt", { error: String(err) })), o.tickMs ?? TICK_MS);
+  // Wekelijks energieverslag: zondag vanaf 18:00 (tijdzone van het huis) één pushmelding met de week in cijfers.
+  const weeklyFile = o.dataDir ? joinPath(o.dataDir, "weekly-report.json") : null;
+  let weeklyDone: string | null = null;
+  const weekly = async () => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, weekday: "short", hour: "2-digit", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now()).map((p) => [p.type, p.value]));
+    if (parts.weekday !== "Sun" || Number(parts.hour) < 18) return;
+    const key = `${parts.year}-${parts.month}-${parts.day}`;
+    if (weeklyDone === null && weeklyFile) weeklyDone = (await readFileOrNull(weeklyFile))?.trim() ?? "";
+    if (weeklyDone === key) return;
+    weeklyDone = key;
+    if (weeklyFile) await writeFileAtomic(weeklyFile, key);
+    const text = weeklyEnergyText(await o.registry.energyHistory("week").catch(() => null));
+    if (text) notify({ category: "energy", title: "Weekoverzicht energie", body: text });
+  };
+  const tickAll = async () => {
+    await engine.tick();
+    await weekly().catch((err) => o.logger.warn("Weekoverzicht mislukt", { error: String(err) }));
+  };
+  const timer = o.serverless ? null : setInterval(() => void tickAll().catch((err) => o.logger.error("Automatisering-tick mislukt", { error: String(err) })), o.tickMs ?? TICK_MS);
   timer?.unref?.();
 
   const find = (id: string) => {
@@ -130,7 +148,7 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
       engine.stop();
     },
     tick: async () => {
-      await engine.tick();
+      await tickAll();
       if (stateFile) await writeFileAtomic(stateFile, JSON.stringify(engine.exportState()));
       await Promise.all([runs.flush(), notifications.flush()]);
     },
@@ -192,3 +210,29 @@ export async function createAutomationService(o: { registry: DeviceRegistry; dat
 }
 
 export type AutomationService = Awaited<ReturnType<typeof createAutomationService>>;
+
+const TIME_ZONE = process.env.HOMEOS_TIME_ZONE || "Europe/Amsterdam";
+const kwh = (n: number) => `${n.toLocaleString("nl-NL", { maximumFractionDigits: 1 })} kWh`;
+
+/** Tekst voor het weekoverzicht; null als er geen energiebron is of geen gegevens. */
+export function weeklyEnergyText(h: EnergyHistory | null): string | null {
+  if (!h || !h.points.length) return null;
+  const sum = (k: "productionKwh" | "consumptionKwh" | "importKwh" | "exportKwh") => {
+    const v = h.points.map((p) => p[k]).filter((x): x is number => typeof x === "number");
+    return v.length ? v.reduce((a, b) => a + b, 0) : null;
+  };
+  const prod = sum("productionKwh");
+  const cons = sum("consumptionKwh");
+  const imp = sum("importKwh");
+  const exp = sum("exportKwh");
+  if (prod === null && cons === null && imp === null) return null;
+  const parts: string[] = [];
+  if (prod !== null) {
+    const best = h.points.reduce((a, b) => ((b.productionKwh ?? -1) > (a.productionKwh ?? -1) ? b : a));
+    parts.push(`Opwek ${kwh(prod)}${best.productionKwh ? ` (beste dag ${new Date(best.t).toLocaleDateString("nl-NL", { weekday: "long", timeZone: TIME_ZONE })}: ${kwh(best.productionKwh)})` : ""}`);
+  }
+  if (cons !== null) parts.push(`verbruik ${kwh(cons)}`);
+  if (imp !== null) parts.push(`afgenomen ${kwh(imp)}`);
+  if (exp !== null) parts.push(`teruggeleverd ${kwh(exp)}`);
+  return `${parts.join(" · ")}${h.demo ? " (DEMO)" : ""}.`;
+}

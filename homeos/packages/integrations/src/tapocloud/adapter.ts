@@ -116,6 +116,23 @@ export class TapoCloudAdapter implements DeviceAdapter {
     return relayStream({ relay, resolution: o.resolution ?? "HD", ...(o.signal ? { signal: o.signal } : {}), maxMs: o.maxMs ?? 240_000, ...(this.relaySocket ? { socket: this.relaySocket } : {}) });
   }
 
+  /** Geluidsformaat van de microfoon (G.711 A-law/µ-law), of null als onbekend, gedempt of niet ondersteund. */
+  async audioInfo(deviceId: string): Promise<{ codec: "alaw" | "mulaw"; rate: number } | null> {
+    try {
+      const r = await this.withSession("command", async (s) =>
+        this.client!.cameraCall(await this.iotBase(s), s.token, deviceId, "getAudioConfig", { audio_config: { name: ["speaker", "microphone"] }, audio_capability: { name: ["device_microphone"] } }),
+      );
+      const mic = (r.audio_config as { microphone?: { encode_type?: string; sampling_rate?: string; mute?: string } } | undefined)?.microphone;
+      const codec = mic?.encode_type === "G711alaw" ? "alaw" : mic?.encode_type === "G711ulaw" ? "mulaw" : null;
+      if (!codec || mic?.mute === "on") return null;
+      let rate = Number.parseInt(String(mic?.sampling_rate ?? "8"), 10) || 8;
+      if (rate < 1000) rate *= 1000;
+      return { codec, rate: Math.min(48_000, Math.max(8_000, rate)) };
+    } catch {
+      return null;
+    }
+  }
+
   async disconnect(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.ctx = null;

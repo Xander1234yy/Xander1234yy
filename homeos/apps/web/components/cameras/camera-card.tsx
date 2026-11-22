@@ -40,6 +40,17 @@ export function CameraCard({ device }: { device: Device }) {
     return () => clearInterval(t);
   }, [canView, online, live, hasStream]);
 
+  // Vanuit een pushmelding (/beveiliging?live=<id>): dit live beeld meteen starten en in beeld schuiven.
+  const [autoStarted, setAutoStarted] = useState(false);
+  useEffect(() => {
+    if (autoStarted || !online || !canView || !(hasStream || cloudStream)) return;
+    if (new URLSearchParams(window.location.search).get("live") !== device.id) return;
+    setAutoStarted(true);
+    setTick(Date.now());
+    setLive(true);
+    document.querySelector(`[data-camera-id="${CSS.escape(device.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [autoStarted, online, canView, hasStream, cloudStream, device.id]);
+
   useEffect(() => {
     if (!live) return;
     const t = setTimeout(() => setLive(false), cloudStream ? 4 * 60_000 : LIVE_LIMIT_MS);
@@ -51,7 +62,7 @@ export function CameraCard({ device }: { device: Device }) {
   const move = (direction: "up" | "down" | "left" | "right") => void sendCommand(device, { type: "ptz_move", direction });
 
   return (
-    <Card className="overflow-hidden p-0" data-testid="camera-card">
+    <Card className="overflow-hidden p-0" data-testid="camera-card" data-camera-id={device.id}>
       <div className="relative aspect-video bg-black/60">
         {!canView ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted">
