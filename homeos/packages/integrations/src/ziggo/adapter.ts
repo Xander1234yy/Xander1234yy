@@ -246,7 +246,7 @@ export class ZiggoAdapter implements DeviceAdapter {
     if (!this.config.boxes.some((b) => b.deviceId === boxId)) return { status: "UNKNOWN", state: {}, lastSeen: null, error: "Box niet gevonden" };
     if (!this.creds) return { status: "UNKNOWN", state: {}, lastSeen: null, error: "Niet gekoppeld met Ziggo" };
     const st = this.c.status?.[boxId];
-    if (st?.state === "OFFLINE") return { status: "OFFLINE", state: this.state(boxId), lastSeen: null, error: "De box is offline (stroom of internet?)", stateAt: st.at };
+    if (st?.state === "OFFLINE") return { status: "OFFLINE", state: this.state(boxId), lastSeen: null, error: "De box staat in diepe stand-by (energiebesparing) of heeft geen stroom/internet en is daardoor niet op afstand aan te zetten. Zet op de box bij Instellingen → Energie/Stand-by de modus op snel opstarten (niet 'Eco'). Via de tv met HDMI-CEC gaat hij wel mee aan.", stateAt: st.at };
     // Status onbekend: toch bedienbaar laten (Ziggo meldt niet altijd direct de status).
     return { status: "ONLINE", state: this.state(boxId), lastSeen: st?.at ?? null, error: this.c.lastError ?? null, stateAt: st?.at ?? null };
   }

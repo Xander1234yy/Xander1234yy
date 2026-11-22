@@ -55,7 +55,15 @@ export function TvRemote({ device }: { device: Device }) {
       aria-label={`Afstandsbediening ${device.name}`}
       data-testid="tv-remote"
     >
-      {!on && <p className="text-center text-xs text-muted">Zet de tv aan om de afstandsbediening te gebruiken.</p>}
+      {!on && (
+        <p className="text-center text-xs text-muted">
+          {device.integration === "ziggo"
+            ? device.status === "OFFLINE"
+              ? "De box staat in diepe stand-by en is niet via internet bereikbaar. Zet hem aan met de tv (HDMI-CEC) of zet op de box de energiemodus op snel opstarten."
+              : "Zet de box aan met de aan/uit-knop hierboven om de afstandsbediening te gebruiken."
+            : "Zet de tv aan om de afstandsbediening te gebruiken."}
+        </p>
+      )}
       <div className="flex justify-between">
         {k("BACK", "Terug", <Undo2 />)}
         {k("HOME", "Home", <Home />)}
